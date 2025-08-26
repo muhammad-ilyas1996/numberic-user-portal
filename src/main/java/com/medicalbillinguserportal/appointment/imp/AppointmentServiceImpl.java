@@ -56,7 +56,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     public AppointmentEntity getAppointmentDetail(Long id) {
-        Optional<AppointmentEntity> appointmentEntity = appointmentRepo.findByIdAndIsActiveTrue(id);
+        Optional<AppointmentEntity> appointmentEntity = appointmentRepo.findByAppointmentIdAndIsActiveTrue(id);
         if (appointmentEntity.isEmpty()) {
             return new AppointmentEntity();
         } else {

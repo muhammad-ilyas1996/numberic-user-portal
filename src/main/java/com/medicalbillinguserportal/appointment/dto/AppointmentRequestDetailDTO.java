@@ -8,5 +8,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AppointmentRequestDetailDTO {
-    private Long id;
+    private Long appointmentId;
 }

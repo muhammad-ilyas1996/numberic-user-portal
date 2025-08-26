@@ -8,5 +8,5 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 @Repository
 public interface AppointmentRepo extends JpaRepository<AppointmentEntity, Long >, JpaSpecificationExecutor<AppointmentEntity> {
-    Optional<AppointmentEntity> findByIdAndIsActiveTrue(long id);
+    Optional<AppointmentEntity> findByAppointmentIdAndIsActiveTrue(long id);
 }

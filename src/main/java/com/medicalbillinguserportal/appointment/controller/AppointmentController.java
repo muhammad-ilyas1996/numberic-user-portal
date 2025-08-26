@@ -40,6 +40,6 @@ public class AppointmentController {
     @PostMapping("/view-detail")
     // @PreAuthorize("hasAuthority('VIEW_PROVIDER')")
     public ResponseEntity<AppointmentEntity> getProviderData(@RequestBody AppointmentRequestDetailDTO requestDTO) {
-        return ResponseEntity.ok(appointmentService.getAppointmentDetail(requestDTO.getId()));
+        return ResponseEntity.ok(appointmentService.getAppointmentDetail(requestDTO.getAppointmentId()));
     }
 }
