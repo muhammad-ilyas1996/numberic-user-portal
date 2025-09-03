@@ -130,4 +130,12 @@ public class MenuService {
         if (dto.getIconClass() != null) menu.setIconClass(dto.getIconClass());
         if (dto.getIsActive() != null) menu.setIsActive(dto.getIsActive());
     }
+
+    public MenuDto getMenuById(Long menuId) {
+        Optional<Menu> menu = menuRepository.findById(menuId);
+        if (menu.isPresent()) {
+            return convertToDto(menu.get());
+        }
+        return null;
+    }
 }
