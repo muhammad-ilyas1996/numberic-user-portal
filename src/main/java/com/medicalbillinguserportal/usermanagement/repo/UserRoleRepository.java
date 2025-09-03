@@ -13,13 +13,13 @@ import java.util.List;
 @Repository
 public interface UserRoleRepository extends JpaRepository<UserRole, UserRoleId> {
     
-    @Query("SELECT ur FROM UserRole ur WHERE ur.user.userId = :userId AND ur.isActive = true")
+    @Query("SELECT ur FROM UserRole ur WHERE ur.user.userId = :userId")
     List<UserRole> findByUserId(@Param("userId") Long userId);
     
     @Modifying
     @Query("DELETE FROM UserRole ur WHERE ur.user.userId = :userId")
     void deleteByUserId(@Param("userId") Long userId);
     
-    @Query("SELECT ur FROM UserRole ur WHERE ur.role.roleId = :roleId AND ur.isActive = true")
+    @Query("SELECT ur FROM UserRole ur WHERE ur.role.roleId = :roleId")
     List<UserRole> findByRoleId(@Param("roleId") Long roleId);
 }

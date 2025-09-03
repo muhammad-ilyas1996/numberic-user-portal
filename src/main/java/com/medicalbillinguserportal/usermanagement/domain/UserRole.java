@@ -1,5 +1,6 @@
 package com.medicalbillinguserportal.usermanagement.domain;
 
+import com.medicalbillinguserportal.commonpersistence.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -26,6 +27,14 @@ public class UserRole {
     @MapsId("roleId")
     @JoinColumn(name = "role_id")
     private Role role;
+
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "added_by", nullable = false)
+    private Long addedBy;
+
 }
 
 

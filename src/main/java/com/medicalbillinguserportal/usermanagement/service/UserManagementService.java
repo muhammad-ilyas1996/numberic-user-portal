@@ -92,7 +92,7 @@ public class UserManagementService {
         userRoleId.setUserId(userId);
         userRoleId.setRoleId(roleId);
         userRole.setId(userRoleId);
-        userRole.setIsActive(true);
+//        userRole.setIsActive(true);
         // BaseEntity automatically manages these fields
         // No need to set them manually
         

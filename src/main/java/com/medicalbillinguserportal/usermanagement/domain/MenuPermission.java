@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Entity
 @Table(name = "menu_permissions")
-public class MenuPermission extends BaseEntity {
+public class MenuPermission{
     
     @EmbeddedId
     private MenuPermissionId id;

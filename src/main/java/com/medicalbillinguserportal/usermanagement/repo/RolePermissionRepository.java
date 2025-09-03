@@ -12,10 +12,10 @@ import java.util.List;
 @Repository
 public interface RolePermissionRepository extends JpaRepository<RolePermission, RolePermissionId> {
     
-    @Query("SELECT rp FROM RolePermission rp WHERE rp.role.roleId = :roleId AND rp.isActive = true")
+    @Query("SELECT rp FROM RolePermission rp WHERE rp.role.roleId = :roleId")
     List<RolePermission> findByRoleId(@Param("roleId") Long roleId);
     
-    @Query("SELECT rp FROM RolePermission rp WHERE rp.permission.permissionId = :permissionId AND rp.isActive = true")
+    @Query("SELECT rp FROM RolePermission rp WHERE rp.permission.permissionId = :permissionId")
     List<RolePermission> findByPermissionId(@Param("permissionId") Long permissionId);
 }
 
