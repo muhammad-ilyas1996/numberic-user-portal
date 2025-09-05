@@ -28,6 +28,10 @@ public class UserRole {
     @JoinColumn(name = "role_id")
     private Role role;
 
+    // Add missing isActive field
+    @Column(name = "is_active")
+    private Boolean isActive = true;
+
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

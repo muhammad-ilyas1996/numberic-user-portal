@@ -97,6 +97,10 @@ public class User {
     @Column(name = "taxonomy_id", nullable = false)
     private Long taxonomyId;
 
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "portal_type_id", nullable = false)
+    private PortalType portalType;
+
 /*    @ManyToOne
     @JoinColumn(name = "provider_id")
     private ProviderEntity providerId;

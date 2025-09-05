@@ -148,3 +148,63 @@ UPDATE users
 SET portal_type_id = 1
 WHERE portal_type_id =0
   AND portal_type_id NOT IN (SELECT portal_type_id FROM portal_types);
+
+
+
+-- Insert Menu-Permission Mappings
+INSERT INTO menu_permissions (menu_id, permission_id) VALUES
+-- HOME Menu (All users can see home)
+(1, 1056),
+
+-- EHR Menu (EHR Admin permission)
+(2, 1069),
+
+-- PATIENTS Menu (Patient related permissions)
+(3, 1057),
+(3, 1067),
+(3, 1068),
+-- SCHEDULE Menu (Basic access)
+(4, 1056), -- ALL
+-- BILLING Menu (All billing permissions)
+(5, 1057),
+(5, 1058),
+(5, 1059),
+(5, 1060),
+(5, 1061),
+(5, 1062),
+(5, 1063),
+(5, 1064),
+(5, 1065),
+(5, 1066),
+-- REAL-TIME Menu (Billing related)
+(6, 1060),
+(6, 1063),
+
+-- REPORTS Menu (Admin and Financial)
+(7, 1055),
+(7, 1066),
+
+-- ICON Menu (Basic access)
+(8, 1056),
+-- TASKS & MESSAGES Menu (Self assign permission)
+(9, 1071),
+-- ADMIN Menu (Administration rights)
+(10, 1055),
+(10, 1070),
+-- BILLING Submenus
+-- ENTER CHARGES (Charge entry permission)
+(11, 1065),
+(12, 1060),
+(12, 1061),
+(12, 1062),
+(12, 1063),
+-- PAYMENTS (Financial permissions)
+(13, 1066),
+-- ERA (ERA permission)
+(14, 1064),
+-- A/R LEDGERS (Financial permissions)
+(15, 1066),
+(16, 1061),
+(16, 1062),
+(17, 1066),
+(18, 1066);

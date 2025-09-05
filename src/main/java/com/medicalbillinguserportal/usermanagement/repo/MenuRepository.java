@@ -1,6 +1,7 @@
 package com.medicalbillinguserportal.usermanagement.repo;
 
 import com.medicalbillinguserportal.usermanagement.domain.Menu;
+import com.medicalbillinguserportal.usermanagement.domain.MenuPermission;
 import com.medicalbillinguserportal.usermanagement.domain.PortalType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -22,4 +23,6 @@ public interface MenuRepository extends JpaRepository<Menu, Long>, JpaSpecificat
     List<Menu> findByPortalTypeAndParentMenuIdIsNullAndIsActiveTrueOrderByMenuOrderAsc(PortalType portalType);
     
     List<Menu> findByParentMenuIdAndIsActiveTrueOrderByMenuOrderAsc(Long parentMenuId);
+
+    List<MenuPermission> findByMenuId(Long menuId);
 }

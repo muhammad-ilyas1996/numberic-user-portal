@@ -9,9 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -193,13 +191,28 @@ public class UserManagementService {
     
     // Helper methods
     private List<Permission> getUserPermissions(Long userId) {
-        List<UserRole> userRoles = userRoleRepository.findByUserId(userId);
-        Set<Long> permissionIds = userRoles.stream()
-                .flatMap(userRole -> userRole.getRole().getRolePermissions().stream())
-                .map(rolePermission -> rolePermission.getPermission().getPermissionId())
-                .collect(Collectors.toSet());
+        // Get user roles with role data loaded
+        List<UserRole> userRoles = userRoleRepository.findByUserUserIdAndIsActiveTrue(userId);
         
-        return permissionRepository.findAllById(permissionIds);
+        // Get permissions from roles with detailed logging
+        Set<Permission> allPermissions = new HashSet<>();
+        for (UserRole userRole : userRoles) {
+            System.out.println("=== UserRole Debug ===");
+            System.out.println("Role ID: " + userRole.getRole().getRoleId());
+            System.out.println("Role Name: " + userRole.getRole().getRoleId());
+            
+            List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleRoleId(userRole.getRole().getRoleId());
+            System.out.println("Role Permissions Count: " + rolePermissions.size());
+            
+            for (RolePermission rolePermission : rolePermissions) {
+                System.out.println("Permission ID: " + rolePermission.getPermission().getPermissionId());
+                System.out.println("Permission Name: " + rolePermission.getPermission().getPermissionId());
+                allPermissions.add(rolePermission.getPermission());
+            }
+            System.out.println("=== End UserRole Debug ===");
+        }
+        
+        return new ArrayList<>(allPermissions);
     }
     
     private RoleDto convertRoleToDto(Role role) {
