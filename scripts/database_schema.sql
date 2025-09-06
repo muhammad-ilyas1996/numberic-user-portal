@@ -137,6 +137,10 @@ SELECT u.user_id, r.role_id, NOW(), NOW(), 'system', 'system', true
 FROM users u, roles r
 WHERE u.username = 'ali_ahmed_015' AND r.code_name = 'PM_SUPER_ADMIN';
 
+UPDATE roles
+SET portal_type_id = 1
+WHERE portal_type_id = 0;
+
 
 -- Increase description column size to TEXT
 ALTER TABLE roles
