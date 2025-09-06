@@ -2,6 +2,8 @@ package com.medicalbillinguserportal.usermanagement.repo;
 
 import com.medicalbillinguserportal.usermanagement.domain.Role;
 import com.medicalbillinguserportal.usermanagement.domain.PortalType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
@@ -22,4 +24,11 @@ public interface RoleRepository extends JpaRepository<Role, Long>, JpaSpecificat
     List<Role> findByPortalTypeAndIsSuperadminTrueAndIsActiveTrue(PortalType portalType);
     
     List<Role> findByPortalTypeAndIsReadonlyFalseAndIsActiveTrue(PortalType portalType);
+    
+    // New methods for Role Management
+    boolean existsByCodeName(String codeName);
+    
+    Page<Role> findByPortalTypeAndIsActiveTrue(PortalType portalType, Pageable pageable);
+    
+    Page<Role> findByIsActiveTrue(Pageable pageable);
 }
