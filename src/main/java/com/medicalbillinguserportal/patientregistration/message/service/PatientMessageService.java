@@ -1,9 +1,4 @@
 package com.medicalbillinguserportal.patientregistration.message.service;
-
-import com.medicalbillinguserportal.patientregistration.insuranceinfo.dto.PatientInsuranceDto;
-import com.medicalbillinguserportal.patientregistration.insuranceinfo.entity.PatientInsuranceEntity;
-import com.medicalbillinguserportal.patientregistration.insuranceinfo.mapper.PatientInsuranceConverter;
-import com.medicalbillinguserportal.patientregistration.insuranceinfo.repository.PatientInsuranceRepo;
 import com.medicalbillinguserportal.patientregistration.message.dto.PatientMessageDto;
 import com.medicalbillinguserportal.patientregistration.message.entity.PatientMessageEntity;
 import com.medicalbillinguserportal.patientregistration.message.mapper.PatientMessageConverter;

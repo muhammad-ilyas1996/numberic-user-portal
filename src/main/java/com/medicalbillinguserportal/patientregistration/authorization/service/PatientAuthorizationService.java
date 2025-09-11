@@ -1,9 +1,7 @@
 package com.medicalbillinguserportal.patientregistration.authorization.service;
 
-
 import com.medicalbillinguserportal.appointment.dto.request.PatientSearch;
 import com.medicalbillinguserportal.patientregistration.authorization.dto.PatientAuthorizationDto;
-import com.medicalbillinguserportal.patientregistration.authorization.entity.PatientAuthorizationEntity;
 import com.medicalbillinguserportal.usermanagement.domain.User;
 import org.springframework.data.domain.Page;
 public interface PatientAuthorizationService {

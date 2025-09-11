@@ -47,7 +47,7 @@ public class AppointmentServiceImpl implements AppointmentService {
             spec = spec.and(SpecificationUtility.lessThanOrEqualTo("createdOn", searchDate.getToDate()));
         }
         return appointmentRepo.findAll(spec,
-                PageRequest.of(request.getPageNumber(),
+                PageRequest.of(request.getPageNumber()-1,
                         request.getPageSize(),
                         Sort.Direction.DESC,
                         "createdOn")

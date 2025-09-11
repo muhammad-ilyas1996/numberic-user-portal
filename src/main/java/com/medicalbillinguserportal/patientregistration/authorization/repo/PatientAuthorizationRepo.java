@@ -10,6 +10,5 @@ import java.util.Optional;
 
 @Repository
 public interface PatientAuthorizationRepo extends JpaRepository<PatientAuthorizationEntity,Long> , JpaSpecificationExecutor<PatientAuthorizationEntity> {
-
     Optional<PatientAuthorizationEntity> findByIdAndIsActiveTrue(long id);
 }

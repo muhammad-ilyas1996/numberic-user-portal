@@ -12,7 +12,6 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class PatientInsuranceDto {
     private Long id;
-
     private String planName;
     private String policyHolder;
     private String policyNumber;
