@@ -37,6 +37,8 @@ public class PatientEpisodeEntity extends BaseEntity {
 
     private String accidentType;
     private LocalDate accidentDate;
+    private String additionalInfoCombo;
+    private String additionalInfo;
     private String specialProgramCode;
     private String claimDelayReason;
     private String claimNotes;

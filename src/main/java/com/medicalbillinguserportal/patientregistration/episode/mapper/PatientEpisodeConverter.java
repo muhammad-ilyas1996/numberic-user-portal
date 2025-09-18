@@ -31,6 +31,9 @@ public class PatientEpisodeConverter {
 
         dto.setAccidentType(entity.getAccidentType());
         dto.setAccidentDate(entity.getAccidentDate());
+        dto.setAdditionalInfoCombo(entity.getAdditionalInfoCombo());
+        dto.setAdditionalInfo(entity.getAdditionalInfo());
+
         dto.setSpecialProgramCode(entity.getSpecialProgramCode());
         dto.setClaimDelayReason(entity.getClaimDelayReason());
         dto.setClaimNotes(entity.getClaimNotes());
@@ -62,6 +65,10 @@ public class PatientEpisodeConverter {
 
         entity.setAccidentType(dto.getAccidentType());
         entity.setAccidentDate(dto.getAccidentDate());
+
+        entity.setAdditionalInfoCombo(dto.getAdditionalInfoCombo());
+        entity.setAdditionalInfo(dto.getAdditionalInfo());
+
         entity.setSpecialProgramCode(dto.getSpecialProgramCode());
         entity.setClaimDelayReason(dto.getClaimDelayReason());
         entity.setClaimNotes(dto.getClaimNotes());
