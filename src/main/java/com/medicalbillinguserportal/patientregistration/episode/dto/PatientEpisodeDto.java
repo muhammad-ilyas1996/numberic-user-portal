@@ -11,11 +11,28 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class PatientEpisodeDto {
     private Long id;
-    private LocalDate startDate;
-    private LocalDate endDate;
-    private String diagnosis;
-    private String status;
-    private String description;
+    private String title;
+    private String defaultEpisode;
+    private String employement;
+    private String autoAccident;
+    private String state;
+    private String otherAccident;
+
+
+    private LocalDate dateOfCurrentIllness;
+    private LocalDate dateDisAbilityBegin;
+    private LocalDate dateDisAbilityEnd;
+    private LocalDate dateHospitalAdmission;
+    private LocalDate dateHospitalDischanrge;
+    private LocalDate dateAssumedCare;
+    private LocalDate dateRelinquishedCare;
+
+    private String accidentType;
+    private LocalDate accidentDate;
+    private String specialProgramCode;
+    private String claimDelayReason;
+    private String claimNotes;
+    private String homeBound;
 
     private Long patientId;
 }

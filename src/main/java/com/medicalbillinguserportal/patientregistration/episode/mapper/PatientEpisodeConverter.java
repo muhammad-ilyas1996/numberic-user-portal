@@ -13,11 +13,29 @@ public class PatientEpisodeConverter {
 
         PatientEpisodeDto dto = new PatientEpisodeDto();
         dto.setId(entity.getId());
-        dto.setStartDate(entity.getStartDate());
-        dto.setEndDate(entity.getEndDate());
-        dto.setDiagnosis(entity.getDiagnosis());
-        dto.setStatus(entity.getStatus());
-        dto.setDescription(entity.getDescription());
+        dto.setId(entity.getId());
+        dto.setTitle(entity.getTitle());
+        dto.setDefaultEpisode(entity.getDefaultEpisode());
+        dto.setEmployement(entity.getEmployement());
+        dto.setAutoAccident(entity.getAutoAccident());
+        dto.setState(entity.getState());
+        dto.setOtherAccident(entity.getOtherAccident());
+
+        dto.setDateOfCurrentIllness(entity.getDateOfCurrentIllness());
+        dto.setDateDisAbilityBegin(entity.getDateDisAbilityBegin());
+        dto.setDateDisAbilityEnd(entity.getDateDisAbilityEnd());
+        dto.setDateHospitalAdmission(entity.getDateHospitalAdmission());
+        dto.setDateHospitalDischanrge(entity.getDateHospitalDischanrge());
+        dto.setDateAssumedCare(entity.getDateAssumedCare());
+        dto.setDateRelinquishedCare(entity.getDateRelinquishedCare());
+
+        dto.setAccidentType(entity.getAccidentType());
+        dto.setAccidentDate(entity.getAccidentDate());
+        dto.setSpecialProgramCode(entity.getSpecialProgramCode());
+        dto.setClaimDelayReason(entity.getClaimDelayReason());
+        dto.setClaimNotes(entity.getClaimNotes());
+        dto.setHomeBound(entity.getHomeBound());
+
 
         return dto;
     }
@@ -27,11 +45,27 @@ public class PatientEpisodeConverter {
 
         PatientEpisodeEntity entity = new PatientEpisodeEntity();
         entity.setId(dto.getId());
-        entity.setStartDate(dto.getStartDate());
-        entity.setEndDate(dto.getEndDate());
-        entity.setDiagnosis(dto.getDiagnosis());
-        entity.setStatus(dto.getStatus());
-        entity.setDescription(dto.getDescription());
+        entity.setTitle(dto.getTitle());
+        entity.setDefaultEpisode(dto.getDefaultEpisode());
+        entity.setEmployement(dto.getEmployement());
+        entity.setAutoAccident(dto.getAutoAccident());
+        entity.setState(dto.getState());
+        entity.setOtherAccident(dto.getOtherAccident());
+
+        entity.setDateOfCurrentIllness(dto.getDateOfCurrentIllness());
+        entity.setDateDisAbilityBegin(dto.getDateDisAbilityBegin());
+        entity.setDateDisAbilityEnd(dto.getDateDisAbilityEnd());
+        entity.setDateHospitalAdmission(dto.getDateHospitalAdmission());
+        entity.setDateHospitalDischanrge(dto.getDateHospitalDischanrge());
+        entity.setDateAssumedCare(dto.getDateAssumedCare());
+        entity.setDateRelinquishedCare(dto.getDateRelinquishedCare());
+
+        entity.setAccidentType(dto.getAccidentType());
+        entity.setAccidentDate(dto.getAccidentDate());
+        entity.setSpecialProgramCode(dto.getSpecialProgramCode());
+        entity.setClaimDelayReason(dto.getClaimDelayReason());
+        entity.setClaimNotes(dto.getClaimNotes());
+        entity.setHomeBound(dto.getHomeBound());
 
         entity.setPatientInfoEntity(patientInfoEntity);
         entity.setCreatedBy(currentUser.getUserId().toString());
