@@ -14,40 +14,40 @@ public class PatientInsuranceConverter {
         PatientInsuranceDto dto = new PatientInsuranceDto();
 
         dto.setId(entity.getId());
-        dto.setPlanName(entity.getPlanName());
-        dto.setPolicyHolder(entity.getPolicyHolder());
-        dto.setPolicyNumber(entity.getPolicyNumber());
-        dto.setExpirationDate(entity.getExpirationDate());
-        dto.setStatus(entity.getStatus());
-        dto.setPayerName(entity.getPayerName());
-
+        dto.setInsuranceLevel(entity.getInsuranceLevel());
         dto.setInsuranceStatus(entity.getInsuranceStatus());
+        dto.setExpirationDate(entity.getExpirationDate());
         dto.setEffectiveDate(entity.getEffectiveDate());
-        dto.setCurrentExpirationDate(entity.getCurrentExpirationDate());
-        dto.setCurrentPayerName(entity.getCurrentPayerName());
+        dto.setPayerName(entity.getPayerName());
         dto.setPayerAddress(entity.getPayerAddress());
-        dto.setPayerClaim(entity.getPayerClaim());
+        dto.setPayerClass(entity.getPayerClass());
         dto.setPayerType(entity.getPayerType());
-        dto.setGroupNumber(entity.getGroupNumber());
-        dto.setTypeCode(entity.getTypeCode());
-
+        dto.setPlanName(entity.getPlanName());
+        dto.setGroupNo(entity.getGroupNo());
+        dto.setInsuranceTypeCode(entity.getInsuranceTypeCode());
         dto.setCoPay(entity.getCoPay());
         dto.setCoIns(entity.getCoIns());
         dto.setAcceptAssignment(entity.getAcceptAssignment());
-
         dto.setPatientRelationship(entity.getPatientRelationship());
         dto.setInsuredFirstName(entity.getInsuredFirstName());
-        dto.setInsuredMiddleName(entity.getInsuredMiddleName());
+        dto.setMiddleName(entity.getMiddleName());
         dto.setInsuredLastName(entity.getInsuredLastName());
-        dto.setInsuredDOB(entity.getInsuredDOB());
+        dto.setInsuredDob(entity.getInsuredDob());
         dto.setInsuredSex(entity.getInsuredSex());
-
         dto.setCountry(entity.getCountry());
         dto.setAddress1(entity.getAddress1());
+        dto.setPlanName1(entity.getPlanName1());
+        dto.setGroupNo1(entity.getGroupNo1());
+        dto.setInsuranceTypeCode1(entity.getInsuranceTypeCode1());
+        dto.setCoPay1(entity.getCoPay1());
+        dto.setCoIns1(entity.getCoIns1());
+        dto.setAcceptAssignment1(entity.getAcceptAssignment1());
         dto.setAddress2(entity.getAddress2());
         dto.setCity(entity.getCity());
         dto.setState(entity.getState());
+        dto.setZip(entity.getZip());
         dto.setHomePhone(entity.getHomePhone());
+
 
         dto.setPatientId(entity.getPatientInfoEntity().getId());
         return dto;
@@ -59,40 +59,40 @@ public class PatientInsuranceConverter {
         PatientInsuranceEntity entity = new PatientInsuranceEntity();
 
         entity.setId(dto.getId());
-        entity.setPlanName(dto.getPlanName());
-        entity.setPolicyHolder(dto.getPolicyHolder());
-        entity.setPolicyNumber(dto.getPolicyNumber());
-        entity.setExpirationDate(dto.getExpirationDate());
-        entity.setStatus(dto.getStatus());
-        entity.setPayerName(dto.getPayerName());
-
+        entity.setInsuranceLevel(dto.getInsuranceLevel());
         entity.setInsuranceStatus(dto.getInsuranceStatus());
         entity.setEffectiveDate(dto.getEffectiveDate());
-        entity.setCurrentExpirationDate(dto.getCurrentExpirationDate());
-        entity.setCurrentPayerName(dto.getCurrentPayerName());
+        entity.setExpirationDate(dto.getExpirationDate());
+        entity.setPayerName(dto.getPayerName());
         entity.setPayerAddress(dto.getPayerAddress());
-        entity.setPayerClaim(dto.getPayerClaim());
+        entity.setPayerClass(dto.getPayerClass());
         entity.setPayerType(dto.getPayerType());
-        entity.setGroupNumber(dto.getGroupNumber());
-        entity.setTypeCode(dto.getTypeCode());
-
+        entity.setPlanName(dto.getPlanName());
+        entity.setGroupNo(dto.getGroupNo());
+        entity.setInsuranceTypeCode(dto.getInsuranceTypeCode());
         entity.setCoPay(dto.getCoPay());
         entity.setCoIns(dto.getCoIns());
         entity.setAcceptAssignment(dto.getAcceptAssignment());
-
         entity.setPatientRelationship(dto.getPatientRelationship());
         entity.setInsuredFirstName(dto.getInsuredFirstName());
-        entity.setInsuredMiddleName(dto.getInsuredMiddleName());
+        entity.setMiddleName(dto.getMiddleName());
         entity.setInsuredLastName(dto.getInsuredLastName());
-        entity.setInsuredDOB(dto.getInsuredDOB());
+        entity.setInsuredDob(dto.getInsuredDob());
         entity.setInsuredSex(dto.getInsuredSex());
-
         entity.setCountry(dto.getCountry());
         entity.setAddress1(dto.getAddress1());
+        entity.setPlanName1(dto.getPlanName1());
+        entity.setGroupNo1(dto.getGroupNo1());
+        entity.setInsuranceTypeCode1(dto.getInsuranceTypeCode1());
+        entity.setCoPay1(dto.getCoPay1());
+        entity.setCoIns1(dto.getCoIns1());
+        entity.setAcceptAssignment1(dto.getAcceptAssignment1());
         entity.setAddress2(dto.getAddress2());
         entity.setCity(dto.getCity());
         entity.setState(dto.getState());
+        entity.setZip(dto.getZip());
         entity.setHomePhone(dto.getHomePhone());
+
 
         entity.setPatientInfoEntity(patientInfoEntity);
 

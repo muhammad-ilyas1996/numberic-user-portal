@@ -12,40 +12,38 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class PatientInsuranceDto {
     private Long id;
-    private String planName;
-    private String policyHolder;
-    private String policyNumber;
-    private LocalDate expirationDate;
-    private String status;
-    private String payerName;
-
+    private String insuranceLevel;
     private String insuranceStatus;
     private LocalDate effectiveDate;
-    private LocalDate currentExpirationDate;
-    private String currentPayerName;
+    private LocalDate expirationDate;
+    private String payerName;
     private String payerAddress;
-    private String payerClaim;
+    private String payerClass;
     private String payerType;
-    private String groupNumber;
-    private String typeCode;
-
-    private BigDecimal coPay;
-    private Integer coIns;
-    private Boolean acceptAssignment;
-
+    private String planName;
+    private String groupNo;
+    private String insuranceTypeCode;
+    private String coPay;
+    private String coIns;
+    private String acceptAssignment;
     private String patientRelationship;
     private String insuredFirstName;
-    private String insuredMiddleName;
+    private String middleName;
     private String insuredLastName;
-    private LocalDate insuredDOB;
+    private String insuredDob;
     private String insuredSex;
-
     private String country;
     private String address1;
+    private String planName1;
+    private String groupNo1;
+    private String insuranceTypeCode1;
+    private String coPay1;
+    private String coIns1;
+    private String acceptAssignment1;
     private String address2;
     private String city;
     private String state;
+    private String zip;
     private String homePhone;
-
     private Long patientId;
 }

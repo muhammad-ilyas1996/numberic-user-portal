@@ -18,7 +18,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import com.medicalbillinguserportal.patientregistration.authorization.service.PatientAuthorizationService;
-
+import com.medicalbillinguserportal.patientregistration.patientinformation.respository.PatientInfoRepository;
 import java.util.Optional;
 
 @Service
@@ -30,7 +30,7 @@ public class PatientAuthorizationImp implements PatientAuthorizationService {
     public PatientAuthorizationRepo patientAuthorizationRepo;
 
     @Autowired
-    public com.medicalbillinguserportal.patientregistration.patientinformation.respository.PatientInfoRepository patientInfoRepository;
+    public PatientInfoRepository patientInfoRepository;
 
     @Override
     public PatientAuthorizationDto savePatientAuthorization(PatientAuthorizationDto dto, User currentUser)
