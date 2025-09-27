@@ -21,4 +21,7 @@ public interface PatientEpisodeService {
     PatientEpisodeDto savePatientEpisode(PatientEpisodeDto dto, User currentUser);
     public Page<PatientEpisodeDto> searchPatientEpisode(PatientSearch requestDTO);
     public PatientEpisodeDto getPatientEpisodeDetail(Long id);
+    PatientEpisodeDto updateEpisode(PatientEpisodeDto dto, User currentUser);
 }
+
+

@@ -68,4 +68,15 @@ public class PatientEpisodeImpl implements PatientEpisodeService {
                 .orElseThrow(() -> new RuntimeException("Episode not found with id: " + id));
         return PatientEpisodeConverter.toDTO(entity);
     }
+    @Override
+    public PatientEpisodeDto updateEpisode(PatientEpisodeDto dto, User currentUser) {
+        PatientEpisodeEntity existingEpisode = patientEpisodeRepo.findById(dto.getId())
+                .orElseThrow(() -> new RuntimeException("Episode not found with ID: " + dto.getId()));
+
+        PatientEpisodeConverter.updateEntityFromDto(dto, existingEpisode, currentUser);
+
+        PatientEpisodeEntity savedEntity = patientEpisodeRepo.save(existingEpisode);
+        return PatientEpisodeConverter.toDTO(savedEntity);
+    }
+
 }

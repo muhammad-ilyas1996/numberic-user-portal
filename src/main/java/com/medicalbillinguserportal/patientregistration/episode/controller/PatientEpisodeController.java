@@ -40,4 +40,13 @@ public class PatientEpisodeController {
     public ResponseEntity<PatientEpisodeDto> getEpisodeDetail(@RequestBody PatientEpisodeRequestDetailDTO requestDTO) {
         return ResponseEntity.ok(patientEpisodeService.getPatientEpisodeDetail(requestDTO.getId()));
     }
+    @PostMapping("/update")
+    public ResponseEntity<PatientEpisodeDto> updateEpisode(
+            @RequestBody PatientEpisodeDto episodeDto,
+            @AuthenticationPrincipal User currentUser) {
+
+        PatientEpisodeDto updatedEpisode = patientEpisodeService.updateEpisode(episodeDto, currentUser);
+        return ResponseEntity.ok(updatedEpisode);
+    }
+
 }

@@ -81,4 +81,37 @@ public class PatientEpisodeConverter {
         entity.setModifiedOn(new Date());
         return entity;
     }
+    public static void updateEntityFromDto(PatientEpisodeDto dto, PatientEpisodeEntity entity, User currentUser) {
+        if (dto == null || entity == null) return;
+
+        entity.setTitle(dto.getTitle());
+        entity.setDefaultEpisode(dto.getDefaultEpisode());
+        entity.setEmployement(dto.getEmployement());
+        entity.setAutoAccident(dto.getAutoAccident());
+        entity.setState(dto.getState());
+        entity.setOtherAccident(dto.getOtherAccident());
+
+        entity.setDateOfCurrentIllness(dto.getDateOfCurrentIllness());
+        entity.setDateDisAbilityBegin(dto.getDateDisAbilityBegin());
+        entity.setDateDisAbilityEnd(dto.getDateDisAbilityEnd());
+        entity.setDateHospitalAdmission(dto.getDateHospitalAdmission());
+        entity.setDateHospitalDischanrge(dto.getDateHospitalDischanrge());
+        entity.setDateAssumedCare(dto.getDateAssumedCare());
+        entity.setDateRelinquishedCare(dto.getDateRelinquishedCare());
+
+        entity.setAccidentType(dto.getAccidentType());
+        entity.setAccidentDate(dto.getAccidentDate());
+
+        entity.setAdditionalInfoCombo(dto.getAdditionalInfoCombo());
+        entity.setAdditionalInfo(dto.getAdditionalInfo());
+
+        entity.setSpecialProgramCode(dto.getSpecialProgramCode());
+        entity.setClaimDelayReason(dto.getClaimDelayReason());
+        entity.setClaimNotes(dto.getClaimNotes());
+        entity.setHomeBound(dto.getHomeBound());
+
+        // Modified fields update
+        entity.setModifiedBy(currentUser.getUserId().toString());
+        entity.setModifiedOn(new Date());
+    }
 }
