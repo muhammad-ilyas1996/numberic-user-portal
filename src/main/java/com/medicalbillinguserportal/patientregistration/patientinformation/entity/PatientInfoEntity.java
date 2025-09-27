@@ -28,105 +28,49 @@ public class PatientInfoEntity extends BaseEntity {
 
     // Patient Identification
     @Column(length = 30)
-    private String firstName;
+    private String patientFirstName;
     @Column(length = 30)
-    private String middleName;
+    private String patientMiddleName;
     @Column(length = 30)
-    private String lastName;
+    private String patientLastName;
     @Column(length = 20)
-    private String suffix;
+    private String patientSuffix;
     @Column(length = 30)
-    private String previousFirstName;
+    private String patientPreviousFirstName;
+    @Column(length = 30)
+    private String patientPreviousLastName;
     @Column(length = 15)
-    private LocalDate dob;
+    private LocalDate patientDob;
     @Column(length = 8)
-    private String sex;
+    private String patientSex;
     @Column(length = 50)
-    private String sexualOrientation;
+    private String patientSexualOrientation;
     @Column(length = 10)
-    private String genderIdentity;
+    private String patientGenderIdentity;
     @Column(length = 30)
-    private String race;
+    private String patientRace;
     @Column(length = 30)
-    private String ethnicity;
+    private String patientEthnicity;
     @Column(length = 15)
-    private String language;
+    private String patientLanguage;
     @Column(length = 30)
-    private String country;
+    private String patientCountry;
     @Column(length = 50)
-    private String ssn;
-    @Column(length = 15)
-    private String maritalStatus;
-    @Column(length = 15)
-    private Boolean multipleBirth;
-    private Integer birthOrder;
-    private String mothersMaidenName;
-    private Boolean residentOfPractice;
-
-    // Contact Info
-    @Column(length = 15)
-    private String homePhone;
-    @Column(length = 15)
-    private String workPhone;
-    @Column(length = 15)
-    private String workPhoneExt;
-    @Column(length = 15)
-    private String cellPhone;
-    @Column(length = 40)
-    private String email;
-    @Column(length = 30)
-    private String contactPreference;
+    private String patientSsn;
+    @Column(length = 150)
+    private String patientAddress1;
+    @Column(length = 150)
+    private String patientAddress2;
     @Column(length = 100)
-    private String address1;
+    private String patientCity;
     @Column(length = 100)
-    private String address2;
-    @Column(length = 30)
-    private String city;
-    @Column(length = 30)
-    private String state;
-    @Column(length = 20)
-    private String zip;
-
-    // Emergency Contact
-    @Column(length = 20)
-    private String emergencyFirstName;
-    @Column(length = 20)
-    private String emergencyMiddleName;
-    @Column(length = 20)
-    private String emergencyLastName;
-    @Column(length = 20)
-    private String emergencySuffix;
-    @Column(length = 20)
-    private String emergencyPhone;
-    @Column(length = 20)
-    private String emergencyRelationship;
-
-    // Caregiver
-    @Column(length = 20)
-    private String caregiverFirstName;
-    @Column(length = 20)
-    private String caregiverMiddleName;
-    @Column(length = 20)
-    private String caregiverLastName;
-    @Column(length = 20)
-    private String caregiverSuffix;
-    @Column(length = 20)
-    private String caregiverPhone;
-    @Column(length = 20)
-    private String caregiverRelationship;
+    private String patientState;
     @Column(length = 100)
-    private String caregiverAddress1;
-    @Column(length = 100)
-    private String caregiverAddress2;
-    @Column(length = 30)
-    private String caregiverCity;
-    @Column(length = 30)
-    private String caregiverState;
-    @Column(length = 30)
-    private String caregiverZip;
-    @Column(length = 200)
-    private String caregiverComment;
-
+    private String patientZip;
+    @Column(length = 15)
+    private String patientMaritalStatus;
+    @Column(length = 10)
+    private String patientPregnant;
     // Employment Info
     @Column(length = 20)
     private String employmentStatus;
@@ -144,8 +88,28 @@ public class PatientInfoEntity extends BaseEntity {
     private String employerState;
     @Column(length = 30)
     private String employerZip;
+    @Column(length = 100)
+    private String Occupation;
+    @Column(length = 15)
+    private Boolean multipleBirth;
+    @Column(length = 10)
+    private Integer birthOrder;
+    @Column(length = 100)
+    private String mothersMaidenName;
 
-    // Account Info
+    //Previous Address
+    @Column(length = 100)
+    private String previousAddress1;
+    @Column(length = 100)
+    private String previousAddress2;
+    @Column(length = 30)
+    private String previouscity;
+    @Column(length = 30)
+    private String previousstate;
+    @Column(length = 20)
+    private String previouszip;
+
+// Account Info
     @Column(length = 30)
     private String chartNo;
     @Column(length = 30)
@@ -153,35 +117,136 @@ public class PatientInfoEntity extends BaseEntity {
     @Column(length = 50)
     private String accountType;
     @Column(length = 30)
-    private LocalDate dateOfFirstOccurrence;
-    @Column(length = 30)
     private String accountStatus;
     @Column(length = 30)
     private String accountSecondaryStatus;
+    @Column(length = 30)
+    private String accountSignature;
+    @Column(length = 30)
+    private String accountBalanceBilling;
 
-    // Referral Info
+    //Patient Contact Info
+    @Column(length = 15)
+    private String homePhone;
+    @Column(length = 15)
+    private String workPhone;
+    @Column(length = 15)
+    private String workPhoneExt;
+    @Column(length = 15)
+    private String cellPhone;
+    @Column(length = 40)
+    private String email;
+    @Column(length = 10)
+    private String checkboxEmail;
+    @Column(length = 10)
+    private String checkboxTextMessage;
     @Column(length = 30)
-    private String referralFirstName;
+    private String contactPreference;
+
+    // Emergency Contact
+    @Column(length = 20)
+    private String emergencyFirstName;
+    @Column(length = 20)
+    private String emergencyMiddleName;
+    @Column(length = 20)
+    private String emergencyLastName;
+    @Column(length = 20)
+    private String emergencyPhone;
+    @Column(length = 20)
+    private String emergencyRelationToPatient;
+    @Column(length = 20)
+    private String emergencyAddress1;
+    @Column(length = 20)
+    private String emergencyAddress2;
+    @Column(length = 20)
+    private String emergencyCity;
+    @Column(length = 20)
+    private String emergencyState;
+    @Column(length = 20)
+    private String emergencyZip;
+
+    // Caregiver
+    @Column(length = 20)
+    private String caregiverFirstName;
+    @Column(length = 20)
+    private String caregiverMiddleName;
+    @Column(length = 20)
+    private String caregiverLastName;
+    @Column(length = 20)
+    private String caregiverRelationShip;
+    @Column(length = 20)
+    private String caregiverPhone;
+    @Column(length = 100)
+    private String caregiverAddress1;
+    @Column(length = 100)
+    private String caregiverAddress2;
     @Column(length = 30)
-    private String referralMiddleName;
+    private String caregiverCity;
     @Column(length = 30)
-    private String referralPhone;
+    private String caregiverState;
     @Column(length = 30)
-    private String referralRelationship;
+    private String caregiverZip;
+    @Column(length = 10)
+    private String caregiverIsNext;
+    @Column(length = 300)
+    private String caregiverComment;
+
+
+//Legal Guardian
+    @Column(length = 30)
+    private String guardianFirstName;
+    @Column(length = 30)
+    private String guardianMiddleName;
+    @Column(length = 30)
+    private String guardianLastName;
+    @Column(length = 30)
+    private String guardianRelationship;
+    @Column(length = 30)
+    private String guardianPhone;
     @Column(length = 150)
-    private String referralAddress1;
+    private String guardianAddress1;
     @Column(length = 150)
-    private String referralAddress2;
+    private String guardianAddress2;
     @Column(length = 30)
-    private String referralCity;
+    private String guardianCity;
     @Column(length = 30)
-    private String referralState;
+    private String guardianState;
     @Column(length = 30)
-    private String referralZip;
-    @Column(length = 200)
-    private String referralComment;
+    private String guardianZip;
+    @Column(length = 10)
+    private String guardianIsNext;
+    @Column(length = 250)
+    private String guardianComment;
+
     @Column(name = "complete_registration")
     private Boolean completeRegistration = false;
+
+    //healthCare
+    @Column(length = 30)
+    private String healthCareFirstName;
+    @Column(length = 30)
+    private String healthCareMiddleName;
+    @Column(length = 30)
+    private String healthCareLastName;
+    @Column(length = 30)
+    private String healthCareRelationship;
+    @Column(length = 30)
+    private String healthCarePhone;
+    @Column(length = 150)
+    private String healthCareAddress1;
+    @Column(length = 150)
+    private String healthCareAddress2;
+    @Column(length = 30)
+    private String healthCareCity;
+    @Column(length = 30)
+    private String healthCareState;
+    @Column(length = 30)
+    private String healthCareZip;
+    @Column(length = 10)
+    private String healthCareIsNext;
+    @Column(length = 250)
+    private String healthCareComment;
+
 
     @OneToMany(mappedBy = "patientInfoEntity" , cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PatientAssociationEntity> patientAssociationList = new ArrayList<>();;

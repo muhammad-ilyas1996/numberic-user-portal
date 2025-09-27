@@ -12,18 +12,23 @@ import java.time.LocalDate;
 public class PatientAssociationDto {
     private Long id;
 
-    // Referring Provider Info
-    private String referringProvider;
-    private String priorAuthorization;
-    private String otherReferralSource;
+    private String associationProvider;
+    private String associationReferringProvider;
+    private String associationPriorAuthorization;
+    private String associationOtherReferralSource;
 
-    // PCP Info
-    private String defaultPCP;
+    // PCP Information
+    private String patientOutsidePCP;
     private LocalDate lastSeenByPCP;
 
-    // Pharmacy Info
-    private String defaultPharmacy;
-    private String pharmacyPhoneNumber;
+    // New Association
+    private String associationFirstName;
+    private String associationLastName;
+    private String associationRole;
+    private String associationEmail;
+    private String associationPhone;
+    private String associationExt;
+    private String associationFax;
 
     private Long patientId;
 }

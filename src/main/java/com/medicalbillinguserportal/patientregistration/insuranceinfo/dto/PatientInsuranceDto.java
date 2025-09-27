@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Date;
 
 @Data
 @AllArgsConstructor
@@ -23,9 +24,12 @@ public class PatientInsuranceDto {
     private String planName;
     private String groupNo;
     private String insuranceTypeCode;
+    private String insurancesID;
     private String coPay;
     private String coIns;
     private String acceptAssignment;
+
+    // Insurance Info
     private String patientRelationship;
     private String insuredFirstName;
     private String middleName;
@@ -34,16 +38,17 @@ public class PatientInsuranceDto {
     private String insuredSex;
     private String country;
     private String address1;
-    private String planName1;
-    private String groupNo1;
-    private String insuranceTypeCode1;
-    private String coPay1;
-    private String coIns1;
-    private String acceptAssignment1;
     private String address2;
     private String city;
     private String state;
     private String zip;
     private String homePhone;
+
+//Audit
+    private Date createdOn;
+    private Date modifiedOn;
+    private String createdBy;
+    private String modifiedBy;
+    private Boolean isActive;
     private Long patientId;
 }

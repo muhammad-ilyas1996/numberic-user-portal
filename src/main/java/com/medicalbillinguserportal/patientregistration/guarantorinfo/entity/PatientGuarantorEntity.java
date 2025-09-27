@@ -37,15 +37,33 @@ public class PatientGuarantorEntity extends BaseEntity {
     private String addressLine2;
     private String city;
     private String state;
+    private String zip;
     private String maritalStatus;
+    private String pregnant;
     private String employmentStatus;
 
+    private String employerName;
+    private String employerPhone;
+    private String employerAddress1;
+    private String employerAddress2;
+    private String employerCity;
+    private String employerState;
+    private String employerZip;
+    private String employerOccupation;
+    private String employerMultipleBirth;
+    private String employerBirthOrder;
+    private String employerMothersMaidenName;
+
+    //Guarantor Contact Info
     private String homePhone;
     private String workPhone;
-    private String workPhoneExt;
+    private String workExt;
     private String cellPhone;
     private String email;
+    private String checkBoxEmail;
+    private String checkBoxTextMessage;
 
+//Previous Address
     private String previousAddress1;
     private String previousAddress2;
     private String previousCity;

@@ -14,15 +14,19 @@ public class PatientAssociationConverter {
         PatientAssociationDto dto = new PatientAssociationDto();
 
         dto.setId(entity.getId());
-        dto.setReferringProvider(entity.getReferringProvider());
-        dto.setPriorAuthorization(entity.getPriorAuthorization());
-        dto.setOtherReferralSource(entity.getOtherReferralSource());
-
-        dto.setDefaultPCP(entity.getDefaultPCP());
+        dto.setAssociationProvider(entity.getAssociationProvider());
+        dto.setAssociationReferringProvider(entity.getAssociationReferringProvider());
+        dto.setAssociationPriorAuthorization(entity.getAssociationPriorAuthorization());
+        dto.setAssociationOtherReferralSource(entity.getAssociationOtherReferralSource());
+        dto.setPatientOutsidePCP(entity.getPatientOutsidePCP());
         dto.setLastSeenByPCP(entity.getLastSeenByPCP());
-
-        dto.setDefaultPharmacy(entity.getDefaultPharmacy());
-        dto.setPharmacyPhoneNumber(entity.getPharmacyPhoneNumber());
+        dto.setAssociationFirstName(entity.getAssociationFirstName());
+        dto.setAssociationLastName(entity.getAssociationLastName());
+        dto.setAssociationRole(entity.getAssociationRole());
+        dto.setAssociationEmail(entity.getAssociationEmail());
+        dto.setAssociationPhone(entity.getAssociationPhone());
+        dto.setAssociationExt(entity.getAssociationExt());
+        dto.setAssociationFax(entity.getAssociationFax());
 
         return dto;
     }
@@ -33,15 +37,19 @@ public class PatientAssociationConverter {
         PatientAssociationEntity entity = new PatientAssociationEntity();
 
         entity.setId(dto.getId());
-        entity.setReferringProvider(dto.getReferringProvider());
-        entity.setPriorAuthorization(dto.getPriorAuthorization());
-        entity.setOtherReferralSource(dto.getOtherReferralSource());
-
-        entity.setDefaultPCP(dto.getDefaultPCP());
+        entity.setAssociationProvider(dto.getAssociationProvider());
+        entity.setAssociationReferringProvider(dto.getAssociationReferringProvider());
+        entity.setAssociationPriorAuthorization(dto.getAssociationPriorAuthorization());
+        entity.setAssociationOtherReferralSource(dto.getAssociationOtherReferralSource());
+        entity.setPatientOutsidePCP(dto.getPatientOutsidePCP());
         entity.setLastSeenByPCP(dto.getLastSeenByPCP());
-
-        entity.setDefaultPharmacy(dto.getDefaultPharmacy());
-        entity.setPharmacyPhoneNumber(dto.getPharmacyPhoneNumber());
+        entity.setAssociationFirstName(dto.getAssociationFirstName());
+        entity.setAssociationLastName(dto.getAssociationLastName());
+        entity.setAssociationRole(dto.getAssociationRole());
+        entity.setAssociationEmail(dto.getAssociationEmail());
+        entity.setAssociationPhone(dto.getAssociationPhone());
+        entity.setAssociationExt(dto.getAssociationExt());
+        entity.setAssociationFax(dto.getAssociationFax());
 
         entity.setPatientInfoEntity(patientInfoEntity);
         entity.setCreatedBy(currentUser.getUserId().toString());

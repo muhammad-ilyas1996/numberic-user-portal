@@ -37,11 +37,11 @@ public class PatientInfoController {
 //    {
 //        return ResponseEntity.ok(patientInfoService.getPatientId(dto.getId()));
 //    }
-//    @PostMapping("/getAll")
-//    public ResponseEntity<PatientInfoIdDto> getPatientIdInfo(@RequestBody PatientInfoIdDto dto)
-//    {
-//        return ResponseEntity.ok(patientInfoService.getPatientId(dto.getId()));
-//    }
+    @PostMapping("/getAll")
+    public ResponseEntity<PatientInfoIdDto> getPatientIdInfo(@RequestBody PatientInfoIdDto dto)
+    {
+        return ResponseEntity.ok(patientInfoService.getPatientId(dto.getId()));
+    }
     @PostMapping("/list")
     public ResponseEntity<Page<PatientInfoEntity>> getPatients(@RequestBody PatientsSearch requestDTO) {
         Page<PatientInfoEntity> requestPage = patientInfoService.searchPatients(requestDTO);

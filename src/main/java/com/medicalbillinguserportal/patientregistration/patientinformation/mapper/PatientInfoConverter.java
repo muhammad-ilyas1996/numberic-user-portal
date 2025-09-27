@@ -23,58 +23,30 @@ public class PatientInfoConverter {
         }
         PatientInfoDto dto=new PatientInfoDto();
         dto.setId(entity.getId());
-        dto.setFirstName(entity.getFirstName());
-        dto.setMiddleName(entity.getMiddleName());
-        dto.setLastName(entity.getLastName());
-        dto.setSuffix(entity.getSuffix());
-        dto.setPreviousFirstName(entity.getPreviousFirstName());
-        dto.setDob(entity.getDob());
-        dto.setSex(entity.getSex());
-        dto.setSexualOrientation(entity.getSexualOrientation());
-        dto.setGenderIdentity(entity.getGenderIdentity());
-        dto.setRace(entity.getRace());
-        dto.setEthnicity(entity.getEthnicity());
-        dto.setLanguage(entity.getLanguage());
-        dto.setCountry(entity.getCountry());
-        dto.setSsn(entity.getSsn());
-        dto.setMaritalStatus(entity.getMaritalStatus());
-        dto.setMultipleBirth(entity.getMultipleBirth());
-        dto.setBirthOrder(entity.getBirthOrder());
-        dto.setMothersMaidenName(entity.getMothersMaidenName());
-        dto.setResidentOfPractice(entity.getResidentOfPractice());
+        dto.setPatientFirstName(entity.getPatientFirstName());
+        dto.setPatientMiddleName(entity.getPatientMiddleName());
+        dto.setPatientLastName(entity.getPatientLastName());
+        dto.setPatientSuffix(entity.getPatientSuffix());
+        dto.setPatientPreviousFirstName(entity.getPatientPreviousFirstName());
+        dto.setPatientPreviousLastName(entity.getPatientPreviousLastName());
+        dto.setPatientDob(entity.getPatientDob());
+        dto.setPatientSex(entity.getPatientSex());
+        dto.setPatientSexualOrientation(entity.getPatientSexualOrientation());
+        dto.setPatientGenderIdentity(entity.getPatientGenderIdentity());
+        dto.setPatientRace(entity.getPatientRace());
+        dto.setPatientEthnicity(entity.getPatientEthnicity());
+        dto.setPatientLanguage(entity.getPatientLanguage());
+        dto.setPatientCountry(entity.getPatientCountry());
+        dto.setPatientSsn(entity.getPatientSsn());
+        dto.setPatientAddress1(entity.getPatientAddress1());
+        dto.setPatientAddress2(entity.getPatientAddress2());
+        dto.setPatientCity(entity.getPatientCity());
+        dto.setPatientState(entity.getPatientState());
+        dto.setPatientZip(entity.getPatientZip());
+        dto.setPatientMaritalStatus(entity.getPatientMaritalStatus());
+        dto.setPatientPregnant(entity.getPatientPregnant());
 
-        dto.setHomePhone(entity.getHomePhone());
-        dto.setWorkPhone(entity.getWorkPhone());
-        dto.setWorkPhoneExt(entity.getWorkPhoneExt());
-        dto.setCellPhone(entity.getCellPhone());
-        dto.setEmail(entity.getEmail());
-        dto.setContactPreference(entity.getContactPreference());
-        dto.setAddress1(entity.getAddress1());
-        dto.setAddress2(entity.getAddress2());
-        dto.setCity(entity.getCity());
-        dto.setState(entity.getState());
-        dto.setZip(entity.getZip());
-
-        dto.setEmergencyFirstName(entity.getEmergencyFirstName());
-        dto.setEmergencyMiddleName(entity.getEmergencyMiddleName());
-        dto.setEmergencyLastName(entity.getEmergencyLastName());
-        dto.setEmergencySuffix(entity.getEmergencySuffix());
-        dto.setEmergencyPhone(entity.getEmergencyPhone());
-        dto.setEmergencyRelationship(entity.getEmergencyRelationship());
-
-        dto.setCaregiverFirstName(entity.getCaregiverFirstName());
-        dto.setCaregiverMiddleName(entity.getCaregiverMiddleName());
-        dto.setCaregiverLastName(entity.getCaregiverLastName());
-        dto.setCaregiverSuffix(entity.getCaregiverSuffix());
-        dto.setCaregiverPhone(entity.getCaregiverPhone());
-        dto.setCaregiverRelationship(entity.getCaregiverRelationship());
-        dto.setCaregiverAddress1(entity.getCaregiverAddress1());
-        dto.setCaregiverAddress2(entity.getCaregiverAddress2());
-        dto.setCaregiverCity(entity.getCaregiverCity());
-        dto.setCaregiverState(entity.getCaregiverState());
-        dto.setCaregiverZip(entity.getCaregiverZip());
-        dto.setCaregiverComment(entity.getCaregiverComment());
-
+        // Employment Info
         dto.setEmploymentStatus(entity.getEmploymentStatus());
         dto.setEmployerName(entity.getEmployerName());
         dto.setEmployerPhone(entity.getEmployerPhone());
@@ -83,24 +55,93 @@ public class PatientInfoConverter {
         dto.setEmployerCity(entity.getEmployerCity());
         dto.setEmployerState(entity.getEmployerState());
         dto.setEmployerZip(entity.getEmployerZip());
+        dto.setOccupation(entity.getOccupation());
+        dto.setMultipleBirth(entity.getMultipleBirth());
+        dto.setBirthOrder(entity.getBirthOrder());
+        dto.setMothersMaidenName(entity.getMothersMaidenName());
 
+        // Previous Address
+        dto.setPreviousAddress1(entity.getPreviousAddress1());
+        dto.setPreviousAddress2(entity.getPreviousAddress2());
+        dto.setPreviouscity(entity.getPreviouscity());
+        dto.setPreviousstate(entity.getPreviousstate());
+        dto.setPreviouszip(entity.getPreviouszip());
+
+        // Account Info
         dto.setChartNo(entity.getChartNo());
         dto.setDateRegistered(entity.getDateRegistered());
         dto.setAccountType(entity.getAccountType());
-        dto.setDateOfFirstOccurrence(entity.getDateOfFirstOccurrence());
         dto.setAccountStatus(entity.getAccountStatus());
         dto.setAccountSecondaryStatus(entity.getAccountSecondaryStatus());
+        dto.setAccountSignature(entity.getAccountSignature());
+        dto.setAccountBalanceBilling(entity.getAccountBalanceBilling());
 
-        dto.setReferralFirstName(entity.getReferralFirstName());
-        dto.setReferralMiddleName(entity.getReferralMiddleName());
-        dto.setReferralPhone(entity.getReferralPhone());
-        dto.setReferralRelationship(entity.getReferralRelationship());
-        dto.setReferralAddress1(entity.getReferralAddress1());
-        dto.setReferralAddress2(entity.getReferralAddress2());
-        dto.setReferralCity(entity.getReferralCity());
-        dto.setReferralState(entity.getReferralState());
-        dto.setReferralZip(entity.getReferralZip());
-        dto.setReferralComment(entity.getReferralComment());
+        // Contact Info
+        dto.setHomePhone(entity.getHomePhone());
+        dto.setWorkPhone(entity.getWorkPhone());
+        dto.setWorkPhoneExt(entity.getWorkPhoneExt());
+        dto.setCellPhone(entity.getCellPhone());
+        dto.setEmail(entity.getEmail());
+        dto.setCheckboxEmail(entity.getCheckboxEmail());
+        dto.setCheckboxTextMessage(entity.getCheckboxTextMessage());
+        dto.setContactPreference(entity.getContactPreference());
+
+        // Emergency Contact
+        dto.setEmergencyFirstName(entity.getEmergencyFirstName());
+        dto.setEmergencyMiddleName(entity.getEmergencyMiddleName());
+        dto.setEmergencyLastName(entity.getEmergencyLastName());
+        dto.setEmergencyPhone(entity.getEmergencyPhone());
+        dto.setEmergencyRelationToPatient(entity.getEmergencyRelationToPatient());
+        dto.setEmergencyAddress1(entity.getEmergencyAddress1());
+        dto.setEmergencyAddress2(entity.getEmergencyAddress2());
+        dto.setEmergencyCity(entity.getEmergencyCity());
+        dto.setEmergencyState(entity.getEmergencyState());
+        dto.setEmergencyZip(entity.getEmergencyZip());
+
+        // Caregiver
+        dto.setCaregiverFirstName(entity.getCaregiverFirstName());
+        dto.setCaregiverMiddleName(entity.getCaregiverMiddleName());
+        dto.setCaregiverLastName(entity.getCaregiverLastName());
+        dto.setCaregiverRelationShip(entity.getCaregiverRelationShip());
+        dto.setCaregiverPhone(entity.getCaregiverPhone());
+        dto.setCaregiverAddress1(entity.getCaregiverAddress1());
+        dto.setCaregiverAddress2(entity.getCaregiverAddress2());
+        dto.setCaregiverCity(entity.getCaregiverCity());
+        dto.setCaregiverState(entity.getCaregiverState());
+        dto.setCaregiverZip(entity.getCaregiverZip());
+        dto.setCaregiverIsNext(entity.getCaregiverIsNext());
+        dto.setCaregiverComment(entity.getCaregiverComment());
+
+        // Guardian
+        dto.setGuardianFirstName(entity.getGuardianFirstName());
+        dto.setGuardianMiddleName(entity.getGuardianMiddleName());
+        dto.setGuardianLastName(entity.getGuardianLastName());
+        dto.setGuardianRelationship(entity.getGuardianRelationship());
+        dto.setGuardianPhone(entity.getGuardianPhone());
+        dto.setGuardianAddress1(entity.getGuardianAddress1());
+        dto.setGuardianAddress2(entity.getGuardianAddress2());
+        dto.setGuardianCity(entity.getGuardianCity());
+        dto.setGuardianState(entity.getGuardianState());
+        dto.setGuardianZip(entity.getGuardianZip());
+        dto.setGuardianIsNext(entity.getGuardianIsNext());
+        dto.setGuardianComment(entity.getGuardianComment());
+
+        dto.setCompleteRegistration(entity.getCompleteRegistration());
+
+        // Health Care
+        dto.setHealthCareFirstName(entity.getHealthCareFirstName());
+        dto.setHealthCareMiddleName(entity.getHealthCareMiddleName());
+        dto.setHealthCareLastName(entity.getHealthCareLastName());
+        dto.setHealthCareRelationship(entity.getHealthCareRelationship());
+        dto.setHealthCarePhone(entity.getHealthCarePhone());
+        dto.setHealthCareAddress1(entity.getHealthCareAddress1());
+        dto.setHealthCareAddress2(entity.getHealthCareAddress2());
+        dto.setHealthCareCity(entity.getHealthCareCity());
+        dto.setHealthCareState(entity.getHealthCareState());
+        dto.setHealthCareZip(entity.getHealthCareZip());
+        dto.setHealthCareIsNext(entity.getHealthCareIsNext());
+        dto.setHealthCareComment(entity.getHealthCareComment());
+
 
         if (currentUser != null) {
             // Auditing fields
@@ -151,58 +192,30 @@ public class PatientInfoConverter {
         PatientInfoEntity entity = new PatientInfoEntity();
 
         entity.setId(dto.getId());
-        entity.setFirstName(dto.getFirstName());
-        entity.setMiddleName(dto.getMiddleName());
-        entity.setLastName(dto.getLastName());
-        entity.setSuffix(dto.getSuffix());
-        entity.setPreviousFirstName(dto.getPreviousFirstName());
-        entity.setDob(dto.getDob());
-        entity.setSex(dto.getSex());
-        entity.setSexualOrientation(dto.getSexualOrientation());
-        entity.setGenderIdentity(dto.getGenderIdentity());
-        entity.setRace(dto.getRace());
-        entity.setEthnicity(dto.getEthnicity());
-        entity.setLanguage(dto.getLanguage());
-        entity.setCountry(dto.getCountry());
-        entity.setSsn(dto.getSsn());
-        entity.setMaritalStatus(dto.getMaritalStatus());
-        entity.setMultipleBirth(dto.getMultipleBirth());
-        entity.setBirthOrder(dto.getBirthOrder());
-        entity.setMothersMaidenName(dto.getMothersMaidenName());
-        entity.setResidentOfPractice(dto.getResidentOfPractice());
+        entity.setPatientFirstName(dto.getPatientFirstName());
+        entity.setPatientMiddleName(dto.getPatientMiddleName());
+        entity.setPatientLastName(dto.getPatientLastName());
+        entity.setPatientSuffix(dto.getPatientSuffix());
+        entity.setPatientPreviousFirstName(dto.getPatientPreviousFirstName());
+        entity.setPatientPreviousLastName(dto.getPatientPreviousLastName());
+        entity.setPatientDob(dto.getPatientDob());
+        entity.setPatientSex(dto.getPatientSex());
+        entity.setPatientSexualOrientation(dto.getPatientSexualOrientation());
+        entity.setPatientGenderIdentity(dto.getPatientGenderIdentity());
+        entity.setPatientRace(dto.getPatientRace());
+        entity.setPatientEthnicity(dto.getPatientEthnicity());
+        entity.setPatientLanguage(dto.getPatientLanguage());
+        entity.setPatientCountry(dto.getPatientCountry());
+        entity.setPatientSsn(dto.getPatientSsn());
+        entity.setPatientAddress1(dto.getPatientAddress1());
+        entity.setPatientAddress2(dto.getPatientAddress2());
+        entity.setPatientCity(dto.getPatientCity());
+        entity.setPatientState(dto.getPatientState());
+        entity.setPatientZip(dto.getPatientZip());
+        entity.setPatientMaritalStatus(dto.getPatientMaritalStatus());
+        entity.setPatientPregnant(dto.getPatientPregnant());
 
-        entity.setHomePhone(dto.getHomePhone());
-        entity.setWorkPhone(dto.getWorkPhone());
-        entity.setWorkPhoneExt(dto.getWorkPhoneExt());
-        entity.setCellPhone(dto.getCellPhone());
-        entity.setEmail(dto.getEmail());
-        entity.setContactPreference(dto.getContactPreference());
-        entity.setAddress1(dto.getAddress1());
-        entity.setAddress2(dto.getAddress2());
-        entity.setCity(dto.getCity());
-        entity.setState(dto.getState());
-        entity.setZip(dto.getZip());
-
-        entity.setEmergencyFirstName(dto.getEmergencyFirstName());
-        entity.setEmergencyMiddleName(dto.getEmergencyMiddleName());
-        entity.setEmergencyLastName(dto.getEmergencyLastName());
-        entity.setEmergencySuffix(dto.getEmergencySuffix());
-        entity.setEmergencyPhone(dto.getEmergencyPhone());
-        entity.setEmergencyRelationship(dto.getEmergencyRelationship());
-
-        entity.setCaregiverFirstName(dto.getCaregiverFirstName());
-        entity.setCaregiverMiddleName(dto.getCaregiverMiddleName());
-        entity.setCaregiverLastName(dto.getCaregiverLastName());
-        entity.setCaregiverSuffix(dto.getCaregiverSuffix());
-        entity.setCaregiverPhone(dto.getCaregiverPhone());
-        entity.setCaregiverRelationship(dto.getCaregiverRelationship());
-        entity.setCaregiverAddress1(dto.getCaregiverAddress1());
-        entity.setCaregiverAddress2(dto.getCaregiverAddress2());
-        entity.setCaregiverCity(dto.getCaregiverCity());
-        entity.setCaregiverState(dto.getCaregiverState());
-        entity.setCaregiverZip(dto.getCaregiverZip());
-        entity.setCaregiverComment(dto.getCaregiverComment());
-
+        // Employment Info
         entity.setEmploymentStatus(dto.getEmploymentStatus());
         entity.setEmployerName(dto.getEmployerName());
         entity.setEmployerPhone(dto.getEmployerPhone());
@@ -211,24 +224,93 @@ public class PatientInfoConverter {
         entity.setEmployerCity(dto.getEmployerCity());
         entity.setEmployerState(dto.getEmployerState());
         entity.setEmployerZip(dto.getEmployerZip());
+        entity.setOccupation(dto.getOccupation());
+        entity.setMultipleBirth(dto.getMultipleBirth());
+        entity.setBirthOrder(dto.getBirthOrder());
+        entity.setMothersMaidenName(dto.getMothersMaidenName());
 
+        // Previous Address
+        entity.setPreviousAddress1(dto.getPreviousAddress1());
+        entity.setPreviousAddress2(dto.getPreviousAddress2());
+        entity.setPreviouscity(dto.getPreviouscity());
+        entity.setPreviousstate(dto.getPreviousstate());
+        entity.setPreviouszip(dto.getPreviouszip());
+
+        // Account Info
         entity.setChartNo(dto.getChartNo());
         entity.setDateRegistered(dto.getDateRegistered());
         entity.setAccountType(dto.getAccountType());
-        entity.setDateOfFirstOccurrence(dto.getDateOfFirstOccurrence());
         entity.setAccountStatus(dto.getAccountStatus());
         entity.setAccountSecondaryStatus(dto.getAccountSecondaryStatus());
+        entity.setAccountSignature(dto.getAccountSignature());
+        entity.setAccountBalanceBilling(dto.getAccountBalanceBilling());
 
-        entity.setReferralFirstName(dto.getReferralFirstName());
-        entity.setReferralMiddleName(dto.getReferralMiddleName());
-        entity.setReferralPhone(dto.getReferralPhone());
-        entity.setReferralRelationship(dto.getReferralRelationship());
-        entity.setReferralAddress1(dto.getReferralAddress1());
-        entity.setReferralAddress2(dto.getReferralAddress2());
-        entity.setReferralCity(dto.getReferralCity());
-        entity.setReferralState(dto.getReferralState());
-        entity.setReferralZip(dto.getReferralZip());
-        entity.setReferralComment(dto.getReferralComment());
+        // Contact Info
+        entity.setHomePhone(dto.getHomePhone());
+        entity.setWorkPhone(dto.getWorkPhone());
+        entity.setWorkPhoneExt(dto.getWorkPhoneExt());
+        entity.setCellPhone(dto.getCellPhone());
+        entity.setEmail(dto.getEmail());
+        entity.setCheckboxEmail(dto.getCheckboxEmail());
+        entity.setCheckboxTextMessage(dto.getCheckboxTextMessage());
+        entity.setContactPreference(dto.getContactPreference());
+
+        // Emergency Contact
+        entity.setEmergencyFirstName(dto.getEmergencyFirstName());
+        entity.setEmergencyMiddleName(dto.getEmergencyMiddleName());
+        entity.setEmergencyLastName(dto.getEmergencyLastName());
+        entity.setEmergencyPhone(dto.getEmergencyPhone());
+        entity.setEmergencyRelationToPatient(dto.getEmergencyRelationToPatient());
+        entity.setEmergencyAddress1(dto.getEmergencyAddress1());
+        entity.setEmergencyAddress2(dto.getEmergencyAddress2());
+        entity.setEmergencyCity(dto.getEmergencyCity());
+        entity.setEmergencyState(dto.getEmergencyState());
+        entity.setEmergencyZip(dto.getEmergencyZip());
+
+        // Caregiver
+        entity.setCaregiverFirstName(dto.getCaregiverFirstName());
+        entity.setCaregiverMiddleName(dto.getCaregiverMiddleName());
+        entity.setCaregiverLastName(dto.getCaregiverLastName());
+        entity.setCaregiverRelationShip(dto.getCaregiverRelationShip());
+        entity.setCaregiverPhone(dto.getCaregiverPhone());
+        entity.setCaregiverAddress1(dto.getCaregiverAddress1());
+        entity.setCaregiverAddress2(dto.getCaregiverAddress2());
+        entity.setCaregiverCity(dto.getCaregiverCity());
+        entity.setCaregiverState(dto.getCaregiverState());
+        entity.setCaregiverZip(dto.getCaregiverZip());
+        entity.setCaregiverIsNext(dto.getCaregiverIsNext());
+        entity.setCaregiverComment(dto.getCaregiverComment());
+
+        // Guardian
+        entity.setGuardianFirstName(dto.getGuardianFirstName());
+        entity.setGuardianMiddleName(dto.getGuardianMiddleName());
+        entity.setGuardianLastName(dto.getGuardianLastName());
+        entity.setGuardianRelationship(dto.getGuardianRelationship());
+        entity.setGuardianPhone(dto.getGuardianPhone());
+        entity.setGuardianAddress1(dto.getGuardianAddress1());
+        entity.setGuardianAddress2(dto.getGuardianAddress2());
+        entity.setGuardianCity(dto.getGuardianCity());
+        entity.setGuardianState(dto.getGuardianState());
+        entity.setGuardianZip(dto.getGuardianZip());
+        entity.setGuardianIsNext(dto.getGuardianIsNext());
+        entity.setGuardianComment(dto.getGuardianComment());
+
+        entity.setCompleteRegistration(dto.getCompleteRegistration());
+
+        // Health Care
+        entity.setHealthCareFirstName(dto.getHealthCareFirstName());
+        entity.setHealthCareMiddleName(dto.getHealthCareMiddleName());
+        entity.setHealthCareLastName(dto.getHealthCareLastName());
+        entity.setHealthCareRelationship(dto.getHealthCareRelationship());
+        entity.setHealthCarePhone(dto.getHealthCarePhone());
+        entity.setHealthCareAddress1(dto.getHealthCareAddress1());
+        entity.setHealthCareAddress2(dto.getHealthCareAddress2());
+        entity.setHealthCareCity(dto.getHealthCareCity());
+        entity.setHealthCareState(dto.getHealthCareState());
+        entity.setHealthCareZip(dto.getHealthCareZip());
+        entity.setHealthCareIsNext(dto.getHealthCareIsNext());
+        entity.setHealthCareComment(dto.getHealthCareComment());
+
 
         entity.setCreatedBy(currentUser.getUserId().toString());
         entity.setCreatedOn(new Date());

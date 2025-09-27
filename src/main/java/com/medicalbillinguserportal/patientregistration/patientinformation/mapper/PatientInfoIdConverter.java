@@ -10,10 +10,10 @@ public class PatientInfoIdConverter {
     {
         PatientInfoIdDto dto=new PatientInfoIdDto();
         dto.setId(entity.getId());
-        dto.setFirstName(entity.getFirstName());
-        dto.setMiddleName(entity.getMiddleName());
-        dto.setLastName(entity.getLastName());
-        dto.setAddress1(entity.getAddress1());
+        dto.setPatientFirstName(entity.getPatientFirstName());
+        dto.setPatientMiddleName(entity.getPatientMiddleName());
+        dto.setPatientLastName(entity.getPatientLastName());
+        dto.setPatientAddress1(entity.getPatientAddress1());
         dto.setCellPhone(entity.getCellPhone());
         dto.setEmail(entity.getEmail());
         return dto;
@@ -22,10 +22,10 @@ public class PatientInfoIdConverter {
     {
         PatientInfoEntity entity =new PatientInfoEntity();
         entity.setId(dto.getId());
-        entity.setFirstName(dto.getFirstName());
-        entity.setMiddleName(dto.getMiddleName());
-        entity.setLastName(dto.getLastName());
-        entity.setAddress1(dto.getAddress1());
+        entity.setPatientFirstName(dto.getPatientFirstName());
+        entity.setPatientMiddleName(dto.getPatientMiddleName());
+        entity.setPatientLastName(dto.getPatientLastName());
+        entity.setPatientAddress1(dto.getPatientAddress1());
         entity.setCellPhone(dto.getCellPhone());
         entity.setEmail(dto.getEmail());
         return entity;

@@ -20,17 +20,23 @@ public class PatientAssociationEntity extends BaseEntity {
     private Long id;
 
     // Referring Provider Information
-    private String referringProvider;
-    private String priorAuthorization;
-    private String otherReferralSource;
+    private String associationProvider;
+    private String associationReferringProvider;
+    private String associationPriorAuthorization;
+    private String associationOtherReferralSource;
 
     // PCP Information
-    private String defaultPCP;
+    private String patientOutsidePCP;
     private LocalDate lastSeenByPCP;
 
-    // Default Pharmacy Information
-    private String defaultPharmacy;
-    private String pharmacyPhoneNumber;
+//New Association
+    private String associationFirstName;
+    private String associationLastName;
+    private String associationRole;
+    private String associationEmail;
+    private String associationPhone;
+    private String associationExt;
+    private String associationFax;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_info_id")

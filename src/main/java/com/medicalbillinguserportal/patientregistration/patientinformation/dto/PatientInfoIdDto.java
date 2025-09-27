@@ -7,8 +7,8 @@ public class PatientInfoIdDto {
     private Long id;
     private String cellPhone;
     private String email;
-    private String firstName;
-    private String address1;
-    private String middleName;
-    private String lastName;
+    private String patientFirstName;
+    private String patientAddress1;
+    private String patientMiddleName;
+    private String patientLastName;
 }

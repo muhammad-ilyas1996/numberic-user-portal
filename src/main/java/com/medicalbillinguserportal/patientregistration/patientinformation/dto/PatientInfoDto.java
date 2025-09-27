@@ -21,60 +21,28 @@ public class PatientInfoDto {
     private Long id;
 
     // Patient Identification
-    private String firstName;
-    private String middleName;
-    private String lastName;
-    private String suffix;
-    private String previousFirstName;
-    private LocalDate dob;
-    private String sex;
-    private String sexualOrientation;
-    private String genderIdentity;
-    private String race;
-    private String ethnicity;
-    private String language;
-    private String country;
-    private String ssn;
-    private String maritalStatus;
-    private Boolean multipleBirth;
-    private Integer birthOrder;
-    private String mothersMaidenName;
-    private Boolean residentOfPractice;
-
-    // Contact Info
-    private String homePhone;
-    private String workPhone;
-    private String workPhoneExt;
-    private String cellPhone;
-    private String email;
-    private String contactPreference;
-    private String address1;
-    private String address2;
-    private String city;
-    private String state;
-    private String zip;
-
-    // Emergency Contact
-    private String emergencyFirstName;
-    private String emergencyMiddleName;
-    private String emergencyLastName;
-    private String emergencySuffix;
-    private String emergencyPhone;
-    private String emergencyRelationship;
-
-    // Caregiver
-    private String caregiverFirstName;
-    private String caregiverMiddleName;
-    private String caregiverLastName;
-    private String caregiverSuffix;
-    private String caregiverPhone;
-    private String caregiverRelationship;
-    private String caregiverAddress1;
-    private String caregiverAddress2;
-    private String caregiverCity;
-    private String caregiverState;
-    private String caregiverZip;
-    private String caregiverComment;
+    private String patientFirstName;
+    private String patientMiddleName;
+    private String patientLastName;
+    private String patientSuffix;
+    private String patientPreviousFirstName;
+    private String patientPreviousLastName;
+    private LocalDate patientDob;
+    private String patientSex;
+    private String patientSexualOrientation;
+    private String patientGenderIdentity;
+    private String patientRace;
+    private String patientEthnicity;
+    private String patientLanguage;
+    private String patientCountry;
+    private String patientSsn;
+    private String patientAddress1;
+    private String patientAddress2;
+    private String patientCity;
+    private String patientState;
+    private String patientZip;
+    private String patientMaritalStatus;
+    private String patientPregnant;
 
     // Employment Info
     private String employmentStatus;
@@ -85,26 +53,92 @@ public class PatientInfoDto {
     private String employerCity;
     private String employerState;
     private String employerZip;
+    private String occupation;
+    private Boolean multipleBirth;
+    private Integer birthOrder;
+    private String mothersMaidenName;
+
+    // Previous Address
+    private String previousAddress1;
+    private String previousAddress2;
+    private String previouscity;
+    private String previousstate;
+    private String previouszip;
 
     // Account Info
     private String chartNo;
     private LocalDate dateRegistered;
     private String accountType;
-    private LocalDate dateOfFirstOccurrence;
     private String accountStatus;
     private String accountSecondaryStatus;
+    private String accountSignature;
+    private String accountBalanceBilling;
 
-    // Referral Info
-    private String referralFirstName;
-    private String referralMiddleName;
-    private String referralPhone;
-    private String referralRelationship;
-    private String referralAddress1;
-    private String referralAddress2;
-    private String referralCity;
-    private String referralState;
-    private String referralZip;
-    private String referralComment;
+    // Patient Contact Info
+    private String homePhone;
+    private String workPhone;
+    private String workPhoneExt;
+    private String cellPhone;
+    private String email;
+    private String checkboxEmail;
+    private String checkboxTextMessage;
+    private String contactPreference;
+
+    // Emergency Contact
+    private String emergencyFirstName;
+    private String emergencyMiddleName;
+    private String emergencyLastName;
+    private String emergencyPhone;
+    private String emergencyRelationToPatient;
+    private String emergencyAddress1;
+    private String emergencyAddress2;
+    private String emergencyCity;
+    private String emergencyState;
+    private String emergencyZip;
+
+    // Caregiver
+    private String caregiverFirstName;
+    private String caregiverMiddleName;
+    private String caregiverLastName;
+    private String caregiverRelationShip;
+    private String caregiverPhone;
+    private String caregiverAddress1;
+    private String caregiverAddress2;
+    private String caregiverCity;
+    private String caregiverState;
+    private String caregiverZip;
+    private String caregiverIsNext;
+    private String caregiverComment;
+
+    // Legal Guardian
+    private String guardianFirstName;
+    private String guardianMiddleName;
+    private String guardianLastName;
+    private String guardianRelationship;
+    private String guardianPhone;
+    private String guardianAddress1;
+    private String guardianAddress2;
+    private String guardianCity;
+    private String guardianState;
+    private String guardianZip;
+    private String guardianIsNext;
+    private String guardianComment;
+
+    private Boolean completeRegistration = false;
+
+    // HealthCare
+    private String healthCareFirstName;
+    private String healthCareMiddleName;
+    private String healthCareLastName;
+    private String healthCareRelationship;
+    private String healthCarePhone;
+    private String healthCareAddress1;
+    private String healthCareAddress2;
+    private String healthCareCity;
+    private String healthCareState;
+    private String healthCareZip;
+    private String healthCareIsNext;
+    private String healthCareComment;
 
     //Base Entity
     private Date createdOn;

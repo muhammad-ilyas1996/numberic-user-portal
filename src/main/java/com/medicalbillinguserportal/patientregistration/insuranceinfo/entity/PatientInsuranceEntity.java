@@ -32,9 +32,12 @@ public class PatientInsuranceEntity extends BaseEntity {
     private String planName;
     private String groupNo;
     private String insuranceTypeCode;
+    private String insurancesID;
     private String coPay;
     private String coIns;
     private String acceptAssignment;
+
+    //Insurance Info
     private String patientRelationship;
     private String insuredFirstName;
     private String middleName;
@@ -43,12 +46,6 @@ public class PatientInsuranceEntity extends BaseEntity {
     private String insuredSex;
     private String country;
     private String address1;
-    private String planName1;
-    private String groupNo1;
-    private String insuranceTypeCode1;
-    private String coPay1;
-    private String coIns1;
-    private String acceptAssignment1;
     private String address2;
     private String city;
     private String state;
