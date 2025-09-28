@@ -1,4 +1,4 @@
-package com.medicalbillinguserportal.patientregistration.patientinformation.respository;
+package com.medicalbillinguserportal.patientregistration.patientinformation.repository;
 
 import com.medicalbillinguserportal.patientregistration.patientinformation.entity.PatientInfoEntity;
 import org.springframework.data.jpa.repository.JpaRepository;

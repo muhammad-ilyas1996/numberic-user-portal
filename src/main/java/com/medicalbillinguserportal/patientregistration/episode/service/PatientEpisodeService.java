@@ -10,7 +10,7 @@ import com.medicalbillinguserportal.patientregistration.episode.mapper.PatientEp
 import com.medicalbillinguserportal.patientregistration.episode.repo.PatientEpisodeRepo;
 import com.medicalbillinguserportal.patientregistration.insuranceinfo.dto.PatientInsuranceDto;
 import com.medicalbillinguserportal.patientregistration.patientinformation.entity.PatientInfoEntity;
-import com.medicalbillinguserportal.patientregistration.patientinformation.respository.PatientInfoRepository;
+import com.medicalbillinguserportal.patientregistration.patientinformation.repository.PatientInfoRepository;
 import com.medicalbillinguserportal.usermanagement.domain.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;

@@ -10,7 +10,9 @@ import com.medicalbillinguserportal.patientregistration.association.mapper.Patie
 import com.medicalbillinguserportal.patientregistration.association.repository.PatientAssociationRepo;
 import com.medicalbillinguserportal.patientregistration.association.service.PatientAssociationService;
 import com.medicalbillinguserportal.patientregistration.patientinformation.entity.PatientInfoEntity;
+import com.medicalbillinguserportal.patientregistration.patientinformation.repository.PatientInfoRepository;
 import com.medicalbillinguserportal.usermanagement.domain.User;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,17 +27,19 @@ public class PatientAssociationImpl implements PatientAssociationService {
     private DateValidation dateValidation;
     @Autowired
     public PatientAssociationRepo patientAssociationRepo;
+
     @Autowired
-    private com.medicalbillinguserportal.patientregistration.patientinformation.respository.PatientInfoRepository patientInfoRepository;
+    private PatientInfoRepository patientInfoRepository;
 
-    public PatientAssociationDto savePatientAssociation(PatientAssociationDto dto, User currentUser)
-    {
-        PatientInfoEntity patientInfoEntity=patientInfoRepository.findById(dto.getPatientId())
-                .orElseThrow(()->new RuntimeException("Patient Id Not Found"));
 
-        PatientAssociationEntity patientAssociationEntity = PatientAssociationConverter.toEntity(dto,patientInfoEntity,currentUser);
-        PatientAssociationDto patientAssociationDto=PatientAssociationConverter.toDTO(patientAssociationRepo.save(patientAssociationEntity));
-        return patientAssociationDto;
+    @Override
+    @Transactional
+    public PatientAssociationDto saveAssociation(PatientAssociationDto dto, User currentUser) {
+            PatientInfoEntity patientInfo = patientInfoRepository.findById(dto.getPatientId())
+                    .orElseThrow(() -> new RuntimeException("Patient not found"));
+            PatientAssociationEntity entity = PatientAssociationConverter.toEntity(dto, patientInfo, currentUser);
+            PatientAssociationEntity saved = patientAssociationRepo.save(entity);
+            return PatientAssociationConverter.toDTO(saved);
     }
     @Override
     public Page<PatientAssociationDto> searchPatientAssociation(PatientSearch request) {

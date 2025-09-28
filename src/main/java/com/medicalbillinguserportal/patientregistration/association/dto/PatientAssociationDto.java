@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -21,14 +22,9 @@ public class PatientAssociationDto {
     private String patientOutsidePCP;
     private LocalDate lastSeenByPCP;
 
-    // New Association
-    private String associationFirstName;
-    private String associationLastName;
-    private String associationRole;
-    private String associationEmail;
-    private String associationPhone;
-    private String associationExt;
-    private String associationFax;
+
 
     private Long patientId;
+
+    private List<PatientOtherAssociationDto> patientOtherAssociationDto;
 }

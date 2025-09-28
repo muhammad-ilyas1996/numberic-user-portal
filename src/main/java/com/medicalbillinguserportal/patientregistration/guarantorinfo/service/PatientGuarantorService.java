@@ -9,7 +9,7 @@ import com.medicalbillinguserportal.patientregistration.guarantorinfo.entity.Pat
 import com.medicalbillinguserportal.patientregistration.guarantorinfo.mapper.PatientGuarantorConverter;
 import com.medicalbillinguserportal.patientregistration.guarantorinfo.repository.PatientGuarantorRepo;
 import com.medicalbillinguserportal.patientregistration.patientinformation.entity.PatientInfoEntity;
-import com.medicalbillinguserportal.patientregistration.patientinformation.respository.PatientInfoRepository;
+import com.medicalbillinguserportal.patientregistration.patientinformation.repository.PatientInfoRepository;
 import com.medicalbillinguserportal.usermanagement.domain.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

@@ -10,7 +10,7 @@ import com.medicalbillinguserportal.patientregistration.insuranceinfo.mapper.Pat
 import com.medicalbillinguserportal.patientregistration.insuranceinfo.service.PatientInsuranceService;
 import com.medicalbillinguserportal.patientregistration.patientinformation.entity.PatientInfoEntity;
 import com.medicalbillinguserportal.patientregistration.insuranceinfo.repo.PatientInsuranceRepo;
-import com.medicalbillinguserportal.patientregistration.patientinformation.respository.PatientInfoRepository;
+import com.medicalbillinguserportal.patientregistration.patientinformation.repository.PatientInfoRepository;
 import com.medicalbillinguserportal.usermanagement.domain.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -36,7 +36,6 @@ public class PatientInsuranceImpl implements PatientInsuranceService {
         PatientInsuranceEntity patientInsuranceEntity= PatientInsuranceConverter.toEntity(dto,patientInfoEntity,currentUser);
         PatientInsuranceDto patientInsuranceDto=PatientInsuranceConverter.toDto(patientInsuranceRepo.save(patientInsuranceEntity));
         return patientInsuranceDto;
-
     }
 
     @Override

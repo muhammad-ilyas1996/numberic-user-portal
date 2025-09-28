@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "patient_association")
@@ -30,13 +32,8 @@ public class PatientAssociationEntity extends BaseEntity {
     private LocalDate lastSeenByPCP;
 
 //New Association
-    private String associationFirstName;
-    private String associationLastName;
-    private String associationRole;
-    private String associationEmail;
-    private String associationPhone;
-    private String associationExt;
-    private String associationFax;
+    @OneToMany(mappedBy = "patientAssociation", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PatientOtherAssociationEntity> patientOtherAssociation = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_info_id")

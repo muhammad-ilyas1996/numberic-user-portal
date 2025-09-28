@@ -4,7 +4,7 @@ import com.medicalbillinguserportal.patientregistration.message.entity.PatientMe
 import com.medicalbillinguserportal.patientregistration.message.mapper.PatientMessageConverter;
 import com.medicalbillinguserportal.patientregistration.message.repo.PatientMessageRepo;
 import com.medicalbillinguserportal.patientregistration.patientinformation.entity.PatientInfoEntity;
-import com.medicalbillinguserportal.patientregistration.patientinformation.respository.PatientInfoRepository;
+import com.medicalbillinguserportal.patientregistration.patientinformation.repository.PatientInfoRepository;
 import com.medicalbillinguserportal.usermanagement.domain.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

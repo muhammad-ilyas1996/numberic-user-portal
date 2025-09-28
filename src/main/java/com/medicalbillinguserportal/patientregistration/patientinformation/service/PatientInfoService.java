@@ -7,7 +7,7 @@ import com.medicalbillinguserportal.patientregistration.patientinformation.dto.s
 import com.medicalbillinguserportal.patientregistration.patientinformation.entity.PatientInfoEntity;
 import com.medicalbillinguserportal.patientregistration.patientinformation.mapper.PatientInfoConverter;
 import com.medicalbillinguserportal.patientregistration.patientinformation.mapper.PatientInfoIdConverter;
-import com.medicalbillinguserportal.patientregistration.patientinformation.respository.PatientInfoRepository;
+import com.medicalbillinguserportal.patientregistration.patientinformation.repository.PatientInfoRepository;
 //import com.medicalbillinguserportal.provider.dto.request.ProviderSearch;
 //import com.medicalbillinguserportal.provider.entity.ProviderEntity;
 import com.medicalbillinguserportal.commonpersistence.dto.SearchDate;

@@ -11,7 +11,7 @@ import com.medicalbillinguserportal.patientregistration.episode.repo.PatientEpis
 import com.medicalbillinguserportal.patientregistration.episode.service.PatientEpisodeService;
 import com.medicalbillinguserportal.patientregistration.patientinformation.entity.PatientInfoEntity;
 import com.medicalbillinguserportal.usermanagement.domain.User;
-import com.medicalbillinguserportal.patientregistration.patientinformation.respository.PatientInfoRepository;
+import com.medicalbillinguserportal.patientregistration.patientinformation.repository.PatientInfoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

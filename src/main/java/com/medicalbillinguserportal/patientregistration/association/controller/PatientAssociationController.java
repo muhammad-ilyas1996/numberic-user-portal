@@ -23,7 +23,7 @@ public class PatientAssociationController {
     @PostMapping("/create")
     public ResponseEntity<PatientAssociationDto> savePatientAssociation(@RequestBody PatientAssociationDto patientAssociationDto, @AuthenticationPrincipal User currentUser)
     {
-        return ResponseEntity.ok(patientAssociationService.savePatientAssociation(patientAssociationDto,currentUser));
+        return ResponseEntity.ok(patientAssociationService.saveAssociation(patientAssociationDto,currentUser));
     }
     @PostMapping("/list")
     //  @PreAuthorize("hasAuthority('VIEW_PATIENT')")
