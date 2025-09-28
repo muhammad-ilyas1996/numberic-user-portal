@@ -23,7 +23,7 @@ public class PatientAssociationConverter {
         dto.setAssociationOtherReferralSource(entity.getAssociationOtherReferralSource());
         dto.setPatientOutsidePCP(entity.getPatientOutsidePCP());
         dto.setLastSeenByPCP(entity.getLastSeenByPCP());
-
+        dto.setPatientDefaultPharmacy(entity.getPatientDefaultPharmacy());
         // patientId mapping
         dto.setPatientId(entity.getPatientInfoEntity() != null ? entity.getPatientInfoEntity().getId() : null);
 
@@ -50,7 +50,7 @@ public class PatientAssociationConverter {
         entity.setAssociationOtherReferralSource(dto.getAssociationOtherReferralSource());
         entity.setPatientOutsidePCP(dto.getPatientOutsidePCP());
         entity.setLastSeenByPCP(dto.getLastSeenByPCP());
-
+        entity.setPatientDefaultPharmacy(dto.getPatientDefaultPharmacy());
         entity.setPatientInfoEntity(patientInfoEntity);
 
         // map child list

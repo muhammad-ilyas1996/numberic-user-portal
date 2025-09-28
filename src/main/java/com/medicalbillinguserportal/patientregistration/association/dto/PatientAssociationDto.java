@@ -21,7 +21,7 @@ public class PatientAssociationDto {
     // PCP Information
     private String patientOutsidePCP;
     private LocalDate lastSeenByPCP;
-
+    private String patientDefaultPharmacy;
 
 
     private Long patientId;

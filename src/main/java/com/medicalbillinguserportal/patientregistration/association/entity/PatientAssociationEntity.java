@@ -30,6 +30,7 @@ public class PatientAssociationEntity extends BaseEntity {
     // PCP Information
     private String patientOutsidePCP;
     private LocalDate lastSeenByPCP;
+    private String patientDefaultPharmacy;
 
 //New Association
     @OneToMany(mappedBy = "patientAssociation", cascade = CascadeType.ALL, orphanRemoval = true)
