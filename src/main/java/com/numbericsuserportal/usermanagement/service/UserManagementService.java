@@ -37,7 +37,7 @@ public class UserManagementService {
     
     // Create new user with role and permissions
     @Transactional
-    public UserWithPermissionsDto createUser(UserCreateDto userCreateDto, String portalType, Long createdBy) {
+    public UserWithPermissionsDto createUser(UserCreateDto userCreateDto, Long createdBy) {
         // Check if user already exists
         if (userRepository.existsByUsername(userCreateDto.getUsername()) || 
             userRepository.existsByEmail(userCreateDto.getEmail())) {
@@ -69,7 +69,7 @@ public class UserManagementService {
             assignAdditionalPermissionsToUser(savedUser.getUserId(), userCreateDto.getAdditionalPermissionIds(), createdBy);
         }
         
-        return getUserWithPermissions(savedUser.getUserId(), portalType);
+        return getUserWithPermissions(savedUser.getUserId());
     }
     
     // Assign role to user
@@ -100,7 +100,7 @@ public class UserManagementService {
     }
     
     // Get user with all permissions and available options
-    public UserWithPermissionsDto getUserWithPermissions(Long userId, String portalType) {
+    public UserWithPermissionsDto getUserWithPermissions(Long userId) {
         Optional<User> userOpt = userRepository.findById(userId);
         if (!userOpt.isPresent()) {
             throw new RuntimeException("User not found");
@@ -137,18 +137,17 @@ public class UserManagementService {
                 .map(this::convertPermissionToDto)
                 .collect(Collectors.toList()));
         
-        // Get available roles for this portal
-        Long portalTypeId = Long.valueOf(portalType);
-        PortalType portalTypeEntity = portalTypeRepository.findById(portalTypeId)
-            .orElseThrow(() -> new RuntimeException("Portal type not found"));
+        // Get available roles for NUMBRICS portal
+        PortalType numbricsPortal = portalTypeRepository.findByPortalName(PortalType.NUMBRICS_PORTAL_NAME)
+            .orElseThrow(() -> new RuntimeException("NUMBRICS Portal not found"));
             
-        List<Role> availableRoles = roleRepository.findByPortalTypeAndIsActiveTrue(portalTypeEntity);
+        List<Role> availableRoles = roleRepository.findByPortalTypeAndIsActiveTrue(numbricsPortal);
         dto.setAvailableRoles(availableRoles.stream()
                 .map(this::convertRoleToDto)
                 .collect(Collectors.toList()));
         
-        // Get available permissions for this portal
-        List<Permission> availablePermissions = permissionRepository.findByPortalTypeAndIsActiveTrue(portalTypeEntity);
+        // Get available permissions for NUMBRICS portal
+        List<Permission> availablePermissions = permissionRepository.findByPortalTypeAndIsActiveTrue(numbricsPortal);
         dto.setAvailablePermissions(availablePermissions.stream()
                 .map(this::convertPermissionToDto)
                 .collect(Collectors.toList()));
@@ -156,11 +155,11 @@ public class UserManagementService {
         return dto;
     }
     
-    // Get all users for a portal
-    public List<UserWithPermissionsDto> getAllUsersForPortal(String portalType) {
+    // Get all users
+    public List<UserWithPermissionsDto> getAllUsers() {
         List<User> users = userRepository.findByIsDeletedFalse();
         return users.stream()
-                .map(user -> getUserWithPermissions(user.getUserId(), portalType))
+                .map(user -> getUserWithPermissions(user.getUserId()))
                 .collect(Collectors.toList());
     }
     
@@ -177,7 +176,7 @@ public class UserManagementService {
             assignAdditionalPermissionsToUser(assignmentDto.getUserId(), assignmentDto.getPermissionIds(), updatedBy);
         }
         
-        return getUserWithPermissions(assignmentDto.getUserId(), assignmentDto.getPortalType());
+        return getUserWithPermissions(assignmentDto.getUserId());
     }
     
     // Helper methods

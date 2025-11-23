@@ -140,10 +140,11 @@ public class User {
     // ============================================
 
     public enum SubscriptionPlan {
-        BASIC(5000L, "Basic Plan - $50"),      // $50
-        PREMIUM(9000L, "Premium Plan - $90");   // $90
+        STARTER(29900L, "Starter Plan - $299/season"),           // $299
+        PROFESSIONAL(59900L, "Professional Plan - $599/season"), // $599
+        ENTERPRISE(129900L, "Enterprise Plan - $1,299/season"); // $1,299
 
-        private final Long amount;
+        private final Long amount; // Amount in cents
         private final String description;
 
         SubscriptionPlan(Long amount, String description) {
@@ -161,6 +162,15 @@ public class User {
 
         public Double getAmountInDollars() {
             return amount / 100.0;
+        }
+        
+        // Helper method to get default role based on plan
+        public String getDefaultRoleCode() {
+            return switch (this) {
+                case STARTER -> "NUMBRICS_BUSINESS_OWNER";
+                case PROFESSIONAL -> "NUMBRICS_ACCOUNTANT_PRO";
+                case ENTERPRISE -> "NUMBRICS_ACCOUNTANT_PRO";
+            };
         }
     }
     public void setSubscriptionPlan(SubscriptionPlan subscriptionPlan) {

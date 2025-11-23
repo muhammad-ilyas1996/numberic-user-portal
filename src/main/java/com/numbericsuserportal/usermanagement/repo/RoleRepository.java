@@ -1,7 +1,7 @@
 package com.numbericsuserportal.usermanagement.repo;
 
-import com.numbericsuserportal.usermanagement.domain.Role;
 import com.numbericsuserportal.usermanagement.domain.PortalType;
+import com.numbericsuserportal.usermanagement.domain.Role;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -27,6 +27,8 @@ public interface RoleRepository extends JpaRepository<Role, Long>, JpaSpecificat
     
     // New methods for Role Management
     boolean existsByCodeName(String codeName);
+    
+    Optional<Role> findByCodeName(String codeName);
     
     Page<Role> findByPortalTypeAndIsActiveTrue(PortalType portalType, Pageable pageable);
     

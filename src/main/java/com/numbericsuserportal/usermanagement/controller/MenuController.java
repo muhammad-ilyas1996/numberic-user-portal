@@ -66,10 +66,10 @@ public class MenuController {
 
 
     @GetMapping("/user")
-    public ResponseEntity<List<MenuDto>> getMenusByUserAndPortal(
+    public ResponseEntity<List<MenuDto>> getMenusByUser(
             @AuthenticationPrincipal User currentUser) {
         try {
-            List<MenuDto> menus = menuService.getMenusByUserAndPortal(currentUser.getUserId(), currentUser.getPortalType().getPortalTypeId());
+            List<MenuDto> menus = menuService.getMenusByUser(currentUser.getUserId());
             return ResponseEntity.ok(menus);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
@@ -78,10 +78,10 @@ public class MenuController {
 
 
     @GetMapping("/user/hierarchy")
-    public ResponseEntity<List<MenuDto>> getHierarchicalMenusByUserAndPortal(
+    public ResponseEntity<List<MenuDto>> getHierarchicalMenusByUser(
             @AuthenticationPrincipal User currentUser) {
         try {
-            List<MenuDto> menus = menuService.getHierarchicalMenusByUserAndPortal(currentUser.getUserId(), currentUser.getPortalType().getPortalTypeId());
+            List<MenuDto> menus = menuService.getHierarchicalMenusByUser(currentUser.getUserId());
             return ResponseEntity.ok(menus);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();

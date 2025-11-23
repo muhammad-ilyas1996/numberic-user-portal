@@ -12,7 +12,7 @@ import java.util.List;
 @RequestMapping("/api/permissions")
 @CrossOrigin(origins = "*")
 public class PermissionController {
-    
+    /*
     @Autowired
     private PermissionService permissionService;
     
@@ -68,5 +68,5 @@ public class PermissionController {
             return ResponseEntity.badRequest().build();
         }
     }
-
+*/
 }

@@ -21,31 +21,31 @@ public class PermissionService {
     @Autowired
     private PortalTypeRepository portalTypeRepository;
     
-    public List<PermissionDto> getActivePermissionsByPortalType(Long portalTypeId) {
-        PortalType portalType = portalTypeRepository.findById(portalTypeId)
-            .orElseThrow(() -> new RuntimeException("Portal type not found"));
+    public List<PermissionDto> getActivePermissions() {
+        PortalType numbricsPortal = portalTypeRepository.findByPortalName(PortalType.NUMBRICS_PORTAL_NAME)
+            .orElseThrow(() -> new RuntimeException("NUMBRICS Portal not found"));
             
-        List<Permission> permissions = permissionRepository.findByPortalTypeAndIsActiveTrue(portalType);
+        List<Permission> permissions = permissionRepository.findByPortalTypeAndIsActiveTrue(numbricsPortal);
         return permissions.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
     
-    public List<PermissionDto> getPermissionsByCategoryAndPortalType(String category, Long portalTypeId) {
-        PortalType portalType = portalTypeRepository.findById(portalTypeId)
-            .orElseThrow(() -> new RuntimeException("Portal type not found"));
+    public List<PermissionDto> getPermissionsByCategory(String category) {
+        PortalType numbricsPortal = portalTypeRepository.findByPortalName(PortalType.NUMBRICS_PORTAL_NAME)
+            .orElseThrow(() -> new RuntimeException("NUMBRICS Portal not found"));
             
-        List<Permission> permissions = permissionRepository.findByPortalTypeAndCategoryAndIsActiveTrue(portalType, category);
+        List<Permission> permissions = permissionRepository.findByPortalTypeAndCategoryAndIsActiveTrue(numbricsPortal, category);
         return permissions.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
     
-    public List<String> getPermissionCategoriesByPortalType(Long portalTypeId) {
-        PortalType portalType = portalTypeRepository.findById(portalTypeId)
-            .orElseThrow(() -> new RuntimeException("Portal type not found"));
+    public List<String> getPermissionCategories() {
+        PortalType numbricsPortal = portalTypeRepository.findByPortalName(PortalType.NUMBRICS_PORTAL_NAME)
+            .orElseThrow(() -> new RuntimeException("NUMBRICS Portal not found"));
             
-        List<Permission> permissions = permissionRepository.findByPortalTypeAndIsActiveTrue(portalType);
+        List<Permission> permissions = permissionRepository.findByPortalTypeAndIsActiveTrue(numbricsPortal);
         return permissions.stream()
                 .map(Permission::getCategory)
                 .distinct()
@@ -86,10 +86,10 @@ public class PermissionService {
         }
     }
     
-    public boolean existsByCodeNameAndPortalType(String codeName, Long portalTypeId) {
-        PortalType portalType = portalTypeRepository.findById(portalTypeId)
-            .orElseThrow(() -> new RuntimeException("Portal type not found"));
-        return permissionRepository.existsByCodeNameAndPortalType(codeName, portalType);
+    public boolean existsByCodeName(String codeName) {
+        PortalType numbricsPortal = portalTypeRepository.findByPortalName(PortalType.NUMBRICS_PORTAL_NAME)
+            .orElseThrow(() -> new RuntimeException("NUMBRICS Portal not found"));
+        return permissionRepository.existsByCodeNameAndPortalType(codeName, numbricsPortal);
     }
     
     private PermissionDto convertToDto(Permission permission) {
@@ -115,12 +115,10 @@ public class PermissionService {
         permission.setCategory(dto.getCategory());
         permission.setDescription(dto.getDescription());
         
-        // Set portal type from ID
-        if (dto.getPortalTypeId() != null) {
-            PortalType portalType = portalTypeRepository.findById(dto.getPortalTypeId())
-                .orElseThrow(() -> new RuntimeException("Portal type not found"));
-            permission.setPortalType(portalType);
-        }
+        // Set NUMBRICS portal type
+        PortalType numbricsPortal = portalTypeRepository.findByPortalName(PortalType.NUMBRICS_PORTAL_NAME)
+            .orElseThrow(() -> new RuntimeException("NUMBRICS Portal not found"));
+        permission.setPortalType(numbricsPortal);
         
         permission.setIsSuperadmin(dto.getIsSuperadmin());
         permission.setIsActive(dto.getIsActive());

@@ -1,10 +1,17 @@
 package com.numbericsuserportal.stripeintegration.controller;
 import com.numbericsuserportal.usermanagement.domain.User;
+import com.numbericsuserportal.usermanagement.domain.Role;
+import com.numbericsuserportal.usermanagement.domain.UserRole;
+import com.numbericsuserportal.usermanagement.domain.UserRoleId;
+import com.numbericsuserportal.usermanagement.repo.UserRepository;
+import com.numbericsuserportal.usermanagement.repo.RoleRepository;
+import com.numbericsuserportal.usermanagement.repo.UserRoleRepository;
 import com.numbericsuserportal.stripeintegration.service.SubscriptionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/subscription")
@@ -13,6 +20,15 @@ public class SubscriptionController {
 
     @Autowired
     private SubscriptionService subscriptionService;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private RoleRepository roleRepository;
+    
+    @Autowired
+    private UserRoleRepository userRoleRepository;
 
     // Get available plans
     @GetMapping("/plans")
@@ -25,6 +41,7 @@ public class SubscriptionController {
             planInfo.put("name", plan.getDescription());
             planInfo.put("amount", plan.getAmountInDollars());
             planInfo.put("currency", "USD");
+            planInfo.put("defaultRole", plan.getDefaultRoleCode());
             plans.add(planInfo);
         }
 
@@ -41,8 +58,12 @@ public class SubscriptionController {
             String planName = request.get("plan");
 
             if (planName == null || planName.isEmpty()) {
+                String validPlans = String.join(", ", 
+                    Arrays.stream(User.SubscriptionPlan.values())
+                        .map(Enum::name)
+                        .toArray(String[]::new));
                 return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Plan is required (BASIC or PREMIUM)"));
+                    .body(Map.of("error", "Plan is required. Valid plans: " + validPlans));
             }
 
             User.SubscriptionPlan plan = User.SubscriptionPlan.valueOf(planName.toUpperCase());
@@ -58,14 +79,19 @@ public class SubscriptionController {
             response.put("amount", user.getSubscriptionPlan().getAmountInDollars());
             response.put("trialEndsAt", user.getPaymentDueDate());
             response.put("status", user.getSubscriptionStatus());
+            response.put("assignedRole", plan.getDefaultRoleCode());
 
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
+            String validPlans = String.join(", ", 
+                Arrays.stream(User.SubscriptionPlan.values())
+                    .map(Enum::name)
+                    .toArray(String[]::new));
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Invalid plan. Use BASIC or PREMIUM"));
+                .body(Map.of("error", "Invalid plan. Valid plans: " + validPlans));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", e.getMessage()));
+                .body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -96,11 +122,11 @@ public class SubscriptionController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "User not found"));
+                .body(Map.of("error", "User not found"));
         }
     }
 
-    // Manual payment trigger (for testing)
+    // Manual payment trigger
     @PostMapping("/process-payment/{userId}")
     public ResponseEntity<?> processPaymentManually(@PathVariable Long userId) {
         try {
@@ -108,13 +134,58 @@ public class SubscriptionController {
             subscriptionService.processTrialEndPayment(userId);
 
             return ResponseEntity.ok(Map.of(
-                    "message", "Payment processed successfully",
-                    "plan", user.getSubscriptionPlan().name(),
-                    "amount", user.getSubscriptionPlan().getAmountInDollars()
+                "message", "Payment processed successfully",
+                "plan", user.getSubscriptionPlan().name(),
+                "amount", user.getSubscriptionPlan().getAmountInDollars()
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", e.getMessage()));
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    // Assign Super Admin role (no subscription plan)
+    @PostMapping("/assign-super-admin/{userId}")
+    public ResponseEntity<?> assignSuperAdmin(@PathVariable Long userId) {
+        try {
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            Role superAdminRole = roleRepository.findByCodeName("NUMBRICS_SUPER_ADMIN")
+                .orElseThrow(() -> new RuntimeException("Super Admin role not found"));
+            
+            // Remove existing roles
+            userRoleRepository.deleteByUserId(userId);
+            
+            // Assign Super Admin role
+            UserRole userRole = new UserRole();
+            UserRoleId userRoleId = new UserRoleId();
+            userRoleId.setUserId(userId);
+            userRoleId.setRoleId(superAdminRole.getRoleId());
+            userRole.setId(userRoleId);
+            userRole.setUser(user);
+            userRole.setRole(superAdminRole);
+            userRole.setIsActive(true);
+            userRole.setCreatedAt(LocalDateTime.now());
+            userRole.setAddedBy(userId);
+            
+            userRoleRepository.save(userRole);
+            
+            // Clear subscription plan for Super Admin
+            user.setSubscriptionPlan(null);
+            user.setSubscriptionAmount(null);
+            user.setStripeCustomerId(null);
+            user.setStripePaymentMethodId(null);
+            userRepository.save(user);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Super Admin role assigned successfully",
+                "userId", userId,
+                "role", "NUMBRICS_SUPER_ADMIN"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", e.getMessage()));
         }
     }
 }

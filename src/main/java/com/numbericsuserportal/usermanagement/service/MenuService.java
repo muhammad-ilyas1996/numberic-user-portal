@@ -146,16 +146,16 @@ public class MenuService {
 
 
     // Add these methods to existing MenuService.java
-    public List<MenuDto> getMenusByUserAndPortal(Long userId, Long portalTypeId) {
+    public List<MenuDto> getMenusByUser(Long userId) {
         try {
             // Get user's permissions
             List<Permission> userPermissions = getUserPermissions(userId);
 
-            // Get all menus for portal
-            PortalType portalType = portalTypeRepository.findById(portalTypeId)
-                    .orElseThrow(() -> new RuntimeException("Portal type not found"));
+            // Get all menus for NUMBRICS portal
+            PortalType numbricsPortal = portalTypeRepository.findByPortalName(PortalType.NUMBRICS_PORTAL_NAME)
+                    .orElseThrow(() -> new RuntimeException("NUMBRICS Portal not found"));
 
-            List<Menu> allMenus = menuRepository.findByPortalTypeAndIsActiveTrueOrderByMenuOrderAsc(portalType);
+            List<Menu> allMenus = menuRepository.findByPortalTypeAndIsActiveTrueOrderByMenuOrderAsc(numbricsPortal);
 
             // Filter menus based on user permissions
             List<Menu> filteredMenus = filterMenusByPermissions(allMenus, userPermissions);
@@ -168,16 +168,16 @@ public class MenuService {
         }
     }
 
-    public List<MenuDto> getHierarchicalMenusByUserAndPortal(Long userId, Long portalTypeId) {
+    public List<MenuDto> getHierarchicalMenusByUser(Long userId) {
         try {
             // Get user's permissions
             List<Permission> userPermissions = getUserPermissions(userId);
 
-            // Get parent menus
-            PortalType portalType = portalTypeRepository.findById(portalTypeId)
-                    .orElseThrow(() -> new RuntimeException("Portal type not found"));
+            // Get parent menus for NUMBRICS portal
+            PortalType numbricsPortal = portalTypeRepository.findByPortalName(PortalType.NUMBRICS_PORTAL_NAME)
+                    .orElseThrow(() -> new RuntimeException("NUMBRICS Portal not found"));
 
-            List<Menu> parentMenus = menuRepository.findByPortalTypeAndParentMenuIdIsNullAndIsActiveTrueOrderByMenuOrderAsc(portalType);
+            List<Menu> parentMenus = menuRepository.findByPortalTypeAndParentMenuIdIsNullAndIsActiveTrueOrderByMenuOrderAsc(numbricsPortal);
 
             // Filter parent menus based on permissions
             List<Menu> filteredParentMenus = filterMenusByPermissions(parentMenus, userPermissions);

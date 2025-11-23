@@ -47,8 +47,10 @@ public class RoleService {
         role.setCodeName(dto.getRoleName());
         role.setDisplayName(dto.getDisplayName());
         role.setDescription(dto.getDescription());
-        role.setPortalType(portalTypeRepository.findById(dto.getPortalTypeId())
-            .orElseThrow(() -> new RuntimeException("Portal type not found")));
+        // Set NUMBRICS portal type
+        PortalType numbricsPortal = portalTypeRepository.findByPortalName(PortalType.NUMBRICS_PORTAL_NAME)
+            .orElseThrow(() -> new RuntimeException("NUMBRICS Portal not found"));
+        role.setPortalType(numbricsPortal);
         role.setIsSuperadmin(dto.getIsSuperadmin());
         role.setIsReadonly(dto.getIsReadonly());
         role.setIsActive(true);

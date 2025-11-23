@@ -27,10 +27,6 @@ public class PortalType extends BaseEntity {
     @Column(name = "description")
     private String description;
     
-    // Constants for easy reference
-    public static final Long SUPER_ADMIN_PORTAL_ID = 1L;
-    public static final Long PM_PORTAL_ID = 2L;
-    
-    public static final String SUPER_ADMIN_PORTAL_NAME = "SUPER_ADMIN_PORTAL";
-    public static final String PM_PORTAL_NAME = "PM_PORTAL";
+    // Constants for NUMBRICS Portal (single portal)
+    public static final String NUMBRICS_PORTAL_NAME = "NUMBRICS_PORTAL";
 }
