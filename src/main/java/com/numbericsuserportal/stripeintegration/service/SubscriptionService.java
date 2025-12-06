@@ -47,7 +47,7 @@ public class SubscriptionService {
         user.setStripePaymentMethodId(paymentMethodId);
         user.setSubscriptionPlan(plan); // This also sets amount
         user.setTrialStartDate(LocalDateTime.now());
-        user.setPaymentDueDate(LocalDateTime.now().plusDays(7));
+        user.setPaymentDueDate(LocalDateTime.now().plusDays(14));
         user.setPaymentCompleted(false);
         user.setSubscriptionStatus("TRIAL");
         user.setUpdatedAt(LocalDateTime.now());

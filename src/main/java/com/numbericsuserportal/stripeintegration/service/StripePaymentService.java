@@ -45,7 +45,7 @@ public class StripePaymentService {
                 .setPaymentMethod(paymentMethodId)
                 .setConfirm(true)
                 .setOffSession(true)
-                .setDescription("7-day trial charge - " + planName)
+                .setDescription("14-day trial charge - " + planName)
                 .putMetadata("plan", planName)
                 .build();
 
