@@ -1,7 +1,12 @@
 package com.numbericsuserportal.LlcNorthwest.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.numbericsuserportal.LlcNorthwest.auth.CorporateToolsAuthService;
+import com.numbericsuserportal.LlcNorthwest.companies.dto.CompaniesResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.companies.dto.CompanyDTO;
+import com.numbericsuserportal.LlcNorthwest.companies.dto.CreateCompanyRequestDTO;
+import com.numbericsuserportal.LlcNorthwest.companies.dto.UpdateCompanyRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.dto.FilingProductsResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.service.CorporateToolsApiService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +14,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
@@ -123,6 +131,155 @@ public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
             System.err.println("Error Details: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Failed to get filing products offerings: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public CompaniesResponseDTO getCompanies(Integer limit, Integer offset, String[] names) {
+        try {
+            String path = "/companies";
+            
+            // Build query string manually
+            StringBuilder queryBuilder = new StringBuilder();
+            if (limit != null) {
+                queryBuilder.append("limit=").append(limit);
+            }
+            if (offset != null) {
+                if (queryBuilder.length() > 0) queryBuilder.append("&");
+                queryBuilder.append("offset=").append(offset);
+            }
+            if (names != null && names.length > 0) {
+                if (queryBuilder.length() > 0) queryBuilder.append("&");
+                queryBuilder.append("names=").append(String.join(",", names));
+            }
+            
+            String queryString = queryBuilder.toString();
+            String token = authService.generateTokenForGet(path, queryString);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path + (queryString.isEmpty() ? "" : "?" + queryString);
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+            
+            return objectMapper.readValue(response.getBody(), CompaniesResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting companies: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get companies: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public CompaniesResponseDTO getCompanyById(UUID companyId) {
+        try {
+            String path = "/companies/" + companyId.toString();
+            String token = authService.generateTokenForGet(path, "");
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path;
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+            
+            // Single company response - API returns result as single object, not array
+            String responseBody = response.getBody();
+            JsonNode jsonNode = objectMapper.readTree(responseBody);
+            
+            CompaniesResponseDTO fullResponse = new CompaniesResponseDTO();
+            fullResponse.setSuccess(jsonNode.get("success").asBoolean());
+            fullResponse.setTimestamp(jsonNode.has("timestamp") ? jsonNode.get("timestamp").asText() : null);
+            
+            // Parse result as single CompanyDTO object
+            JsonNode resultNode = jsonNode.get("result");
+            if (resultNode != null && resultNode.isObject()) {
+                CompanyDTO company = objectMapper.treeToValue(resultNode, CompanyDTO.class);
+                fullResponse.setResult(List.of(company));
+            }
+            
+            return fullResponse;
+            
+        } catch (Exception e) {
+            System.err.println("Error getting company by ID: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get company by ID: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public CompaniesResponseDTO createCompanies(CreateCompanyRequestDTO request) {
+        try {
+            String path = "/companies";
+            String requestBody = objectMapper.writeValueAsString(request);
+            String token = authService.generateTokenForPost(path, requestBody);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+            String url = baseUrl + path;
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                entity,
+                String.class
+            );
+            
+            return objectMapper.readValue(response.getBody(), CompaniesResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error creating companies: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to create companies: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public CompaniesResponseDTO updateCompanies(UpdateCompanyRequestDTO request) {
+        try {
+            String path = "/companies";
+            String requestBody = objectMapper.writeValueAsString(request);
+            String token = authService.generateTokenForPost(path, requestBody);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+            String url = baseUrl + path;
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.PATCH,
+                entity,
+                String.class
+            );
+            
+            return objectMapper.readValue(response.getBody(), CompaniesResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error updating companies: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to update companies: " + e.getMessage(), e);
         }
     }
 }
