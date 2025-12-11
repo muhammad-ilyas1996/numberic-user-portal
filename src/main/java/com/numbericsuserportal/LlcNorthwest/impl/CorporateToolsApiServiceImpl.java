@@ -12,8 +12,11 @@ import com.numbericsuserportal.LlcNorthwest.service.CorporateToolsApiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
 
 import java.util.List;
 import java.util.UUID;
@@ -27,8 +30,18 @@ public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
     @Value("${corporate.tools.api.base.url}")
     private String baseUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    // Configure RestTemplate with HttpComponentsClientHttpRequestFactory to support PATCH method
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public CorporateToolsApiServiceImpl() {
+        // Use Apache HttpClient which properly supports PATCH method
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
+        factory.setConnectTimeout(java.time.Duration.ofSeconds(30)); // 30 seconds
+        factory.setConnectionRequestTimeout(java.time.Duration.ofSeconds(30)); // 30 seconds
+        this.restTemplate = new RestTemplate(factory);
+    }
 
     @Override
     public FilingProductsResponseDTO getFilingProducts(

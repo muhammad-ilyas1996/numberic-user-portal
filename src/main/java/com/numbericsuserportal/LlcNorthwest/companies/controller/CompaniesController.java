@@ -9,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/llc-northwest/companies")
@@ -21,7 +20,7 @@ public class CompaniesController {
 
     /**
      * GET /api/llc-northwest/companies
-     * Fetch from API and save to database, then return
+     * Fetch companies from API
      */
     @GetMapping
     public ResponseEntity<?> getCompanies(
@@ -39,38 +38,8 @@ public class CompaniesController {
     }
 
     /**
-     * GET /api/llc-northwest/companies/database
-     * Get companies from local database only
-     */
-    @GetMapping("/database")
-    public ResponseEntity<?> getCompaniesFromDatabase() {
-        try {
-            CompaniesResponseDTO response = companyService.getCompaniesFromDatabase();
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * GET /api/llc-northwest/companies/{id}
-     * Get a specific company by ID from database
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getCompanyById(@PathVariable UUID id) {
-        try {
-            CompaniesResponseDTO response = companyService.getCompanyByIdFromDatabase(id);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
      * POST /api/llc-northwest/companies
-     * Create new companies via API and save to database
+     * Create new companies via API
      */
     @PostMapping
     public ResponseEntity<?> createCompanies(@RequestBody CreateCompanyRequestDTO request) {
@@ -85,7 +54,7 @@ public class CompaniesController {
 
     /**
      * PATCH /api/llc-northwest/companies
-     * Update companies via API and save to database
+     * Update companies via API
      */
     @PatchMapping
     public ResponseEntity<?> updateCompanies(@RequestBody UpdateCompanyRequestDTO request) {

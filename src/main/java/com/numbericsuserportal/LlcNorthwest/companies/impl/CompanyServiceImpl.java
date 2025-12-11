@@ -1,21 +1,12 @@
 package com.numbericsuserportal.LlcNorthwest.companies.impl;
 
-import com.numbericsuserportal.LlcNorthwest.companies.converter.CompanyConverter;
-import com.numbericsuserportal.LlcNorthwest.companies.dto.CompanyDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.CompaniesResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.CreateCompanyRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.UpdateCompanyRequestDTO;
-import com.numbericsuserportal.LlcNorthwest.companies.entity.CompanyEntity;
-import com.numbericsuserportal.LlcNorthwest.companies.repo.CompanyRepository;
 import com.numbericsuserportal.LlcNorthwest.companies.service.CompanyService;
 import com.numbericsuserportal.LlcNorthwest.service.CorporateToolsApiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class CompanyServiceImpl implements CompanyService {
@@ -23,60 +14,14 @@ public class CompanyServiceImpl implements CompanyService {
     @Autowired
     private CorporateToolsApiService corporateToolsApiService;
 
-    @Autowired
-    private CompanyRepository companyRepository;
-
-    @Autowired
-    private CompanyConverter companyConverter;
-
     @Override
-    @Transactional
     public CompaniesResponseDTO fetchAndSaveCompanies(Integer limit, Integer offset, String[] names) {
-        // Fetch from API
-        CompaniesResponseDTO apiResponse = corporateToolsApiService.getCompanies(limit, offset, names);
-
-        if (apiResponse.getSuccess() && apiResponse.getResult() != null) {
-            // Save to database
-            for (CompanyDTO companyDTO : apiResponse.getResult()) {
-                saveCompany(companyDTO);
-            }
-        }
-
-        return apiResponse;
+        // Fetch from API only (no database save)
+        return corporateToolsApiService.getCompanies(limit, offset, names);
     }
 
-    @Override
-    public CompaniesResponseDTO getCompaniesFromDatabase() {
-        // Get from database
-        List<CompanyEntity> entities = companyRepository.findAll();
-
-        CompaniesResponseDTO response = new CompaniesResponseDTO();
-        response.setSuccess(true);
-        response.setTimestamp(java.time.LocalDateTime.now().toString());
-        response.setResult(
-            entities.stream()
-                .map(companyConverter::toDTO)
-                .collect(Collectors.toList())
-        );
-
-        return response;
-    }
 
     @Override
-    public CompaniesResponseDTO getCompanyByIdFromDatabase(UUID companyId) {
-        CompanyEntity entity = companyRepository.findByExternalId(companyId)
-            .orElseThrow(() -> new RuntimeException("Company not found with ID: " + companyId));
-
-        CompaniesResponseDTO response = new CompaniesResponseDTO();
-        response.setSuccess(true);
-        response.setTimestamp(java.time.LocalDateTime.now().toString());
-        response.setResult(List.of(companyConverter.toDTO(entity)));
-
-        return response;
-    }
-
-    @Override
-    @Transactional
     public CompaniesResponseDTO createAndSaveCompanies(CreateCompanyRequestDTO request) {
         // Set default value for duplicate_name_allowed if null
         if (request.getDuplicateNameAllowed() == null) {
@@ -110,21 +55,11 @@ public class CompanyServiceImpl implements CompanyService {
             }
         }
         
-        // Create via API
-        CompaniesResponseDTO apiResponse = corporateToolsApiService.createCompanies(request);
-
-        if (apiResponse.getSuccess() && apiResponse.getResult() != null) {
-            // Save to database
-            for (CompanyDTO companyDTO : apiResponse.getResult()) {
-                saveCompany(companyDTO);
-            }
-        }
-
-        return apiResponse;
+        // Create via API only (no database save)
+        return corporateToolsApiService.createCompanies(request);
     }
 
     @Override
-    @Transactional
     public CompaniesResponseDTO updateAndSaveCompanies(UpdateCompanyRequestDTO request) {
         // Set default value for duplicate_name_allowed if null
         if (request.getDuplicateNameAllowed() == null) {
@@ -164,34 +99,9 @@ public class CompanyServiceImpl implements CompanyService {
             }
         }
         
-        // Update via API
-        CompaniesResponseDTO apiResponse = corporateToolsApiService.updateCompanies(request);
-
-        if (apiResponse.getSuccess() && apiResponse.getResult() != null) {
-            // Update in database
-            for (CompanyDTO companyDTO : apiResponse.getResult()) {
-                saveCompany(companyDTO);
-            }
-        }
-
-        return apiResponse;
+        // Update via API only (no database save)
+        return corporateToolsApiService.updateCompanies(request);
     }
 
-    private void saveCompany(CompanyDTO companyDTO) {
-        // Check if already exists
-        CompanyEntity existing = companyRepository
-            .findByExternalId(companyDTO.getId())
-            .orElse(null);
-
-        if (existing == null) {
-            // Create new
-            CompanyEntity entity = companyConverter.toEntity(companyDTO);
-            companyRepository.save(entity);
-        } else {
-            // Update existing
-            companyConverter.updateEntity(existing, companyDTO);
-            companyRepository.save(existing);
-        }
-    }
 }
 
