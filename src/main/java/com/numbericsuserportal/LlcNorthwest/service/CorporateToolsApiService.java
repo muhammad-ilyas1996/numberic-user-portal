@@ -8,6 +8,7 @@ import com.numbericsuserportal.LlcNorthwest.dto.FilingProductsResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.filingmethod.dto.FilingMethodSchemaResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.filingmethod.dto.FilingMethodsResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.registeredagent.dto.RegisteredAgentProductsResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.signedforms.dto.SignedFormsResponseDTO;
 
 import java.util.UUID;
 
@@ -39,5 +40,8 @@ public interface CorporateToolsApiService {
     
     // Registered Agent Products API methods
     RegisteredAgentProductsResponseDTO getRegisteredAgentProducts(String url);
+    
+    // Signed Forms API methods
+    SignedFormsResponseDTO getSignedForms(UUID filingMethodId, UUID websiteId);
 }
 

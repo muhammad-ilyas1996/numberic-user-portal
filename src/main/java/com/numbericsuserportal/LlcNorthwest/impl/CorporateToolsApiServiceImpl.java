@@ -12,6 +12,7 @@ import com.numbericsuserportal.LlcNorthwest.complianceevents.dto.ComplianceEvent
 import com.numbericsuserportal.LlcNorthwest.filingmethod.dto.FilingMethodSchemaResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.filingmethod.dto.FilingMethodsResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.registeredagent.dto.RegisteredAgentProductsResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.signedforms.dto.SignedFormsResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.service.CorporateToolsApiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -477,6 +478,42 @@ public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
             System.err.println("Error getting registered agent products: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Failed to get registered agent products: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public SignedFormsResponseDTO getSignedForms(UUID filingMethodId, UUID websiteId) {
+        try {
+            String path = "/signed-forms";
+            
+            // Build query string manually
+            StringBuilder queryBuilder = new StringBuilder();
+            queryBuilder.append("filing_method_id=").append(filingMethodId.toString());
+            queryBuilder.append("&website_id=").append(websiteId.toString());
+            
+            String queryString = queryBuilder.toString();
+            String token = authService.generateTokenForGet(path, queryString);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path + "?" + queryString;
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+            
+            return objectMapper.readValue(response.getBody(), SignedFormsResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting signed forms: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get signed forms: " + e.getMessage(), e);
         }
     }
 }
