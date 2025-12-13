@@ -8,6 +8,10 @@ import com.numbericsuserportal.LlcNorthwest.companies.dto.CompanyDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.CreateCompanyRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.UpdateCompanyRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.dto.FilingProductsResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.complianceevents.dto.ComplianceEventsResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.filingmethod.dto.FilingMethodSchemaResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.filingmethod.dto.FilingMethodsResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.registeredagent.dto.RegisteredAgentProductsResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.service.CorporateToolsApiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -293,6 +297,186 @@ public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
             System.err.println("Error updating companies: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Failed to update companies: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public FilingMethodsResponseDTO getFilingMethods(UUID companyId, UUID filingProductId, String jurisdiction) {
+        try {
+            String path = "/filing-methods";
+            
+            // Build query string manually
+            StringBuilder queryBuilder = new StringBuilder();
+            queryBuilder.append("company_id=").append(companyId.toString());
+            queryBuilder.append("&filing_product_id=").append(filingProductId.toString());
+            queryBuilder.append("&jurisdiction=").append(jurisdiction);
+            
+            String queryString = queryBuilder.toString();
+            String token = authService.generateTokenForGet(path, queryString);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path + "?" + queryString;
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+            
+            return objectMapper.readValue(response.getBody(), FilingMethodsResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting filing methods: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get filing methods: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public FilingMethodSchemaResponseDTO getFilingMethodSchemas(UUID companyId, UUID filingMethodId) {
+        try {
+            String path = "/filing-methods/schemas";
+            
+            // Build query string manually
+            StringBuilder queryBuilder = new StringBuilder();
+            queryBuilder.append("company_id=").append(companyId.toString());
+            queryBuilder.append("&filing_method_id=").append(filingMethodId.toString());
+            
+            String queryString = queryBuilder.toString();
+            String token = authService.generateTokenForGet(path, queryString);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path + "?" + queryString;
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+            
+            return objectMapper.readValue(response.getBody(), FilingMethodSchemaResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting filing method schemas: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get filing method schemas: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public ComplianceEventsResponseDTO getComplianceEvents(
+            Integer limit,
+            Integer offset,
+            String company,
+            UUID companyId,
+            String startDate,
+            String endDate,
+            String[] jurisdictions,
+            UUID[] jurisdictionIds) {
+        try {
+            String path = "/compliance-events";
+            
+            // Build query string manually
+            StringBuilder queryBuilder = new StringBuilder();
+            
+            // Required parameters
+            queryBuilder.append("start_date=").append(startDate);
+            queryBuilder.append("&end_date=").append(endDate);
+            
+            // Optional parameters
+            if (limit != null) {
+                queryBuilder.append("&limit=").append(limit);
+            }
+            if (offset != null) {
+                queryBuilder.append("&offset=").append(offset);
+            }
+            
+            // Either company OR company_id (not both)
+            if (company != null && !company.trim().isEmpty()) {
+                queryBuilder.append("&company=").append(company);
+            } else if (companyId != null) {
+                queryBuilder.append("&company_id=").append(companyId.toString());
+            }
+            
+            // Either jurisdictions OR jurisdiction_ids (not both)
+            if (jurisdictions != null && jurisdictions.length > 0) {
+                queryBuilder.append("&jurisdictions=").append(String.join(",", jurisdictions));
+            } else if (jurisdictionIds != null && jurisdictionIds.length > 0) {
+                String[] jurisdictionIdStrings = new String[jurisdictionIds.length];
+                for (int i = 0; i < jurisdictionIds.length; i++) {
+                    jurisdictionIdStrings[i] = jurisdictionIds[i].toString();
+                }
+                queryBuilder.append("&jurisdiction_ids=").append(String.join(",", jurisdictionIdStrings));
+            }
+            
+            String queryString = queryBuilder.toString();
+            String token = authService.generateTokenForGet(path, queryString);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path + "?" + queryString;
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+            
+            return objectMapper.readValue(response.getBody(), ComplianceEventsResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting compliance events: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get compliance events: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public RegisteredAgentProductsResponseDTO getRegisteredAgentProducts(String url) {
+        try {
+            String path = "/registered-agent-products";
+            
+            // Build query string manually
+            StringBuilder queryBuilder = new StringBuilder();
+            queryBuilder.append("url=").append(url);
+            
+            String queryString = queryBuilder.toString();
+            String token = authService.generateTokenForGet(path, queryString);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String fullUrl = baseUrl + path + "?" + queryString;
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                fullUrl,
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+            
+            return objectMapper.readValue(response.getBody(), RegisteredAgentProductsResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting registered agent products: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get registered agent products: " + e.getMessage(), e);
         }
     }
 }
