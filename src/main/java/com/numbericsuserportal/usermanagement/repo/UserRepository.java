@@ -62,4 +62,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findBySubscriptionPlan(User.SubscriptionPlan plan);
     List<User> findBySubscriptionStatus(String status);
+    
+    /**
+     * Find user by phone number
+     */
+    Optional<User> findByPhone(String phone);
 }
