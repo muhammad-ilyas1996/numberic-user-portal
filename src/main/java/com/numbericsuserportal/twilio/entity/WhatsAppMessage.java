@@ -26,7 +26,7 @@ public class WhatsAppMessage {
      * Message direction: INCOMING (from user) or OUTGOING (to user)
      */
     @Enumerated(EnumType.STRING)
-    @Column(name = "direction", nullable = false, length = 10)
+    @Column(name = "direction", nullable = false, length = 50)
     private MessageDirection direction;
 
     /**
@@ -34,7 +34,7 @@ public class WhatsAppMessage {
      * For INCOMING: user's phone number
      * For OUTGOING: your Twilio WhatsApp number
      */
-    @Column(name = "from_number", nullable = false, length = 20)
+    @Column(name = "from_number", nullable = false, length = 50)
     private String fromNumber;
 
     /**
@@ -55,13 +55,13 @@ public class WhatsAppMessage {
      * For INCOMING: your Twilio WhatsApp number
      * For OUTGOING: user's phone number
      */
-    @Column(name = "to_number", length = 20)
+    @Column(name = "to_number", length = 30)
     private String toNumber;
 
     /**
      * Number of media items in the message
      */
-    @Column(name = "num_media", length = 10)
+    @Column(name = "num_media", length = 20)
     private String numMedia;
 
     /**

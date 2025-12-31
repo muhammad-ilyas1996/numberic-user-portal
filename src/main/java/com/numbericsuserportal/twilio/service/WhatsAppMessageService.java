@@ -1,9 +1,13 @@
 package com.numbericsuserportal.twilio.service;
 
 import com.numbericsuserportal.twilio.config.TwilioConfig;
+import com.numbericsuserportal.twilio.dto.OcrResult;
+import com.numbericsuserportal.twilio.entity.OcrExtractionResult;
 import com.numbericsuserportal.twilio.entity.TaxCase;
 import com.numbericsuserportal.twilio.entity.TaxDocument;
 import com.numbericsuserportal.twilio.entity.WhatsAppMessage;
+import com.numbericsuserportal.twilio.service.DocumentProcessingService;
+import com.numbericsuserportal.twilio.repository.OcrExtractionResultRepository;
 import com.numbericsuserportal.twilio.repository.TaxDocumentRepository;
 import com.numbericsuserportal.twilio.repository.WhatsAppMessageRepository;
 import com.numbericsuserportal.twilio.service.TaxCaseService;
@@ -38,6 +42,12 @@ public class WhatsAppMessageService {
 
     @Autowired
     private TaxDocumentRepository taxDocumentRepository;
+    
+    @Autowired
+    private DocumentProcessingService documentProcessingService;
+    
+    @Autowired
+    private OcrExtractionResultRepository ocrExtractionResultRepository;
 
     /**
      * Process and save incoming WhatsApp message
@@ -589,7 +599,55 @@ public class WhatsAppMessageService {
                              ", TaxCase ID=" + taxCase.getId() + 
                              ", Media URL=" + mediaUrl);
 
-            // Step 3: If TaxCase status is NEEDS_DOCUMENTS, update it to IN_PROGRESS
+            // Step 3: Process OCR and extract structured data
+            try {
+                System.out.println("Starting OCR processing for document ID: " + savedDocument.getId());
+                OcrResult ocrResult = documentProcessingService.processDocument(mediaUrl, contentType);
+                
+                // Save OCR result to database
+                OcrExtractionResult ocrExtractionResult = new OcrExtractionResult();
+                ocrExtractionResult.setTaxDocumentId(savedDocument.getId());
+                ocrExtractionResult.setDocumentType(ocrResult.getDocumentType());
+                ocrExtractionResult.setRawText(ocrResult.getRawText());
+                ocrExtractionResult.setPageCount(ocrResult.getPageCount());
+                ocrExtractionResult.setOverallConfidence(ocrResult.getOverallConfidence());
+                
+                // Convert extracted data to JSON for storage
+                if (ocrResult.getExtractedData() != null) {
+                    String extractedDataJson = documentProcessingService.convertExtractedDataToJson(ocrResult.getExtractedData());
+                    ocrExtractionResult.setExtractedDataJson(extractedDataJson);
+                }
+                
+                if (ocrResult.isSuccess()) {
+                    ocrExtractionResult.setProcessingStatus("SUCCESS");
+                    System.out.println("OCR processing completed successfully. Document type: " + ocrResult.getDocumentType() + 
+                                     ", Confidence: " + ocrResult.getOverallConfidence());
+                } else {
+                    ocrExtractionResult.setProcessingStatus("FAILED");
+                    ocrExtractionResult.setErrorMessage(ocrResult.getErrorMessage());
+                    System.err.println("OCR processing failed: " + ocrResult.getErrorMessage());
+                }
+                
+                ocrExtractionResultRepository.save(ocrExtractionResult);
+                System.out.println("OCR extraction result saved: ID=" + ocrExtractionResult.getId());
+                
+            } catch (Exception e) {
+                System.err.println("Error during OCR processing: " + e.getMessage());
+                e.printStackTrace();
+                // Don't fail the entire process if OCR fails - document is still saved
+                // Save failed OCR result for tracking
+                try {
+                    OcrExtractionResult failedResult = new OcrExtractionResult();
+                    failedResult.setTaxDocumentId(savedDocument.getId());
+                    failedResult.setProcessingStatus("FAILED");
+                    failedResult.setErrorMessage("OCR processing error: " + e.getMessage());
+                    ocrExtractionResultRepository.save(failedResult);
+                } catch (Exception saveException) {
+                    System.err.println("Error saving failed OCR result: " + saveException.getMessage());
+                }
+            }
+
+            // Step 4: If TaxCase status is NEEDS_DOCUMENTS, update it to IN_PROGRESS
             if (taxCase.getStatus() == TaxCase.TaxCaseStatus.NEEDS_DOCUMENTS) {
                 try {
                     TaxCase updatedCase = taxCaseService.updateTaxCaseStatus(
@@ -605,7 +663,7 @@ public class WhatsAppMessageService {
                 }
             }
 
-            // Step 4: Send automatic reply confirming document receipt
+            // Step 5: Send automatic reply confirming document receipt
             String replyMessage = "Documents received successfully. Your tax filing is now in progress.";
             sendMediaConfirmationReply(phoneNumber, replyMessage, userId);
 
