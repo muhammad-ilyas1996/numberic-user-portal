@@ -11,6 +11,11 @@ import com.numbericsuserportal.LlcNorthwest.dto.FilingProductsResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.complianceevents.dto.ComplianceEventsResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.filingmethod.dto.FilingMethodSchemaResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.filingmethod.dto.FilingMethodsResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.document.dto.*;
+import com.numbericsuserportal.LlcNorthwest.paymentmethod.dto.CreatePaymentMethodRequestDTO;
+import com.numbericsuserportal.LlcNorthwest.paymentmethod.dto.PaymentMethodActionResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.paymentmethod.dto.PaymentMethodsResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.paymentmethod.dto.UpdatePaymentMethodRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.registeredagent.dto.RegisteredAgentProductsResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.signedforms.dto.SignedFormsResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.service.CorporateToolsApiService;
@@ -514,6 +519,457 @@ public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
             System.err.println("Error getting signed forms: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Failed to get signed forms: " + e.getMessage(), e);
+        }
+    }
+
+    // ==================== PAYMENT METHODS API ====================
+
+    @Override
+    public PaymentMethodsResponseDTO getPaymentMethods() {
+        try {
+            String path = "/payment-methods";
+            String token = authService.generateTokenForGet(path, "");
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path;
+            
+            System.out.println("=== Get Payment Methods ===");
+            System.out.println("URL: " + url);
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+            
+            System.out.println("Response Status: " + response.getStatusCode());
+            System.out.println("Response Body: " + response.getBody());
+            
+            return objectMapper.readValue(response.getBody(), PaymentMethodsResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting payment methods: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get payment methods: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public PaymentMethodActionResponseDTO createPaymentMethod(CreatePaymentMethodRequestDTO request) {
+        try {
+            String path = "/payment-methods";
+            String requestBody = objectMapper.writeValueAsString(request);
+            String token = authService.generateTokenForPost(path, requestBody);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+            String url = baseUrl + path;
+            
+            System.out.println("=== Create Payment Method ===");
+            System.out.println("URL: " + url);
+            System.out.println("Request Body: " + requestBody);
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                entity,
+                String.class
+            );
+            
+            System.out.println("Response Status: " + response.getStatusCode());
+            System.out.println("Response Body: " + response.getBody());
+            
+            return objectMapper.readValue(response.getBody(), PaymentMethodActionResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error creating payment method: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to create payment method: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public PaymentMethodActionResponseDTO updatePaymentMethod(UUID id, UpdatePaymentMethodRequestDTO request) {
+        try {
+            String path = "/payment-methods/" + id.toString();
+            String requestBody = objectMapper.writeValueAsString(request);
+            String token = authService.generateTokenForPost(path, requestBody);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+            String url = baseUrl + path;
+            
+            System.out.println("=== Update Payment Method ===");
+            System.out.println("URL: " + url);
+            System.out.println("Request Body: " + requestBody);
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.PATCH,
+                entity,
+                String.class
+            );
+            
+            System.out.println("Response Status: " + response.getStatusCode());
+            System.out.println("Response Body: " + response.getBody());
+            
+            return objectMapper.readValue(response.getBody(), PaymentMethodActionResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error updating payment method: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to update payment method: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public PaymentMethodActionResponseDTO deletePaymentMethod(UUID id) {
+        try {
+            String path = "/payment-methods/" + id.toString();
+            String token = authService.generateTokenForGet(path, "");
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path;
+            
+            System.out.println("=== Delete Payment Method ===");
+            System.out.println("URL: " + url);
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.DELETE,
+                entity,
+                String.class
+            );
+            
+            System.out.println("Response Status: " + response.getStatusCode());
+            System.out.println("Response Body: " + response.getBody());
+            
+            return objectMapper.readValue(response.getBody(), PaymentMethodActionResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error deleting payment method: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to delete payment method: " + e.getMessage(), e);
+        }
+    }
+
+    // ==================== DOCUMENTS API ====================
+
+    @Override
+    public DocumentsResponseDTO getDocuments(
+            Integer limit,
+            Integer offset,
+            String status,
+            String start,
+            String stop,
+            String jurisdiction,
+            UUID companyId) {
+        try {
+            String path = "/documents";
+            
+            // Build query string
+            StringBuilder queryBuilder = new StringBuilder();
+            if (limit != null) {
+                queryBuilder.append("limit=").append(limit);
+            }
+            if (offset != null) {
+                if (queryBuilder.length() > 0) queryBuilder.append("&");
+                queryBuilder.append("offset=").append(offset);
+            }
+            if (status != null && !status.isEmpty()) {
+                if (queryBuilder.length() > 0) queryBuilder.append("&");
+                queryBuilder.append("status=").append(status);
+            }
+            if (start != null && !start.isEmpty()) {
+                if (queryBuilder.length() > 0) queryBuilder.append("&");
+                queryBuilder.append("start=").append(start);
+            }
+            if (stop != null && !stop.isEmpty()) {
+                if (queryBuilder.length() > 0) queryBuilder.append("&");
+                queryBuilder.append("stop=").append(stop);
+            }
+            if (jurisdiction != null && !jurisdiction.isEmpty()) {
+                if (queryBuilder.length() > 0) queryBuilder.append("&");
+                queryBuilder.append("jurisdiction=").append(jurisdiction);
+            }
+            if (companyId != null) {
+                if (queryBuilder.length() > 0) queryBuilder.append("&");
+                queryBuilder.append("company_id=").append(companyId.toString());
+            }
+            
+            String queryString = queryBuilder.toString();
+            String token = authService.generateTokenForGet(path, queryString);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path + (queryString.isEmpty() ? "" : "?" + queryString);
+            
+            System.out.println("=== Get Documents ===");
+            System.out.println("URL: " + url);
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+            
+            System.out.println("Response Status: " + response.getStatusCode());
+            
+            return objectMapper.readValue(response.getBody(), DocumentsResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting documents: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get documents: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public DocumentResponseDTO getDocumentById(UUID id) {
+        try {
+            String path = "/documents/" + id.toString();
+            String token = authService.generateTokenForGet(path, "");
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path;
+            
+            System.out.println("=== Get Document By ID ===");
+            System.out.println("URL: " + url);
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+            
+            System.out.println("Response Status: " + response.getStatusCode());
+            
+            return objectMapper.readValue(response.getBody(), DocumentResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting document by ID: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get document by ID: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public byte[] getDocumentPage(UUID id, Integer pageNumber, Integer dpi) {
+        try {
+            String path = "/documents/" + id.toString() + "/page/" + pageNumber;
+            
+            StringBuilder queryBuilder = new StringBuilder();
+            if (dpi != null) {
+                queryBuilder.append("dpi=").append(dpi);
+            }
+            
+            String queryString = queryBuilder.toString();
+            String token = authService.generateTokenForGet(path, queryString);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setAccept(List.of(MediaType.IMAGE_PNG));
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path + (queryString.isEmpty() ? "" : "?" + queryString);
+            
+            System.out.println("=== Get Document Page ===");
+            System.out.println("URL: " + url);
+            
+            ResponseEntity<byte[]> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                byte[].class
+            );
+            
+            System.out.println("Response Status: " + response.getStatusCode());
+            
+            return response.getBody();
+            
+        } catch (Exception e) {
+            System.err.println("Error getting document page: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get document page: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public byte[] downloadDocument(UUID id) {
+        try {
+            String path = "/documents/" + id.toString() + "/download";
+            String token = authService.generateTokenForGet(path, "");
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setAccept(List.of(MediaType.APPLICATION_PDF));
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path;
+            
+            System.out.println("=== Download Document ===");
+            System.out.println("URL: " + url);
+            
+            ResponseEntity<byte[]> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                byte[].class
+            );
+            
+            System.out.println("Response Status: " + response.getStatusCode());
+            
+            return response.getBody();
+            
+        } catch (Exception e) {
+            System.err.println("Error downloading document: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to download document: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public PageUrlResponseDTO getDocumentPageUrl(UUID id, Integer pageNumber, Integer dpi) {
+        try {
+            String path = "/documents/" + id.toString() + "/page/" + pageNumber + "/url";
+            
+            StringBuilder queryBuilder = new StringBuilder();
+            if (dpi != null) {
+                queryBuilder.append("dpi=").append(dpi);
+            }
+            
+            String queryString = queryBuilder.toString();
+            String token = authService.generateTokenForGet(path, queryString);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path + (queryString.isEmpty() ? "" : "?" + queryString);
+            
+            System.out.println("=== Get Document Page URL ===");
+            System.out.println("URL: " + url);
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+            
+            System.out.println("Response Status: " + response.getStatusCode());
+            
+            return objectMapper.readValue(response.getBody(), PageUrlResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting document page URL: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get document page URL: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public BulkDownloadResponseDTO bulkDownloadDocuments(UUID[] ids) {
+        try {
+            String path = "/documents/bulk-download";
+            
+            // Build query string with multiple IDs
+            StringBuilder queryBuilder = new StringBuilder();
+            for (int i = 0; i < ids.length; i++) {
+                if (i > 0) queryBuilder.append("&");
+                queryBuilder.append("ids=").append(ids[i].toString());
+            }
+            
+            String queryString = queryBuilder.toString();
+            String token = authService.generateTokenForGet(path, queryString);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path + "?" + queryString;
+            
+            System.out.println("=== Bulk Download Documents ===");
+            System.out.println("URL: " + url);
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+            
+            System.out.println("Response Status: " + response.getStatusCode());
+            
+            return objectMapper.readValue(response.getBody(), BulkDownloadResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error bulk downloading documents: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to bulk download documents: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public UnlockDocumentResponseDTO unlockDocument(UUID id, UnlockDocumentRequestDTO request) {
+        try {
+            String path = "/documents/unlock/" + id.toString();
+            String requestBody = objectMapper.writeValueAsString(request);
+            String token = authService.generateTokenForPost(path, requestBody);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+            String url = baseUrl + path;
+            
+            System.out.println("=== Unlock Document ===");
+            System.out.println("URL: " + url);
+            System.out.println("Request Body: " + requestBody);
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                entity,
+                String.class
+            );
+            
+            System.out.println("Response Status: " + response.getStatusCode());
+            System.out.println("Response Body: " + response.getBody());
+            
+            return objectMapper.readValue(response.getBody(), UnlockDocumentResponseDTO.class);
+            
+        } catch (Exception e) {
+            System.err.println("Error unlocking document: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to unlock document: " + e.getMessage(), e);
         }
     }
 }

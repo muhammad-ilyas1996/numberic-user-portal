@@ -154,9 +154,46 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
                     // Use Azure pre-built ID document model for direct structured extraction
                     try {
                         GovernmentIdExtractedData idData = ocrService.extractGovernmentIdDataStructured(images);
+                        
+                        // Check if Azure extraction missed key fields (issuingState, idType)
+                        boolean missingIssuingState = idData.getIssuingState() == null || idData.getIssuingState().trim().isEmpty();
+                        boolean missingIdType = idData.getIdType() == null || "UNKNOWN".equals(idData.getIdType());
+                        
+                        // If missing fields, merge with regex fallback
+                        if (missingIssuingState || missingIdType) {
+                            System.out.println("Azure extraction missing fields (issuingState=" + missingIssuingState + ", idType=" + missingIdType + "), merging with regex fallback");
+                            GovernmentIdExtractedData regexData = dataExtractionService.extractGovernmentIdData(combinedText);
+                            
+                            // Fill missing issuingState from regex
+                            if (missingIssuingState && regexData.getIssuingState() != null && !regexData.getIssuingState().trim().isEmpty()) {
+                                idData.setIssuingState(regexData.getIssuingState());
+                                idData.setIssuingStateConfidence(regexData.getIssuingStateConfidence());
+                                System.out.println("Filled issuingState from regex: " + regexData.getIssuingState());
+                            }
+                            
+                            // Fill missing idType from regex
+                            if (missingIdType && regexData.getIdType() != null && !"UNKNOWN".equals(regexData.getIdType())) {
+                                idData.setIdType(regexData.getIdType());
+                                idData.setIdTypeConfidence(regexData.getIdTypeConfidence());
+                                System.out.println("Filled idType from regex: " + regexData.getIdType());
+                            }
+                            
+                            // Recalculate overall confidence after merge
+                            double totalConf = 0.0;
+                            int count = 0;
+                            if (idData.getFullNameConfidence() != null) { totalConf += idData.getFullNameConfidence(); count++; }
+                            if (idData.getDateOfBirthConfidence() != null) { totalConf += idData.getDateOfBirthConfidence(); count++; }
+                            if (idData.getIdNumberConfidence() != null) { totalConf += idData.getIdNumberConfidence(); count++; }
+                            if (idData.getIssuingStateConfidence() != null) { totalConf += idData.getIssuingStateConfidence(); count++; }
+                            if (idData.getIssueDateConfidence() != null) { totalConf += idData.getIssueDateConfidence(); count++; }
+                            if (idData.getExpirationDateConfidence() != null) { totalConf += idData.getExpirationDateConfidence(); count++; }
+                            if (idData.getIdTypeConfidence() != null) { totalConf += idData.getIdTypeConfidence(); count++; }
+                            idData.setOverallConfidence(count > 0 ? totalConf / count : 0.0);
+                        }
+                        
                         extractedData = idData;
                         overallConfidence = idData.getOverallConfidence() != null ? idData.getOverallConfidence() : 0.0;
-                        System.out.println("Government ID data extracted using Azure pre-built model. Confidence: " + overallConfidence);
+                        System.out.println("Government ID data extracted using Azure pre-built model (with merge). Confidence: " + overallConfidence);
                     } catch (Exception e) {
                         System.err.println("Error using Azure pre-built ID model, falling back to regex extraction: " + e.getMessage());
                         // Fallback to regex-based extraction

@@ -4,9 +4,14 @@ import com.numbericsuserportal.LlcNorthwest.companies.dto.CompaniesResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.CreateCompanyRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.UpdateCompanyRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.complianceevents.dto.ComplianceEventsResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.document.dto.*;
 import com.numbericsuserportal.LlcNorthwest.dto.FilingProductsResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.filingmethod.dto.FilingMethodSchemaResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.filingmethod.dto.FilingMethodsResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.paymentmethod.dto.CreatePaymentMethodRequestDTO;
+import com.numbericsuserportal.LlcNorthwest.paymentmethod.dto.PaymentMethodActionResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.paymentmethod.dto.PaymentMethodsResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.paymentmethod.dto.UpdatePaymentMethodRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.registeredagent.dto.RegisteredAgentProductsResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.signedforms.dto.SignedFormsResponseDTO;
 
@@ -43,5 +48,28 @@ public interface CorporateToolsApiService {
     
     // Signed Forms API methods
     SignedFormsResponseDTO getSignedForms(UUID filingMethodId, UUID websiteId);
+    
+    // Payment Methods API methods
+    PaymentMethodsResponseDTO getPaymentMethods();
+    PaymentMethodActionResponseDTO createPaymentMethod(CreatePaymentMethodRequestDTO request);
+    PaymentMethodActionResponseDTO updatePaymentMethod(UUID id, UpdatePaymentMethodRequestDTO request);
+    PaymentMethodActionResponseDTO deletePaymentMethod(UUID id);
+    
+    // Documents API methods
+    DocumentsResponseDTO getDocuments(
+        Integer limit,
+        Integer offset,
+        String status,
+        String start,
+        String stop,
+        String jurisdiction,
+        UUID companyId
+    );
+    DocumentResponseDTO getDocumentById(UUID id);
+    byte[] getDocumentPage(UUID id, Integer pageNumber, Integer dpi);
+    byte[] downloadDocument(UUID id);
+    PageUrlResponseDTO getDocumentPageUrl(UUID id, Integer pageNumber, Integer dpi);
+    BulkDownloadResponseDTO bulkDownloadDocuments(UUID[] ids);
+    UnlockDocumentResponseDTO unlockDocument(UUID id, UnlockDocumentRequestDTO request);
 }
 
