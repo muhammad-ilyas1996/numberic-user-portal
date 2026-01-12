@@ -27,6 +27,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login").permitAll()
                         .requestMatchers("/webhooks/**").permitAll() // Allow Twilio webhooks without authentication
+//                        .requestMatchers("/api/auth/register/**").permitAll() // Allow registration endpoints
+//                        .requestMatchers("/webhooks/**").permitAll() // Allow Twilio webhooks without authentication
+
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
