@@ -3,17 +3,22 @@ package com.numbericsuserportal.usermanagement.controller;
 import com.numbericsuserportal.usermanagement.domain.User;
 import com.numbericsuserportal.usermanagement.dto.*;
 import com.numbericsuserportal.usermanagement.service.UserManagementService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/user-management")
 @CrossOrigin(origins = "*")
 public class UserManagementController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(UserManagementController.class);
     
     @Autowired
     private UserManagementService userManagementService;
@@ -48,12 +53,16 @@ public class UserManagementController {
     
     // Get all users
     @GetMapping("/users")
-    public ResponseEntity<List<UserWithPermissionsDto>> getAllUsers() {
+    public ResponseEntity<?> getAllUsers() {
         try {
             List<UserWithPermissionsDto> users = userManagementService.getAllUsers();
             return ResponseEntity.ok(users);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            logger.error("Error retrieving users", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage() != null ? e.getMessage() : "Failed to retrieve users"
+            ));
         }
     }
 }

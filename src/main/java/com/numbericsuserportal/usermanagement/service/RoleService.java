@@ -5,6 +5,8 @@ import com.numbericsuserportal.commonpersistence.dto.SearchDate;
 import com.numbericsuserportal.usermanagement.domain.*;
 import com.numbericsuserportal.usermanagement.dto.*;
 import com.numbericsuserportal.usermanagement.repo.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -14,11 +16,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.PageImpl;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class RoleService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(RoleService.class);
     
     @Autowired
     private RoleRepository roleRepository;
@@ -91,36 +95,35 @@ public class RoleService {
     }
     
     public Page<RoleListDto> listRoles(RoleListRequestDto request) {
-        // Create pageable object
         SearchDate searchDate = dateValidation.validateDates(request.getFromDate(), request.getToDate());
+        Specification<Role> spec = buildRoleSpecification(request, searchDate);
+        
+        int pageNumber = Optional.ofNullable(request.getPageNumber()).orElse(0);
+        int pageSize = Optional.ofNullable(request.getPageSize()).orElse(10);
+        PageRequest pageRequest = PageRequest.of(pageNumber, pageSize, Sort.Direction.DESC, "createdOn");
+        
+        Page<Role> rolesPage = roleRepository.findAll(spec, pageRequest);
+        List<RoleListDto> roleListDtos = rolesPage.getContent().stream()
+            .map(this::convertToListDto)
+            .collect(Collectors.toList());
+        
+        return new PageImpl<>(roleListDtos, pageRequest, rolesPage.getTotalElements());
+    }
+    
+    private Specification<Role> buildRoleSpecification(RoleListRequestDto request, SearchDate searchDate) {
         Specification<Role> spec = com.numbericsuserportal.commonpersistence.utils.SpecificationUtility.equalsValue("isActive", true);
+        
         if (request.getRoleId() != null) {
             spec = spec.and(com.numbericsuserportal.commonpersistence.utils.SpecificationUtility.equalsValue("roleId", request.getRoleId()));
         }
-        if (request.getFromDate() != null) {
+        if (searchDate.getFromDate() != null) {
             spec = spec.and(com.numbericsuserportal.commonpersistence.utils.SpecificationUtility.greaterThanOrEqualTo("createdOn", searchDate.getFromDate()));
         }
-        if (request.getToDate() != null) {
+        if (searchDate.getToDate() != null) {
             spec = spec.and(com.numbericsuserportal.commonpersistence.utils.SpecificationUtility.lessThanOrEqualTo("createdOn", searchDate.getToDate()));
         }
-
-        // Get roles with pagination
-        Page<Role> rolesPage = roleRepository.findAll(spec,
-                PageRequest.of(request.getPageNumber(),
-                        request.getPageSize(),
-                        Sort.Direction.DESC,
-                        "createdOn")
-        );
-
-        // Convert to DTOs to avoid proxy issues
-        List<RoleListDto> roleListDtos = rolesPage.getContent().stream()
-                .map(this::convertToListDto)
-                .collect(Collectors.toList());
-
-        // Return as Page<RoleListDto>
-        return new PageImpl<>(roleListDtos,
-                PageRequest.of(request.getPageNumber(), request.getPageSize(), Sort.Direction.DESC, "createdOn"),
-                rolesPage.getTotalElements());
+        
+        return spec;
     }
     
     public RoleDetailDto getRoleDetail(Long roleId) {
@@ -131,44 +134,29 @@ public class RoleService {
     }
 
     private void assignPermissionsToRole(Long roleId, List<Long> permissionIds) {
-        try {
-            System.out.println("=== Assign Permissions Debug ===");
-            System.out.println("Role ID: " + roleId);
-            System.out.println("Permission IDs: " + permissionIds);
-            
-            // Get role entity
-            Role role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new RuntimeException("Role with ID " + roleId + " not found"));
-            
-            for (Long permissionId : permissionIds) {
-                System.out.println("Processing permission ID: " + permissionId);
-                
-                // Get permission entity
-                Permission permission = permissionRepository.findById(permissionId)
-                    .orElseThrow(() -> new RuntimeException("Permission with ID " + permissionId + " not found"));
-                
-                RolePermission rolePermission = new RolePermission();
-                RolePermissionId id = new RolePermissionId();
-                id.setRoleId(roleId);
-                id.setPermissionId(permissionId);
-                rolePermission.setId(id);
-                
-                // Set the actual entity relationships
-                rolePermission.setRole(role);
-                rolePermission.setPermission(permission);
-                
-                System.out.println("Saving role permission: " + roleId + " -> " + permissionId);
-                rolePermissionRepository.save(rolePermission);
-                System.out.println("Role permission saved successfully");
-            }
-            
-            System.out.println("=== End Assign Permissions Debug ===");
-            
-        } catch (Exception e) {
-            System.out.println("Error in assignPermissionsToRole: " + e.getMessage());
-            e.printStackTrace();
-            throw e;
+        if (permissionIds == null || permissionIds.isEmpty()) {
+            return;
         }
+        
+        Role role = roleRepository.findById(roleId)
+            .orElseThrow(() -> new RuntimeException("Role with ID " + roleId + " not found"));
+        
+        permissionIds.forEach(permissionId -> {
+            Permission permission = permissionRepository.findById(permissionId)
+                .orElseThrow(() -> new RuntimeException("Permission with ID " + permissionId + " not found"));
+            
+            RolePermission rolePermission = new RolePermission();
+            RolePermissionId id = new RolePermissionId();
+            id.setRoleId(roleId);
+            id.setPermissionId(permissionId);
+            rolePermission.setId(id);
+            rolePermission.setRole(role);
+            rolePermission.setPermission(permission);
+            
+            rolePermissionRepository.save(rolePermission);
+        });
+        
+        logger.debug("Assigned {} permissions to role {}", permissionIds.size(), roleId);
     }
     
     private void updateRolePermissions(Long roleId, List<Long> permissionIds) {
@@ -185,17 +173,22 @@ public class RoleService {
         dto.setRoleName(role.getCodeName());
         dto.setDisplayName(role.getDisplayName());
         dto.setDescription(role.getDescription());
-        dto.setPortalTypeId(role.getPortalType().getPortalTypeId());
-        dto.setPortalTypeName(role.getPortalType().getPortalName());
         dto.setIsSuperadmin(role.getIsSuperadmin());
         dto.setIsReadonly(role.getIsReadonly());
         dto.setIsActive(role.getIsActive());
         
-        // Get permissions for this role
+        Optional.ofNullable(role.getPortalType()).ifPresent(portal -> {
+            dto.setPortalTypeId(portal.getPortalTypeId());
+            dto.setPortalTypeName(portal.getPortalName());
+        });
+        
         List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleRoleId(role.getRoleId());
-        List<PermissionDto> permissions = rolePermissions.stream()
-                .map(rp -> convertPermissionToDto(rp.getPermission()))
-                .collect(Collectors.toList());
+        List<PermissionDto> permissions = Optional.ofNullable(rolePermissions).orElse(Collections.emptyList()).stream()
+            .map(RolePermission::getPermission)
+            .filter(Objects::nonNull)
+            .map(this::convertPermissionToDto)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
         dto.setPermissions(permissions);
         
         return dto;
@@ -207,29 +200,37 @@ public class RoleService {
         dto.setRoleName(role.getCodeName());
         dto.setDisplayName(role.getDisplayName());
         dto.setDescription(role.getDescription());
-        dto.setPortalTypeName(role.getPortalType().getPortalName());
         dto.setIsSuperadmin(role.getIsSuperadmin());
         dto.setIsReadonly(role.getIsReadonly());
         dto.setIsActive(role.getIsActive());
         
-        // Get permission count
+        Optional.ofNullable(role.getPortalType())
+            .ifPresent(portal -> dto.setPortalTypeName(portal.getPortalName()));
+        
         List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleRoleId(role.getRoleId());
-        dto.setPermissionCount(rolePermissions.size());
+        dto.setPermissionCount(Optional.ofNullable(rolePermissions).map(List::size).orElse(0));
         
         return dto;
     }
     
     private PermissionDto convertPermissionToDto(Permission permission) {
+        if (permission == null) {
+            return null;
+        }
         PermissionDto dto = new PermissionDto();
         dto.setPermissionId(permission.getPermissionId());
         dto.setCodeName(permission.getCodeName());
         dto.setDisplayName(permission.getDisplayName());
         dto.setCategory(permission.getCategory());
         dto.setDescription(permission.getDescription());
-        dto.setPortalTypeId(permission.getPortalType().getPortalTypeId());
-        dto.setPortalTypeName(permission.getPortalType().getPortalName());
         dto.setIsSuperadmin(permission.getIsSuperadmin());
         dto.setIsActive(permission.getIsActive());
+        
+        Optional.ofNullable(permission.getPortalType()).ifPresent(portal -> {
+            dto.setPortalTypeId(portal.getPortalTypeId());
+            dto.setPortalTypeName(portal.getPortalName());
+        });
+        
         return dto;
     }
 }
