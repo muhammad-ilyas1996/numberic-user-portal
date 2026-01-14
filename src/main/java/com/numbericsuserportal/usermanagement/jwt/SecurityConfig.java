@@ -26,6 +26,7 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login").permitAll()
+                        .requestMatchers("/auth/register/**").permitAll()
                         .requestMatchers("/webhooks/**").permitAll() // Allow Twilio webhooks without authentication
 //                        .requestMatchers("/api/auth/register/**").permitAll() // Allow registration endpoints
 //                        .requestMatchers("/webhooks/**").permitAll() // Allow Twilio webhooks without authentication

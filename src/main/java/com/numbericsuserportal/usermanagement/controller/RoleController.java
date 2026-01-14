@@ -2,15 +2,21 @@ package com.numbericsuserportal.usermanagement.controller;
 
 import com.numbericsuserportal.usermanagement.dto.*;
 import com.numbericsuserportal.usermanagement.service.RoleService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/user-management/roles")
 @CrossOrigin(origins = "*")
 public class RoleController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(RoleController.class);
     
     @Autowired
     private RoleService roleService;
@@ -44,12 +50,16 @@ public class RoleController {
     
     // List all roles
     @PostMapping("/list")
-    public ResponseEntity<Page<RoleListDto>> listRoles(@RequestBody RoleListRequestDto requestDto) {
+    public ResponseEntity<?> listRoles(@RequestBody RoleListRequestDto requestDto) {
         try {
             Page<RoleListDto> roles = roleService.listRoles(requestDto);
             return ResponseEntity.ok(roles);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(null);
+            logger.error("Error retrieving roles", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage() != null ? e.getMessage() : "Failed to retrieve roles"
+            ));
         }
     }
     
