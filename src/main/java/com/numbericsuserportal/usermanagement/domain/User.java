@@ -124,6 +124,37 @@ public class User {
     private String stripeSubscriptionId;
 
     // ============================================
+    // REGISTRATION FIELDS
+    // ============================================
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "account_type", length = 20)
+    private AccountType accountType;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "registration_status", length = 30)
+    private RegistrationStatus registrationStatus;
+    
+    @Column(name = "terms_accepted")
+    private Boolean termsAccepted = false;
+    
+    @Column(name = "marketing_opt_in")
+    private Boolean marketingOptIn = false;
+    
+    @Column(name = "two_factor_enabled")
+    private Boolean twoFactorEnabled = false;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "two_factor_method", length = 20)
+    private TwoFactorMethod twoFactorMethod;
+    
+    @Column(name = "accounting_integration", length = 20)
+    private String accountingIntegration;
+    
+    @Column(name = "consent_to_share_data")
+    private Boolean consentToShareData = false;
+
+    // ============================================
     // EXISTING ENUMS
     // ============================================
 
@@ -133,6 +164,26 @@ public class User {
 
     public enum SuspendReasonType {
         suspended_by_admin, wrong_password_attempts, other
+    }
+    
+    public enum AccountType {
+        individual, business
+    }
+    
+    public enum RegistrationStatus {
+        STEP1_COMPLETED,
+        STEP2_COMPLETED,
+        STEP3_COMPLETED,
+        STEP4_COMPLETED,
+        STEP5_COMPLETED,
+        STEP6_COMPLETED,
+        STEP7_COMPLETED,
+        COMPLETED,
+        INCOMPLETE
+    }
+    
+    public enum TwoFactorMethod {
+        sms, authenticator, email
     }
 
     // ============================================
