@@ -156,14 +156,14 @@ public class UserManagementService {
     
     private List<RoleDto> getActiveRoles(PortalType portal) {
         return roleRepository.findByPortalTypeAndIsActiveTrue(portal).stream()
-            .map(this::convertRoleToDto)
+                .map(this::convertRoleToDto)
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
     }
-    
+        
     private List<PermissionDto> getActivePermissions(PortalType portal) {
         return permissionRepository.findByPortalTypeAndIsActiveTrue(portal).stream()
-            .map(this::convertPermissionToDto)
+                .map(this::convertPermissionToDto)
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
     }
@@ -178,7 +178,7 @@ public class UserManagementService {
         return users.stream()
             .map(this::getUserWithPermissionsSafely)
             .filter(Objects::nonNull)
-            .collect(Collectors.toList());
+                .collect(Collectors.toList());
     }
     
     private UserWithPermissionsDto getUserWithPermissionsSafely(User user) {
@@ -215,7 +215,7 @@ public class UserManagementService {
     }
     
     // Helper methods
-    private List<Permission> getUserPermissions(Long userId) {
+    private List<PermissionDto> getUserPermissions(Long userId) {
         List<UserRole> userRoles = userRoleRepository.findByUserUserIdAndIsActiveTrue(userId);
         if (userRoles == null || userRoles.isEmpty()) {
             return Collections.emptyList();
@@ -227,17 +227,24 @@ public class UserManagementService {
             .map(UserRole::getRole)
             .filter(Objects::nonNull)
             .forEach(role -> {
-                List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleRoleId(role.getRoleId());
-                if (rolePermissions != null) {
-                    rolePermissions.stream()
-                        .filter(Objects::nonNull)
-                        .map(RolePermission::getPermission)
-                        .filter(Objects::nonNull)
-                        .forEach(allPermissions::add);
+                try {
+                    List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleRoleId(role.getRoleId());
+                    if (rolePermissions != null && !rolePermissions.isEmpty()) {
+                        rolePermissions.stream()
+                            .filter(Objects::nonNull)
+                            .map(RolePermission::getPermission)
+                            .filter(Objects::nonNull)
+                            .forEach(allPermissions::add);
+                    }
+                } catch (Exception e) {
+                    logger.warn("Error fetching permissions for role {}: {}", role.getRoleId(), e.getMessage());
                 }
             });
         
-        return new ArrayList<>(allPermissions);
+        return allPermissions.stream()
+                .map(this::convertPermissionToDto)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
     
     private RoleDto convertRoleToDto(Role role) {

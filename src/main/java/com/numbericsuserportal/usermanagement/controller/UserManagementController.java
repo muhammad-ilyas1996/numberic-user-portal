@@ -6,6 +6,7 @@ import com.numbericsuserportal.usermanagement.service.UserManagementService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -25,15 +26,29 @@ public class UserManagementController {
     
     // Get current user's permissions and info (for frontend)
     @GetMapping("/me")
-    public ResponseEntity<UserWithPermissionsDto> getCurrentUserInfo(
+    public ResponseEntity<?> getCurrentUserInfo(
             @AuthenticationPrincipal User currentUser) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).body(Map.of(
+                "success", false,
+                "message", "User not authenticated"
+            ));
+        }
         try {
             UserWithPermissionsDto user = userManagementService.getUserWithPermissions(currentUser.getUserId());
             return ResponseEntity.ok(user);
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            logger.error("Error getting user info for userId: {}", currentUser.getUserId(), e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                "success", false,
+                "message", e.getMessage() != null ? e.getMessage() : "User not found"
+            ));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            logger.error("Error getting user info", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage() != null ? e.getMessage() : "Failed to retrieve user info"
+            ));
         }
     }
     
