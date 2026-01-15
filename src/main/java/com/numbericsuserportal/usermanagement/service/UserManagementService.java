@@ -3,8 +3,6 @@ package com.numbericsuserportal.usermanagement.service;
 import com.numbericsuserportal.usermanagement.domain.*;
 import com.numbericsuserportal.usermanagement.dto.*;
 import com.numbericsuserportal.usermanagement.repo.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -15,8 +13,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class UserManagementService {
-    
-    private static final Logger logger = LoggerFactory.getLogger(UserManagementService.class);
     
     @Autowired
     private UserRepository userRepository;
@@ -105,19 +101,15 @@ public class UserManagementService {
     
     // Get user with all permissions and available options
     public UserWithPermissionsDto getUserWithPermissions(Long userId) {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (!userOpt.isPresent()) {
+            throw new RuntimeException("User not found");
+        }
         
-        UserWithPermissionsDto dto = buildUserDto(user);
-        dto.setCurrentRole(getUserRole(userId));
-        dto.setAllPermissions(getUserPermissions(userId));
-        loadPortalData(dto);
-        
-        return dto;
-    }
-    
-    private UserWithPermissionsDto buildUserDto(User user) {
+        User user = userOpt.get();
         UserWithPermissionsDto dto = new UserWithPermissionsDto();
+        
+        // Basic user info
         dto.setUserId(user.getUserId());
         dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
@@ -126,76 +118,49 @@ public class UserManagementService {
         dto.setPhone(user.getPhone());
         dto.setIsActive(user.getIsActive());
         dto.setLastLogin(user.getLastLogin());
-        return dto;
-    }
-    
-    private RoleDto getUserRole(Long userId) {
-        return userRoleRepository.findByUserId(userId).stream()
-            .findFirst()
-            .map(UserRole::getRole)
-            .filter(Objects::nonNull)
-            .flatMap(role -> roleRepository.findById(role.getRoleId()))
-            .map(this::convertRoleToDto)
-            .orElse(null);
-    }
-    
-    private void loadPortalData(UserWithPermissionsDto dto) {
-        portalTypeRepository.findByPortalName(PortalType.NUMBRICS_PORTAL_NAME)
-            .ifPresentOrElse(
-                portal -> {
-                    dto.setAvailableRoles(getActiveRoles(portal));
-                    dto.setAvailablePermissions(getActivePermissions(portal));
-                },
-                () -> {
-                    logger.warn("NUMBRICS Portal not found");
-                    dto.setAvailableRoles(Collections.emptyList());
-                    dto.setAvailablePermissions(Collections.emptyList());
-                }
-            );
-    }
-    
-    private List<RoleDto> getActiveRoles(PortalType portal) {
-        return roleRepository.findByPortalTypeAndIsActiveTrue(portal).stream()
-                .map(this::convertRoleToDto)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
-    }
+        // BaseEntity fields are automatically managed
+        // No need to get them from entity
         
-    private List<PermissionDto> getActivePermissions(PortalType portal) {
-        return permissionRepository.findByPortalTypeAndIsActiveTrue(portal).stream()
+        // Get current role
+        List<UserRole> userRoles = userRoleRepository.findByUserId(userId);
+        if (!userRoles.isEmpty()) {
+            UserRole userRole = userRoles.get(0);
+            Optional<Role> roleOpt = roleRepository.findById(userRole.getRole().getRoleId());
+            if (roleOpt.isPresent()) {
+                dto.setCurrentRole(convertRoleToDto(roleOpt.get()));
+            }
+        }
+        
+        // Get all permissions for this user
+        List<Permission> userPermissions = getUserPermissions(userId);
+        dto.setAllPermissions(userPermissions.stream()
                 .map(this::convertPermissionToDto)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
+                .collect(Collectors.toList()));
+        
+        // Get available roles for NUMBRICS portal
+        PortalType numbricsPortal = portalTypeRepository.findByPortalName(PortalType.NUMBRICS_PORTAL_NAME)
+            .orElseThrow(() -> new RuntimeException("NUMBRICS Portal not found"));
+            
+        List<Role> availableRoles = roleRepository.findByPortalTypeAndIsActiveTrue(numbricsPortal);
+        dto.setAvailableRoles(availableRoles.stream()
+                .map(this::convertRoleToDto)
+                .collect(Collectors.toList()));
+        
+        // Get available permissions for NUMBRICS portal
+        List<Permission> availablePermissions = permissionRepository.findByPortalTypeAndIsActiveTrue(numbricsPortal);
+        dto.setAvailablePermissions(availablePermissions.stream()
+                .map(this::convertPermissionToDto)
+                .collect(Collectors.toList()));
+        
+        return dto;
     }
     
     // Get all users
     public List<UserWithPermissionsDto> getAllUsers() {
         List<User> users = userRepository.findByIsDeletedFalse();
-        if (users == null || users.isEmpty()) {
-            return Collections.emptyList();
-        }
-        
         return users.stream()
-            .map(this::getUserWithPermissionsSafely)
-            .filter(Objects::nonNull)
+                .map(user -> getUserWithPermissions(user.getUserId()))
                 .collect(Collectors.toList());
-    }
-    
-    private UserWithPermissionsDto getUserWithPermissionsSafely(User user) {
-        try {
-            return getUserWithPermissions(user.getUserId());
-        } catch (Exception e) {
-            logger.warn("Failed to load full permissions for user {}: {}", user.getUserId(), e.getMessage());
-            return buildBasicUserDto(user);
-        }
-    }
-    
-    private UserWithPermissionsDto buildBasicUserDto(User user) {
-        UserWithPermissionsDto dto = buildUserDto(user);
-        dto.setAllPermissions(Collections.emptyList());
-        dto.setAvailableRoles(Collections.emptyList());
-        dto.setAvailablePermissions(Collections.emptyList());
-        return dto;
     }
     
     // Update user permissions
@@ -215,12 +180,11 @@ public class UserManagementService {
     }
     
     // Helper methods
-    private List<PermissionDto> getUserPermissions(Long userId) {
+    private List<Permission> getUserPermissions(Long userId) {
+        // Get user roles with role data loaded
         List<UserRole> userRoles = userRoleRepository.findByUserUserIdAndIsActiveTrue(userId);
-        if (userRoles == null || userRoles.isEmpty()) {
-            return Collections.emptyList();
-        }
         
+        // Get permissions from roles
         Set<Permission> allPermissions = new HashSet<>();
         userRoles.stream()
             .filter(Objects::nonNull)
@@ -237,55 +201,43 @@ public class UserManagementService {
                             .forEach(allPermissions::add);
                     }
                 } catch (Exception e) {
-                    logger.warn("Error fetching permissions for role {}: {}", role.getRoleId(), e.getMessage());
+                    // Log error but continue processing
+                    System.err.println("Error fetching permissions for role " + role.getRoleId() + ": " + e.getMessage());
                 }
             });
         
-        return allPermissions.stream()
-                .map(this::convertPermissionToDto)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        return new ArrayList<>(allPermissions);
     }
     
     private RoleDto convertRoleToDto(Role role) {
-        if (role == null) {
-            return null;
-        }
         RoleDto dto = new RoleDto();
         dto.setRoleId(role.getRoleId());
         dto.setCodeName(role.getCodeName());
         dto.setDisplayName(role.getDisplayName());
         dto.setDescription(role.getDescription());
+        dto.setPortalTypeId(role.getPortalType().getPortalTypeId());
+        dto.setPortalTypeName(role.getPortalType().getPortalName());
         dto.setIsSuperadmin(role.getIsSuperadmin());
         dto.setIsActive(role.getIsActive());
         dto.setIsReadonly(role.getIsReadonly());
-        
-        Optional.ofNullable(role.getPortalType()).ifPresent(portal -> {
-            dto.setPortalTypeId(portal.getPortalTypeId());
-            dto.setPortalTypeName(portal.getPortalName());
-        });
-        
+        // BaseEntity fields are automatically managed
+        // No need to get them from entity
         return dto;
     }
     
     private PermissionDto convertPermissionToDto(Permission permission) {
-        if (permission == null) {
-            return null;
-        }
         PermissionDto dto = new PermissionDto();
         dto.setPermissionId(permission.getPermissionId());
         dto.setCodeName(permission.getCodeName());
         dto.setDisplayName(permission.getDisplayName());
         dto.setCategory(permission.getCategory());
         dto.setDescription(permission.getDescription());
+        dto.setPortalTypeId(permission.getPortalType().getPortalTypeId());
+        dto.setPortalTypeName(permission.getPortalType().getPortalName());
         dto.setIsSuperadmin(permission.getIsSuperadmin());
         dto.setIsActive(permission.getIsActive());
-        
-        Optional.ofNullable(permission.getPortalType()).ifPresent(portal -> {
-            dto.setPortalTypeId(portal.getPortalTypeId());
-            dto.setPortalTypeName(portal.getPortalName());
-        });
-        
+        // BaseEntity fields are automatically managed
+        // No need to get them from entity
         return dto;
     }
 }
