@@ -100,8 +100,11 @@ public class RegistrationService {
             throw new RuntimeException("Role is required. Available roles: Founder, Business_Owner, Accountant_Pro");
         }
         
-        // Available roles: Founder, Business_Owner, Accountant_Pro
-        Optional<Role> role = roleRepository.findByCodeName(roleCode.trim());
+        // Map user-friendly role names to database role codes
+        String mappedRoleCode = mapRoleCodeToDatabase(roleCode.trim());
+        
+        // Find role by code name
+        Optional<Role> role = roleRepository.findByCodeName(mappedRoleCode);
         
         if (role.isEmpty()) {
             throw new RuntimeException("Role '" + roleCode + "' not found. Available roles: Founder, Business_Owner, Accountant_Pro");
@@ -363,6 +366,22 @@ public class RegistrationService {
             case STEP6_COMPLETED -> 6;
             case STEP7_COMPLETED, COMPLETED -> 7;
             default -> 0;
+        };
+    }
+    
+    /**
+     * Maps user-friendly role names to database role codes
+     * @param roleCode The role code from the DTO (can be short or full name)
+     * @return The database role code
+     */
+    private String mapRoleCodeToDatabase(String roleCode) {
+        return switch (roleCode) {
+            case "Founder" -> "NUMBRICS_FOUNDER";
+            case "Business_Owner" -> "NUMBRICS_BUSINESS_OWNER";
+            case "Accountant_Pro" -> "NUMBRICS_ACCOUNTANT_PRO";
+            // If already in database format, return as is
+            case "NUMBRICS_FOUNDER", "NUMBRICS_BUSINESS_OWNER", "NUMBRICS_ACCOUNTANT_PRO" -> roleCode;
+            default -> roleCode; // Return as is if not recognized (will fail in role lookup)
         };
     }
 }

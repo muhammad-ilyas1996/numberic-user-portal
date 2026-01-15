@@ -45,7 +45,7 @@ public class RegistrationStep1Dto {
     private Boolean marketingOptIn = false;
     
     @NotBlank(message = "Role selection is required")
-    @Pattern(regexp = "^(Founder|Business_Owner|Accountant_Pro)$", 
+    @Pattern(regexp = "^(Founder|Business_Owner|Accountant_Pro|NUMBRICS_FOUNDER|NUMBRICS_BUSINESS_OWNER|NUMBRICS_ACCOUNTANT_PRO)$", 
              message = "Role must be one of: Founder, Business_Owner, Accountant_Pro")
     private String preferredRole;
     

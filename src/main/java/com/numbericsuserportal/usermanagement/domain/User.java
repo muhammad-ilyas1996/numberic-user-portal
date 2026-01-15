@@ -74,7 +74,7 @@ public class User {
     @Column(name = "is_force_change_password", nullable = false)
     private Boolean isForceChangePassword = false;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "portal_type_id", nullable = false)
     private PortalType portalType;
 
