@@ -32,3 +32,16 @@ build/
 ### VS Code ###
 .vscode/
 src/main/resources/application.properties
+logs/numbricsservice.log
+logs/numbricsservice.log.2026-01-01.0.gz
+/logs
+/logs
+/logs
+/logs
+/logs
+logs/numbricsservice.log.2026-01-01.0.gz
+*.gz
+logs/numbricsservice.log.2026-01-01.0.gz
+logs/numbricsservice.log.2026-01-01.0.gz
+*.gz
+/logs

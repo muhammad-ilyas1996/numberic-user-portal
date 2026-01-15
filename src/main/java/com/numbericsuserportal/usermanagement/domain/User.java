@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.time.LocalDateTime;
@@ -13,6 +14,7 @@ import java.util.Collection;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString(exclude = {"portalType", "password", "authorities"})
 @Entity
 @Table(name = "users")
 public class User {
@@ -74,7 +76,7 @@ public class User {
     @Column(name = "is_force_change_password", nullable = false)
     private Boolean isForceChangePassword = false;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "portal_type_id", nullable = false)
     private PortalType portalType;
 
