@@ -76,6 +76,7 @@ public class User {
     @Column(name = "is_force_change_password", nullable = false)
     private Boolean isForceChangePassword = false;
 
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "portal_type_id", nullable = false)
     private PortalType portalType;
