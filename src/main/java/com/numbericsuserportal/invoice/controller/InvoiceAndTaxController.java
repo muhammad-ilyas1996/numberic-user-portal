@@ -64,4 +64,34 @@ public class InvoiceAndTaxController {
         return ResponseEntity.ok(dto);
     }
 
+    @PostMapping("/update-invoice")
+    public ResponseEntity<?> updateInvoice(@RequestBody InvoiceAndTaxDTO dto, @AuthenticationPrincipal User currentUser) {
+        try {
+            if (dto.getId() == null) {
+                return ResponseEntity.badRequest().body(java.util.Map.of("error", "Invoice ID is required for update"));
+            }
+            InvoiceAndTaxDTO updatedInvoice = invoiceAndTaxService.updateInvoice(dto.getId(), dto, currentUser);
+            return ResponseEntity.ok(updatedInvoice);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(java.util.Map.of("error", "Failed to update invoice: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/delete-invoice")
+    public ResponseEntity<?> deleteInvoice(@RequestBody InvoiceAndTaxRequestDto requestDTO, @AuthenticationPrincipal User currentUser) {
+        try {
+            if (requestDTO.getId() == null) {
+                return ResponseEntity.badRequest().body(java.util.Map.of("error", "Invoice ID is required for delete"));
+            }
+            invoiceAndTaxService.deleteInvoice(requestDTO.getId(), currentUser);
+            return ResponseEntity.ok(java.util.Map.of("message", "Invoice deleted successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(java.util.Map.of("error", "Failed to delete invoice: " + e.getMessage()));
+        }
+    }
+
 }

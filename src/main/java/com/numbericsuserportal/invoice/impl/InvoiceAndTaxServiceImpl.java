@@ -79,4 +79,70 @@ public class InvoiceAndTaxServiceImpl implements InvoiceAndTaxService {
             return invoiceAndTaxEntity.get();
         }
     }
+
+    @Override
+    public InvoiceAndTaxDTO updateInvoice(Long id, InvoiceAndTaxDTO dto, User currentUser) {
+        Optional<InvoiceAndTaxEntity> existingInvoice = invoiceAndTaxRepo.findByIdAndIsActiveTrue(id);
+        if (existingInvoice.isEmpty()) {
+            throw new RuntimeException("Invoice not found with id: " + id);
+        }
+        
+        InvoiceAndTaxEntity entity = existingInvoice.get();
+        
+        // Update fields
+        entity.setTotalTaxAmountCalculated(dto.getTotalTaxAmountCalculated());
+        entity.setTaxableAmount(dto.getTaxableAmount());
+        entity.setNexusMet(dto.getNexusMet());
+        entity.setTaxRateCalculated(dto.getTaxRateCalculated());
+        entity.setHasActiveRegistration(dto.getHasActiveRegistration());
+        entity.setTransactionItems(dto.getTransactionItems());
+        
+        entity.setInvoiceDate(dto.getInvoiceDate());
+        entity.setExternalId(dto.getExternalId());
+        entity.setCurrency(dto.getCurrency());
+        entity.setDescription(dto.getDescription());
+        
+        entity.setCustomerName(dto.getCustomerName());
+        entity.setCustomerEmail(dto.getCustomerEmail());
+        entity.setCustomerStreet(dto.getCustomerStreet());
+        entity.setCustomerCity(dto.getCustomerCity());
+        entity.setCustomerState(dto.getCustomerState());
+        entity.setCustomerPostalCode(dto.getCustomerPostalCode());
+        entity.setCustomerCountry(dto.getCustomerCountry());
+        
+        entity.setShipStreet(dto.getShipStreet());
+        entity.setShipCity(dto.getShipCity());
+        entity.setShipState(dto.getShipState());
+        entity.setShipPostalCode(dto.getShipPostalCode());
+        entity.setShipCountry(dto.getShipCountry());
+        
+        entity.setInvoiceNum(dto.getInvoiceNum());
+        entity.setInvoiceIssueDate(dto.getInvoiceIssueDate());
+        entity.setInvoiceDueDate(dto.getInvoiceDueDate());
+        entity.setInvoiceStatus(dto.getInvoiceStatus());
+        
+        // Update audit fields
+        entity.setModifiedBy(currentUser.getUserId().toString());
+        entity.setModifiedOn(new java.util.Date());
+        
+        InvoiceAndTaxEntity savedEntity = invoiceAndTaxRepo.save(entity);
+        return InvoiceAndTaxConverter.toDTO(savedEntity, currentUser);
+    }
+
+    @Override
+    public void deleteInvoice(Long id, User currentUser) {
+        Optional<InvoiceAndTaxEntity> existingInvoice = invoiceAndTaxRepo.findByIdAndIsActiveTrue(id);
+        if (existingInvoice.isEmpty()) {
+            throw new RuntimeException("Invoice not found with id: " + id);
+        }
+        
+        InvoiceAndTaxEntity entity = existingInvoice.get();
+        
+        // Soft delete - set isActive to false
+        entity.setIsActive(false);
+        entity.setModifiedBy(currentUser.getUserId().toString());
+        entity.setModifiedOn(new java.util.Date());
+        
+        invoiceAndTaxRepo.save(entity);
+    }
 }
