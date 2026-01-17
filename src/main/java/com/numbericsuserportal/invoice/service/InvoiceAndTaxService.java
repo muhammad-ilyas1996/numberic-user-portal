@@ -13,5 +13,11 @@ public interface InvoiceAndTaxService {
     public InvoiceAndTaxEntity getInvoiceDetail(Long id);
     public InvoiceAndTaxEntity getInvoiceDetailByCustomerName(String customerName);
     public InvoiceAndTaxEntity getInvoiceDetailByInvoiceNumber(String invoiceNum);
+    
+    // Update invoice
+    InvoiceAndTaxDTO updateInvoice(Long id, InvoiceAndTaxDTO dto, User currentUser);
+    
+    // Delete invoice (soft delete)
+    void deleteInvoice(Long id, User currentUser);
 
 }

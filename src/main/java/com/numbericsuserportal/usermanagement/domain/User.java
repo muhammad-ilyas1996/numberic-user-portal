@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.time.LocalDateTime;
@@ -13,6 +14,7 @@ import java.util.Collection;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString(exclude = {"portalType", "password", "authorities"})
 @Entity
 @Table(name = "users")
 public class User {
@@ -74,7 +76,7 @@ public class User {
     @Column(name = "is_force_change_password", nullable = false)
     private Boolean isForceChangePassword = false;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "portal_type_id", nullable = false)
     private PortalType portalType;
 
@@ -126,31 +128,31 @@ public class User {
     // ============================================
     // REGISTRATION FIELDS
     // ============================================
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "account_type", length = 20)
     private AccountType accountType;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "registration_status", length = 30)
     private RegistrationStatus registrationStatus;
-    
+
     @Column(name = "terms_accepted")
     private Boolean termsAccepted = false;
-    
+
     @Column(name = "marketing_opt_in")
     private Boolean marketingOptIn = false;
-    
+
     @Column(name = "two_factor_enabled")
     private Boolean twoFactorEnabled = false;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "two_factor_method", length = 20)
     private TwoFactorMethod twoFactorMethod;
-    
+
     @Column(name = "accounting_integration", length = 20)
     private String accountingIntegration;
-    
+
     @Column(name = "consent_to_share_data")
     private Boolean consentToShareData = false;
 
@@ -165,11 +167,11 @@ public class User {
     public enum SuspendReasonType {
         suspended_by_admin, wrong_password_attempts, other
     }
-    
+
     public enum AccountType {
         individual, business
     }
-    
+
     public enum RegistrationStatus {
         STEP1_COMPLETED,
         STEP2_COMPLETED,
@@ -181,7 +183,7 @@ public class User {
         COMPLETED,
         INCOMPLETE
     }
-    
+
     public enum TwoFactorMethod {
         sms, authenticator, email
     }
@@ -214,7 +216,7 @@ public class User {
         public Double getAmountInDollars() {
             return amount / 100.0;
         }
-        
+
         // Helper method to get default role based on plan
         public String getDefaultRoleCode() {
             return switch (this) {
