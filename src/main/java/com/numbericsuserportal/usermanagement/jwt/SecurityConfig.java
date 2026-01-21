@@ -28,7 +28,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/login").permitAll()
                         .requestMatchers("/webhooks/**").permitAll() // Allow Twilio webhooks without authentication
                         .requestMatchers("/api/auth/register/**").permitAll() // Allow registration endpoints
-                        .requestMatchers("/api/taxbandits/test-auth").permitAll() // Allow TaxBandits test endpoint
+                        .requestMatchers("/api/taxbandits/**").permitAll() // Allow all TaxBandits APIs (test-auth, form1099nec, and future endpoints)
 //                        .requestMatchers("/webhooks/**").permitAll() // Allow Twilio webhooks without authentication
 
                         .anyRequest().authenticated()
