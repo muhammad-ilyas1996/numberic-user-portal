@@ -12,6 +12,9 @@ import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
@@ -21,6 +24,8 @@ import java.util.Map;
 
 @Service
 public class TaxBanditsAuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(TaxBanditsAuthService.class);
 
     @Value("${taxbandits.client.id}")
     private String clientId;
@@ -83,35 +88,10 @@ public class TaxBanditsAuthService {
             String signature = base64UrlEncodeBytes(signatureBytes);
 
             // Build JWS token
-            String jws = encodedHeader + "." + encodedPayload + "." + signature;
-
-            System.out.println("=== TaxBandits JWS Generation ===");
-            System.out.println("Client ID: " + clientId);
-            System.out.println("User Token: " + userToken);
-            System.out.println("System Time (Unix): " + (System.currentTimeMillis() / 1000));
-            System.out.println("Adjusted Time (Unix, -45s): " + currentTime);
-            System.out.println("Generated JWS: " + jws);
-            
-            // Decode and verify JWS payload
-            try {
-                String[] parts = jws.split("\\.");
-                if (parts.length == 3) {
-                    // Decode payload (base64url decode)
-                    String payloadJson = new String(
-                        Base64.getUrlDecoder().decode(parts[1] + "===".substring(0, (4 - parts[1].length() % 4) % 4))
-                    );
-                    System.out.println("JWS Payload (decoded): " + payloadJson);
-                }
-            } catch (Exception e) {
-                System.out.println("Could not decode JWS payload: " + e.getMessage());
-            }
-            System.out.println("=================================");
-
-            return jws;
+            return encodedHeader + "." + encodedPayload + "." + signature;
 
         } catch (Exception e) {
-            System.err.println("Error generating TaxBandits JWS: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Failed to generate TaxBandits JWS: {}", e.getMessage());
             throw new RuntimeException("Failed to generate TaxBandits JWS: " + e.getMessage(), e);
         }
     }
@@ -127,7 +107,7 @@ public class TaxBanditsAuthService {
                 long currentTime = System.currentTimeMillis() / 1000;
                 // If token expires in more than 5 minutes, use cached token
                 if (tokenExpiresAt > currentTime + 300) {
-                    System.out.println("Using cached TaxBandits access token");
+                    log.debug("Using cached TaxBandits access token");
                     return cachedAccessToken;
                 }
             }
@@ -156,24 +136,7 @@ public class TaxBanditsAuthService {
             String authUrl = oauthBaseUrl + "tbsauth";
             // According to TaxBandits sample Java code, header name should be "Authentication" (not "Authorization")
             // JWS token should be sent directly without "Bearer " prefix
-            // The "Bearer " prefix is only for the access token (JWT) received in response
-            String authHeaderValue = jws; // JWS token without "Bearer " prefix
-
-            System.out.println("=== TaxBandits Access Token Request ===");
-            System.out.println("Auth URL: " + authUrl);
-            System.out.println("JWS Token: " + jws);
-            System.out.println("Authentication Header (JWS only, no Bearer prefix): " + authHeaderValue);
-            
-            // Verify JWS token format
-            System.out.println("=== JWS Token Verification ===");
-            System.out.println("JWS Length: " + jws.length());
-            System.out.println("JWS Parts: " + jws.split("\\.").length);
-            if (jws.split("\\.").length == 3) {
-                System.out.println("JWS Format: VALID (3 parts)");
-            } else {
-                System.out.println("JWS Format: INVALID (expected 3 parts)");
-            }
-            System.out.println("==============================");
+            String authHeaderValue = jws;
             
             // Use Apache HttpClient 5 for reliable header handling
             CloseableHttpClient httpClient = HttpClients.createDefault();
@@ -185,21 +148,11 @@ public class TaxBanditsAuthService {
             httpGet.setHeader("Content-Type", "application/json");
             httpGet.setHeader("Accept", "application/json");
             
-            System.out.println("=== Request Headers Set in HttpGet ===");
-            System.out.println("  Authentication: " + httpGet.getHeader("Authentication").getValue());
-            System.out.println("  Content-Type: " + httpGet.getHeader("Content-Type").getValue());
-            System.out.println("  Accept: " + httpGet.getHeader("Accept").getValue());
-            System.out.println("  URL: " + authUrl);
-            System.out.println("  Method: GET");
-            System.out.println("=====================================");
-            
             TaxBanditsTokenResponse tokenResponse;
             try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
                 int statusCode = response.getCode();
-                System.out.println("Response Code: " + statusCode);
-                
                 String responseBody = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
-                System.out.println("Response Body: " + responseBody);
+                log.debug("TaxBandits auth response: {} - {} chars", statusCode, responseBody.length());
                 
                 if (statusCode == 200) {
                     tokenResponse = objectMapper.readValue(responseBody, TaxBanditsTokenResponse.class);
@@ -222,13 +175,7 @@ public class TaxBanditsAuthService {
                 // Calculate expiration time (current time + expiresIn seconds)
                 long currentTime = System.currentTimeMillis() / 1000;
                 tokenExpiresAt = currentTime + tokenResponse.getExpiresIn();
-
-                System.out.println("=== TaxBandits Access Token Received ===");
-                System.out.println("Access Token: " + tokenResponse.getAccessToken());
-                System.out.println("Token Type: " + tokenResponse.getTokenType());
-                System.out.println("Expires In: " + tokenResponse.getExpiresIn() + " seconds");
-                System.out.println("=========================================");
-
+                log.debug("TaxBandits access token obtained, expires in {}s", tokenResponse.getExpiresIn());
                 return tokenResponse.getAccessToken();
             } else {
                 String errorMsg = "Failed to get access token. Status: " + 
@@ -241,8 +188,7 @@ public class TaxBanditsAuthService {
 
 
         } catch (Exception e) {
-            System.err.println("Error getting TaxBandits access token: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Failed to get TaxBandits access token: {}", e.getMessage());
             throw new RuntimeException("Failed to get TaxBandits access token: " + e.getMessage(), e);
         }
     }
@@ -270,8 +216,7 @@ public class TaxBanditsAuthService {
             return response.getBody();
 
         } catch (Exception e) {
-            System.err.println("Error getting TaxBandits server time: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Failed to get TaxBandits server time: {}", e.getMessage());
             throw new RuntimeException("Failed to get TaxBandits server time: " + e.getMessage(), e);
         }
     }

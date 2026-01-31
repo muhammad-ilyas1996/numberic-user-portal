@@ -3,12 +3,14 @@ package com.numbericsuserportal.usermanagement.domain;
 import com.numbericsuserportal.commonpersistence.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 @Entity
 @Table(name = "portal_types")
 @Data
+@EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
 public class PortalType extends BaseEntity {
