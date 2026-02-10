@@ -137,23 +137,23 @@ public class User {
     @Column(name = "registration_status", length = 30)
     private RegistrationStatus registrationStatus;
 
-    @Column(name = "terms_accepted")
+    @Column(name = "terms_accepted", columnDefinition = "BIT(1) DEFAULT 0")
     private Boolean termsAccepted = false;
 
-    @Column(name = "marketing_opt_in")
+    @Column(name = "marketing_opt_in", columnDefinition = "BIT(1) DEFAULT 0")
     private Boolean marketingOptIn = false;
 
-    @Column(name = "two_factor_enabled")
+    @Column(name = "two_factor_enabled", columnDefinition = "BIT(1) DEFAULT 0")
     private Boolean twoFactorEnabled = false;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "two_factor_method", length = 20)
+    @Column(name = "two_factor_method", columnDefinition = "enum('authenticator','email','sms')")
     private TwoFactorMethod twoFactorMethod;
 
     @Column(name = "accounting_integration", length = 20)
     private String accountingIntegration;
 
-    @Column(name = "consent_to_share_data")
+    @Column(name = "consent_to_share_data", columnDefinition = "BIT(1) DEFAULT 0")
     private Boolean consentToShareData = false;
 
     // ============================================
