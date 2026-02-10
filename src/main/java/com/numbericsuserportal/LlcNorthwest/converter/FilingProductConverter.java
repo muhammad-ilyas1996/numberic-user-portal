@@ -55,9 +55,20 @@ public class FilingProductConverter {
         entity.setName(dto.getName());
         entity.setFilingName(dto.getFilingName());
         entity.setPrice(dto.getPrice());
+        if (entity.getFilingMethods() != null) {
+            entity.getFilingMethods().clear();
+        }
+
+        if (dto.getFilingMethods() != null && !dto.getFilingMethods().isEmpty()) {
+            for (FilingMethodDTO methodDTO : dto.getFilingMethods()) {
+                FilingMethodEntity methodEntity = toMethodEntity(methodDTO);
+                methodEntity.setFilingProduct(entity);
+                entity.getFilingMethods().add(methodEntity);
+            }
+        }
     }
 
-    private FilingMethodEntity toMethodEntity(FilingMethodDTO dto) {
+    public FilingMethodEntity toMethodEntity(FilingMethodDTO dto) {
         FilingMethodEntity entity = new FilingMethodEntity();
         entity.setExternalId(dto.getId());
         entity.setName(dto.getName());
