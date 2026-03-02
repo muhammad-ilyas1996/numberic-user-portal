@@ -54,6 +54,10 @@ public class InvoiceAndTaxEntity extends BaseEntity {
     private LocalDate invoiceDueDate;
     private String invoiceStatus;
 
+    /** Set when invoice is auto-generated from a recurring profile */
+    @Column(name = "recurring_invoice_id")
+    private Long recurringInvoiceId;
+
     @OneToMany(mappedBy = "invoiceAndTaxEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InvoiceProductEntity> invoiceProductEntity = new ArrayList<>();
 }

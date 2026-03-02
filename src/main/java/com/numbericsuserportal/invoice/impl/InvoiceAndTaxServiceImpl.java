@@ -38,17 +38,16 @@ public class InvoiceAndTaxServiceImpl implements InvoiceAndTaxService {
         SearchDate searchDate = dateValidation.validateDates(request.getFromDate(), request.getToDate());
         Specification<InvoiceAndTaxEntity> spec = SpecificationUtility.equalsValue("isActive", true);
 
-        if (request.getFromDate() != null) {
+        if (request.getFromDate() != null && searchDate.getFromDate() != null) {
             spec = spec.and(SpecificationUtility.greaterThanOrEqualTo("createdOn", searchDate.getFromDate()));
         }
-        if (request.getToDate() != null) {
+        if (request.getToDate() != null && searchDate.getToDate() != null) {
             spec = spec.and(SpecificationUtility.lessThanOrEqualTo("createdOn", searchDate.getToDate()));
         }
+        int pageNumber = (request.getPageNumber() != null && request.getPageNumber() > 0) ? request.getPageNumber() : 1;
+        int pageSize = (request.getPageSize() != null && request.getPageSize() > 0) ? request.getPageSize() : 20;
         return invoiceAndTaxRepo.findAll(spec,
-                PageRequest.of(request.getPageNumber()-1,
-                        request.getPageSize(),
-                        Sort.Direction.DESC,
-                        "createdOn")
+                PageRequest.of(pageNumber - 1, pageSize, Sort.Direction.DESC, "createdOn")
         );
     }
 

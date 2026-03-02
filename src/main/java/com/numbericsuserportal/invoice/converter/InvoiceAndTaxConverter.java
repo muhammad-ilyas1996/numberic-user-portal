@@ -10,7 +10,6 @@ import com.numbericsuserportal.usermanagement.domain.User;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class InvoiceAndTaxConverter {
 
@@ -50,19 +49,23 @@ public class InvoiceAndTaxConverter {
         dto.setInvoiceIssueDate(entity.getInvoiceIssueDate());
         dto.setInvoiceDueDate(entity.getInvoiceDueDate());
         dto.setInvoiceStatus(entity.getInvoiceStatus());
+        dto.setRecurringInvoiceId(entity.getRecurringInvoiceId());
 
         // Convert child products
         List<InvoiceProductDTO> productDTOs = new ArrayList<>();
-        for (InvoiceProductEntity productEntity : entity.getInvoiceProductEntity()) {
-            productDTOs.add(InvoiceProductConverter.toDTO(productEntity));
+        if (entity.getInvoiceProductEntity() != null) {
+            for (InvoiceProductEntity productEntity : entity.getInvoiceProductEntity()) {
+                productDTOs.add(InvoiceProductConverter.toDTO(productEntity));
+            }
         }
         dto.setInvoiceProductList(productDTOs);
 
-        //Audit
-        dto.setCreatedBy(currentUser.getUserId().toString());
-        dto.setCreatedOn(new Date());
-        dto.setModifiedBy(currentUser.getUserId().toString());
-        dto.setModifiedOn(new Date());
+        // Audit (from entity; use currentUser only for display if needed)
+        dto.setCreatedBy(entity.getCreatedBy());
+        dto.setCreatedOn(entity.getCreatedOn());
+        dto.setModifiedBy(entity.getModifiedBy());
+        dto.setModifiedOn(entity.getModifiedOn());
+        dto.setIsActive(entity.getIsActive());
 
         return dto;
     }
@@ -103,13 +106,20 @@ public class InvoiceAndTaxConverter {
         entity.setInvoiceIssueDate(dto.getInvoiceIssueDate());
         entity.setInvoiceDueDate(dto.getInvoiceDueDate());
         entity.setInvoiceStatus(dto.getInvoiceStatus());
+        if (dto.getRecurringInvoiceId() != null) {
+            entity.setRecurringInvoiceId(dto.getRecurringInvoiceId());
+        }
 
         // Convert child product list
         List<InvoiceProductEntity> productEntities = new ArrayList<>();
-        for (InvoiceProductDTO productDTO : dto.getInvoiceProductList()) {
-            InvoiceProductEntity productEntity = InvoiceProductConverter.toEntity(productDTO);
-            productEntity.setInvoiceAndTaxEntity(entity);
-            productEntities.add(productEntity);
+        if (dto.getInvoiceProductList() != null) {
+            for (InvoiceProductDTO productDTO : dto.getInvoiceProductList()) {
+                InvoiceProductEntity productEntity = InvoiceProductConverter.toEntity(productDTO);
+                if (productEntity != null) {
+                    productEntity.setInvoiceAndTaxEntity(entity);
+                    productEntities.add(productEntity);
+                }
+            }
         }
         entity.setInvoiceProductEntity(productEntities);
 

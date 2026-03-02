@@ -1,6 +1,5 @@
 package com.numbericsuserportal.invoice.dto;
 
-import com.numbericsuserportal.invoiceproduct.dto.InvoiceProductDTO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,9 +12,10 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class InvoiceAndTaxDTO {
+public class RecurringInvoiceDto {
 
     private Long id;
+    private String name;
 
     private Double totalTaxAmountCalculated;
     private Double taxableAmount;
@@ -24,12 +24,10 @@ public class InvoiceAndTaxDTO {
     private String hasActiveRegistration;
     private String transactionItems;
 
-    private LocalDate invoiceDate;
     private String externalId;
     private String currency;
     private String description;
 
-    // Customer Info
     private String customerName;
     private String customerEmail;
     private String customerStreet;
@@ -38,29 +36,24 @@ public class InvoiceAndTaxDTO {
     private String customerPostalCode;
     private String customerCountry;
 
-    // Shipping Info
     private String shipStreet;
     private String shipCity;
     private String shipState;
     private String shipPostalCode;
     private String shipCountry;
 
-    // Invoice Info
-    private String invoiceNum;
-    private LocalDate invoiceIssueDate;
-    private LocalDate invoiceDueDate;
-    private String invoiceStatus;
+    private String frequency;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private LocalDate nextRunOn;
+    private String status;
+    private Integer runCount;
+    private Integer dueDays;
 
-    /** Set when invoice was auto-generated from recurring profile (id of recurring_invoice) */
-    private Long recurringInvoiceId;
-
-    //Base Entity
     private Date createdOn;
     private Date modifiedOn;
     private String createdBy;
     private String modifiedBy;
-    private Boolean isActive;
 
-    // Product List
-    private List<InvoiceProductDTO> invoiceProductList = new ArrayList<>();;
+    private List<RecurringInvoiceItemDto> items = new ArrayList<>();
 }
