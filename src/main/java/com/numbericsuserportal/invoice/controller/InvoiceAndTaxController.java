@@ -18,6 +18,7 @@ import com.numbericsuserportal.invoice.service.PaymentTransactionService;
 import com.numbericsuserportal.usermanagement.domain.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.core.io.ByteArrayResource;
@@ -56,15 +57,16 @@ public class InvoiceAndTaxController {
         return ResponseEntity.ok(invoiceAndTaxDTOS);
     }
 
+    /** POST with body {"id": <invoiceId>}. Returns 404 with message if invoice not found. */
     @PostMapping("/view-detail")
     // @PreAuthorize("hasAuthority('VIEW_PROVIDER')")
-    public ResponseEntity<InvoiceAndTaxDTO> getInvoiceData(@RequestBody InvoiceAndTaxRequestDto requestDTO,@AuthenticationPrincipal User currentUser) {
+    public ResponseEntity<?> getInvoiceData(@RequestBody InvoiceAndTaxRequestDto requestDTO, @AuthenticationPrincipal User currentUser) {
         if (requestDTO.getId() == null) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Request body must include {\"id\": <invoiceId>}"));
         }
         InvoiceAndTaxEntity entity = invoiceAndTaxService.getInvoiceDetail(requestDTO.getId());
         if (entity.getId() == null) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(java.util.Map.of("error", "Invoice not found for id: " + requestDTO.getId()));
         }
         InvoiceAndTaxDTO dto = InvoiceAndTaxConverter.toDTO(entity, currentUser);
         return ResponseEntity.ok(dto);

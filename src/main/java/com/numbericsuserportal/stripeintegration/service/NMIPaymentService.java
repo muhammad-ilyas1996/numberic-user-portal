@@ -65,8 +65,11 @@ public class NMIPaymentService {
             // NMI Direct Post API uses form-encoded data
             MultiValueMap<String, String> requestParams = new LinkedMultiValueMap<>();
             
-            // Authentication - Use API key if available, otherwise username/password
-            if (nmiConfig.getNmiApiKey() != null && !nmiConfig.getNmiApiKey().isEmpty()) {
+            // Authentication - Use username/password if nmi.auth.method=username_password (fixes "API key not found"), else API key
+            if (nmiConfig.isUseUsernamePassword() && nmiConfig.getNmiUsername() != null && !nmiConfig.getNmiUsername().isEmpty()) {
+                requestParams.add("username", nmiConfig.getNmiUsername());
+                requestParams.add("password", nmiConfig.getNmiPassword());
+            } else if (nmiConfig.getNmiApiKey() != null && !nmiConfig.getNmiApiKey().isEmpty()) {
                 requestParams.add("security_key", nmiConfig.getNmiApiKey());
             } else {
                 requestParams.add("username", nmiConfig.getNmiUsername());
@@ -168,8 +171,11 @@ public class NMIPaymentService {
         try {
             MultiValueMap<String, String> requestParams = new LinkedMultiValueMap<>();
             
-            // Authentication
-            if (nmiConfig.getNmiApiKey() != null && !nmiConfig.getNmiApiKey().isEmpty()) {
+            // Authentication (same as processPayment)
+            if (nmiConfig.isUseUsernamePassword() && nmiConfig.getNmiUsername() != null && !nmiConfig.getNmiUsername().isEmpty()) {
+                requestParams.add("username", nmiConfig.getNmiUsername());
+                requestParams.add("password", nmiConfig.getNmiPassword());
+            } else if (nmiConfig.getNmiApiKey() != null && !nmiConfig.getNmiApiKey().isEmpty()) {
                 requestParams.add("security_key", nmiConfig.getNmiApiKey());
             } else {
                 requestParams.add("username", nmiConfig.getNmiUsername());
@@ -233,6 +239,10 @@ public class NMIPaymentService {
         
         // NMI response codes: 1 = Approved, 2 = Declined, 3 = Error
         boolean success = "1".equals(responseCode);
+        if (!success && (response.length() < 500)) {
+            org.slf4j.LoggerFactory.getLogger(NMIPaymentService.class)
+                .warn("NMI returned error. Raw response: {}", response);
+        }
         
         return new NMIPaymentResponse(
             success,

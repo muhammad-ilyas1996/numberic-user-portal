@@ -1,0 +1,321 @@
+{
+  "info": {
+    "name": "Numberics Invoice APIs",
+    "description": "All invoice, recurring, send, pay, transactions APIs. Run Login first to set token.\n\n• view-detail: use POST with body {\"id\": <invoiceId>}; 404 = invoice not found.\n• WhatsApp: Twilio sandbox – recipient must send 'join <code>' to sandbox number first (see postman/README.md).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://72.62.3.78/numbricsservice" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json && json.token) { pm.collectionVariables.set('token', json.token); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"atiq.apo@apo.com\",\n  \"password\": \"Atiq.apo@1\"\n}\n"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invoice",
+      "item": [
+        {
+          "name": "Create Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Test Customer\",\n  \"customerEmail\": \"customer@example.com\",\n  \"currency\": \"USD\",\n  \"invoiceNum\": \"INV-001\",\n  \"invoiceIssueDate\": \"2025-03-01\",\n  \"invoiceDueDate\": \"2025-03-31\",\n  \"invoiceStatus\": \"DRAFT\",\n  \"taxableAmount\": 100.00,\n  \"totalTaxAmountCalculated\": 100.00,\n  \"invoiceProductList\": [\n    { \"productName\": \"Item 1\", \"quantity\": 1, \"amount\": 100.00 }\n  ]\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/invoice/create-invoice"
+          }
+        },
+        {
+          "name": "Invoice List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pageNumber\": 1,\n  \"pageSize\": 20\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/invoice/list"
+          }
+        },
+        {
+          "name": "View Detail (by id)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": 1\n}\n" },
+            "url": "{{baseUrl}}/v1/invoice/view-detail"
+          }
+        },
+        {
+          "name": "View Detail by Customer Name",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"customerName\": \"Test Customer\"\n}\n" },
+            "url": "{{baseUrl}}/v1/invoice/view-detail-by-customer-name"
+          }
+        },
+        {
+          "name": "View Detail by Invoice Num",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"invoiceNum\": \"INV-001\"\n}\n" },
+            "url": "{{baseUrl}}/v1/invoice/view-detail-by-invoice-num"
+          }
+        },
+        {
+          "name": "Update Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"customerName\": \"Test Customer Updated\",\n  \"customerEmail\": \"customer@example.com\",\n  \"currency\": \"USD\",\n  \"invoiceNum\": \"INV-001\",\n  \"invoiceStatus\": \"DRAFT\",\n  \"taxableAmount\": 150.00,\n  \"totalTaxAmountCalculated\": 150.00,\n  \"invoiceProductList\": []\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/invoice/update-invoice"
+          }
+        },
+        {
+          "name": "Delete Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": 1\n}\n" },
+            "url": "{{baseUrl}}/v1/invoice/delete-invoice"
+          }
+        },
+        {
+          "name": "Send Invoice (WhatsApp)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoiceId\": 1,\n  \"channel\": \"WHATSAPP\",\n  \"recipientPhoneOrEmail\": \"+923001234567\"\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/invoice/send"
+          }
+        },
+        {
+          "name": "Send Invoice (Email)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoiceId\": 1,\n  \"channel\": \"EMAIL\",\n  \"recipientPhoneOrEmail\": \"customer@example.com\"\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/invoice/send"
+          }
+        },
+        {
+          "name": "Send History",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"invoiceId\": 1,\n  \"pageNumber\": 1,\n  \"pageSize\": 20\n}\n" },
+            "url": "{{baseUrl}}/v1/invoice/send-history"
+          }
+        },
+        {
+          "name": "Download PDF",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": 1\n}\n" },
+            "url": "{{baseUrl}}/v1/invoice/download-pdf"
+          }
+        },
+        {
+          "name": "Transactions List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pageNumber\": 1,\n  \"pageSize\": 20\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/invoice/transactions/list"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invoice (Public - No Auth)",
+      "item": [
+        {
+          "name": "Pay by Token (GET)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/invoice/pay-by-token?token=PASTE_TOKEN_HERE",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "invoice", "pay-by-token"],
+              "query": [{ "key": "token", "value": "PASTE_TOKEN_HERE" }]
+            }
+          }
+        },
+        {
+          "name": "Pay with Token (NMI)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"PASTE_TOKEN_FROM_LINK\",\n  \"cardNumber\": \"4111111111111111\",\n  \"cardExpiry\": \"1225\",\n  \"cardCvv\": \"123\",\n  \"customerInfo\": {\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"email\": \"test@example.com\"\n  }\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/invoice/pay-with-token"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recurring Invoice",
+      "item": [
+        {
+          "name": "Recurring Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Monthly Retainer\",\n  \"customerName\": \"Acme Corp\",\n  \"customerEmail\": \"acme@example.com\",\n  \"currency\": \"USD\",\n  \"frequency\": \"MONTHLY\",\n  \"startDate\": \"2025-03-01\",\n  \"dueDays\": 30,\n  \"taxableAmount\": 500.00,\n  \"items\": [\n    { \"productName\": \"Consulting\", \"quantity\": 1, \"amount\": 500.00 }\n  ]\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/invoice/recurring/create"
+          }
+        },
+        {
+          "name": "Recurring List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pageNumber\": 1,\n  \"pageSize\": 20\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/invoice/recurring/list"
+          }
+        },
+        {
+          "name": "Recurring View (GET by id)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/v1/invoice/recurring/1"
+          }
+        },
+        {
+          "name": "Recurring Update",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Monthly Retainer Updated\",\n  \"customerName\": \"Acme Corp\",\n  \"customerEmail\": \"acme@example.com\",\n  \"currency\": \"USD\",\n  \"frequency\": \"MONTHLY\",\n  \"startDate\": \"2025-03-01\",\n  \"dueDays\": 30,\n  \"taxableAmount\": 600.00,\n  \"items\": [\n    { \"productName\": \"Consulting\", \"quantity\": 1, \"amount\": 600.00 }\n  ]\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/invoice/recurring/1"
+          }
+        },
+        {
+          "name": "Recurring Pause",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/v1/invoice/recurring/1/pause"
+          }
+        },
+        {
+          "name": "Recurring Resume",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/v1/invoice/recurring/1/resume"
+          }
+        },
+        {
+          "name": "Recurring Stop",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/v1/invoice/recurring/1/stop"
+          }
+        }
+      ]
+    }
+  ]
+}

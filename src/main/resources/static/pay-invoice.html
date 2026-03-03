@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pay Invoice</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 24px; background: #f5f5f5; min-height: 100vh; }
+    .container { max-width: 420px; margin: 0 auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    h1 { margin: 0 0 8px; font-size: 1.35rem; color: #111; }
+    .sub { color: #666; font-size: 0.9rem; margin-bottom: 20px; }
+    .invoice-box { background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
+    .invoice-box p { margin: 6px 0; font-size: 0.95rem; }
+    .amount { font-size: 1.5rem; font-weight: 700; color: #0d6efd; }
+    label { display: block; margin-bottom: 4px; font-size: 0.85rem; font-weight: 500; color: #333; }
+    input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; margin-bottom: 12px; }
+    input:focus { outline: none; border-color: #0d6efd; }
+    button { width: 100%; padding: 12px; background: #0d6efd; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    button:hover { background: #0b5ed7; }
+    button:disabled { background: #adb5bd; cursor: not-allowed; }
+    .error { background: #f8d7da; color: #721c24; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9rem; }
+    .success { background: #d4edda; color: #155724; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9rem; }
+    .loading { color: #666; text-align: center; padding: 24px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="loading" class="loading">Loading invoice…</div>
+    <div id="invalid" class="error hidden">This payment link is invalid or has expired.</div>
+    <div id="content" class="hidden">
+      <h1>Pay Invoice</h1>
+      <p class="sub">Complete your payment below.</p>
+      <div class="invoice-box">
+        <p><strong>Invoice</strong> <span id="invNum"></span></p>
+        <p><strong>Customer</strong> <span id="custName"></span></p>
+        <p class="amount"><span id="currency"></span> <span id="amount"></span></p>
+      </div>
+      <div id="formError" class="error hidden"></div>
+      <div id="formSuccess" class="success hidden"></div>
+      <form id="payForm">
+        <label>Card number</label>
+        <input type="text" id="cardNumber" placeholder="4111111111111111" maxlength="19" autocomplete="cc-number" required>
+        <label>Expiry (MMYY)</label>
+        <input type="text" id="cardExpiry" placeholder="1225" maxlength="4" autocomplete="cc-exp" required>
+        <label>CVV</label>
+        <input type="text" id="cardCvv" placeholder="123" maxlength="4" autocomplete="cc-csc" required>
+        <label>First name</label>
+        <input type="text" id="firstName" placeholder="First name" required>
+        <label>Last name</label>
+        <input type="text" id="lastName" placeholder="Last name" required>
+        <label>Email</label>
+        <input type="email" id="email" placeholder="email@example.com" required>
+        <button type="submit" id="payBtn">Pay now</button>
+      </form>
+    </div>
+  </div>
+  <script>
+    (function() {
+      var API_BASE = window.location.origin + '/numbricsservice';
+      var token = (function() {
+        var m = /[?&]token=([^&]+)/.exec(window.location.search);
+        return m ? decodeURIComponent(m[1]) : '';
+      })();
+
+      var loading = document.getElementById('loading');
+      var invalid = document.getElementById('invalid');
+      var content = document.getElementById('content');
+      var formError = document.getElementById('formError');
+      var formSuccess = document.getElementById('formSuccess');
+      var payBtn = document.getElementById('payBtn');
+
+      function showInvalid() {
+        loading.classList.add('hidden');
+        invalid.classList.remove('hidden');
+      }
+
+      function showContent(data) {
+        loading.classList.add('hidden');
+        invalid.classList.add('hidden');
+        content.classList.remove('hidden');
+        document.getElementById('invNum').textContent = data.invoiceNum || ('#' + data.invoiceId);
+        document.getElementById('custName').textContent = data.customerName || '—';
+        document.getElementById('currency').textContent = data.currency || 'USD';
+        document.getElementById('amount').textContent = data.amount != null ? Number(data.amount).toFixed(2) : '0.00';
+      }
+
+      if (!token) {
+        showInvalid();
+        return;
+      }
+
+      fetch(API_BASE + '/v1/invoice/pay-by-token?token=' + encodeURIComponent(token))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.valid) {
+            showContent(data);
+          } else {
+            showInvalid();
+          }
+        })
+        .catch(function() {
+          showInvalid();
+        });
+
+      document.getElementById('payForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        formError.classList.add('hidden');
+        formSuccess.classList.add('hidden');
+        payBtn.disabled = true;
+
+        var payload = {
+          token: token,
+          cardNumber: document.getElementById('cardNumber').value.trim().replace(/\s/g, ''),
+          cardExpiry: document.getElementById('cardExpiry').value.trim(),
+          cardCvv: document.getElementById('cardCvv').value.trim(),
+          customerInfo: {
+            firstName: document.getElementById('firstName').value.trim(),
+            lastName: document.getElementById('lastName').value.trim(),
+            email: document.getElementById('email').value.trim()
+          }
+        };
+
+        fetch(API_BASE + '/v1/invoice/pay-with-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+          .then(function(r) { return r.json(); })
+          .then(function(res) {
+            if (res.success) {
+              formSuccess.textContent = res.message || 'Payment successful.';
+              formSuccess.classList.remove('hidden');
+              document.getElementById('payForm').reset();
+            } else {
+              formError.textContent = res.message || 'Payment failed.';
+              formError.classList.remove('hidden');
+            }
+          })
+          .catch(function() {
+            formError.textContent = 'Network error. Please try again.';
+            formError.classList.remove('hidden');
+          })
+          .finally(function() {
+            payBtn.disabled = false;
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -111,7 +111,13 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
         InvoiceSendLog saved = invoiceSendLogRepo.save(log);
 
         if (twilioResponse != null && twilioResponse.isSuccess()) {
+            org.slf4j.LoggerFactory.getLogger(InvoiceSendServiceImpl.class)
+                .info("WhatsApp sent to {} for invoice {}; Twilio SID: {}", recipient, invoice.getId(), twilioResponse.getMessageSid());
             return new SendInvoiceResponseDto(true, "Invoice sent via WhatsApp successfully", saved.getId());
+        }
+        if (twilioResponse != null && twilioResponse.getError() != null) {
+            org.slf4j.LoggerFactory.getLogger(InvoiceSendServiceImpl.class)
+                .warn("WhatsApp send failed to {}: {}", recipient, twilioResponse.getError());
         }
         return new SendInvoiceResponseDto(
             false,

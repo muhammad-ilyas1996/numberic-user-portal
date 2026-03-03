@@ -26,6 +26,10 @@ public class NMIConfig {
     @Value("${nmi.environment:sandbox}")
     private String nmiEnvironment; // sandbox or production
 
+    /** Optional: api_key to force API key; omit or username_password to use username+password when both are set. */
+    @Value("${nmi.auth.method:}")
+    private String nmiAuthMethod;
+
     @PostConstruct
     public void init() {
         // Validate NMI configuration
@@ -55,6 +59,15 @@ public class NMIConfig {
 
     public String getNmiEnvironment() {
         return nmiEnvironment;
+    }
+
+    /** Use username+password when both are set (default). Set nmi.auth.method=api_key to use API key instead. */
+    public boolean isUseUsernamePassword() {
+        if (nmiAuthMethod != null && !nmiAuthMethod.trim().isEmpty()) {
+            return "username_password".equalsIgnoreCase(nmiAuthMethod.trim());
+        }
+        return nmiUsername != null && !nmiUsername.isEmpty()
+            && nmiPassword != null && !nmiPassword.isEmpty();
     }
 
     public boolean isConfigured() {
