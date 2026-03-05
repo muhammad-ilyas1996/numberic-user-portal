@@ -52,7 +52,7 @@ public class TwilioServiceImpl implements TwilioService {
 
             // Format phone number to E.164 format
             String formattedTo = formatPhoneNumber(to);
-            String fromNumber = twilioConfig.getWhatsappNumber();
+            String fromNumber = normalizeWhatsAppFrom(twilioConfig.getWhatsappNumber());
 
             if (fromNumber == null || fromNumber.isEmpty()) {
                 return new TwilioResponse(
@@ -85,6 +85,25 @@ public class TwilioServiceImpl implements TwilioService {
                 "Failed to send WhatsApp message: " + e.getMessage()
             );
         }
+    }
+
+    /**
+     * Normalize WhatsApp From address. Twilio error 63007 can occur if From has "+";
+     * use "whatsapp:14155238886" (no +) when config has "whatsapp:+14155238886".
+     */
+    private String normalizeWhatsAppFrom(String from) {
+        if (from == null || from.isEmpty()) return from;
+        String s = from.trim();
+        if (s.startsWith("whatsapp:+")) {
+            return "whatsapp:" + s.substring("whatsapp:+".length()).replaceAll("[^0-9]", "");
+        }
+        if (s.startsWith("whatsapp:")) {
+            return s;
+        }
+        if (s.startsWith("+")) {
+            return "whatsapp:" + s.substring(1).replaceAll("[^0-9]", "");
+        }
+        return "whatsapp:" + s.replaceAll("[^0-9]", "");
     }
 
     /**

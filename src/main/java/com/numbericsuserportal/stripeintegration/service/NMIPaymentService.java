@@ -145,6 +145,94 @@ public class NMIPaymentService {
     }
 
     /**
+     * Process payment using per-merchant NMI credentials (from Settings).
+     * Use when merchant has configured their own NMI in Numbrics.
+     */
+    public NMIPaymentResponse processPaymentWithCredentials(
+            Double amount,
+            String cardNumber,
+            String cardExpiry,
+            String cardCvv,
+            String description,
+            CustomerInfo customerInfo,
+            NmiCredentials credentials) throws Exception {
+        if (credentials == null || !credentials.isConfigured()) {
+            throw new IllegalStateException("Merchant NMI credentials not configured");
+        }
+        return doProcessPayment(amount, cardNumber, cardExpiry, cardCvv, description, customerInfo,
+            credentials.getAuthMethod(), credentials.getSecurityKey(), credentials.getNmiUsername(), credentials.getNmiPassword(),
+            credentials.getTransactionUrl() != null ? credentials.getTransactionUrl() : nmiConfig.getNmiTransactionUrl());
+    }
+
+    private NMIPaymentResponse doProcessPayment(Double amount, String cardNumber, String cardExpiry, String cardCvv,
+            String description, CustomerInfo customerInfo, String authMethod, String securityKey, String username, String password,
+            String transactionUrl) throws Exception {
+        MultiValueMap<String, String> requestParams = new LinkedMultiValueMap<>();
+        boolean useUsernamePassword = "username_password".equalsIgnoreCase(authMethod != null ? authMethod.trim() : "")
+            && username != null && !username.isEmpty() && password != null;
+        if (useUsernamePassword) {
+            requestParams.add("username", username);
+            requestParams.add("password", password);
+        } else if (securityKey != null && !securityKey.isEmpty()) {
+            requestParams.add("security_key", securityKey);
+        } else if (username != null && password != null) {
+            requestParams.add("username", username);
+            requestParams.add("password", password);
+        } else {
+            throw new IllegalStateException("NMI credentials incomplete");
+        }
+        requestParams.add("type", "sale");
+        requestParams.add("amount", String.format("%.2f", amount));
+        requestParams.add("ccnumber", cardNumber.replaceAll("\\s", ""));
+        requestParams.add("ccexp", cardExpiry);
+        requestParams.add("cvv", cardCvv);
+        if (description != null && !description.trim().isEmpty()) {
+            requestParams.add("description", description);
+        }
+        if (customerInfo != null) {
+            if (customerInfo.getFirstName() != null) requestParams.add("firstname", customerInfo.getFirstName());
+            if (customerInfo.getLastName() != null) requestParams.add("lastname", customerInfo.getLastName());
+            if (customerInfo.getEmail() != null) requestParams.add("email", customerInfo.getEmail());
+            if (customerInfo.getAddress() != null) requestParams.add("address1", customerInfo.getAddress());
+            if (customerInfo.getCity() != null) requestParams.add("city", customerInfo.getCity());
+            if (customerInfo.getState() != null) requestParams.add("state", customerInfo.getState());
+            if (customerInfo.getZip() != null) requestParams.add("zip", customerInfo.getZip());
+            if (customerInfo.getCountry() != null) requestParams.add("country", customerInfo.getCountry());
+            if (customerInfo.getPhone() != null) requestParams.add("phone", customerInfo.getPhone());
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(requestParams, headers);
+        ResponseEntity<String> response = restTemplate.postForEntity(transactionUrl, request, String.class);
+        return parseNMIResponse(response.getBody());
+    }
+
+    /** Per-merchant NMI credentials (from DB). */
+    public static class NmiCredentials {
+        private String authMethod;
+        private String securityKey;
+        private String nmiUsername;
+        private String nmiPassword;
+        private String transactionUrl;
+
+        public boolean isConfigured() {
+            if (securityKey != null && !securityKey.isEmpty()) return true;
+            if (nmiUsername != null && !nmiUsername.isEmpty() && nmiPassword != null && !nmiPassword.isEmpty()) return true;
+            return false;
+        }
+        public String getAuthMethod() { return authMethod; }
+        public void setAuthMethod(String authMethod) { this.authMethod = authMethod; }
+        public String getSecurityKey() { return securityKey; }
+        public void setSecurityKey(String securityKey) { this.securityKey = securityKey; }
+        public String getNmiUsername() { return nmiUsername; }
+        public void setNmiUsername(String nmiUsername) { this.nmiUsername = nmiUsername; }
+        public String getNmiPassword() { return nmiPassword; }
+        public void setNmiPassword(String nmiPassword) { this.nmiPassword = nmiPassword; }
+        public String getTransactionUrl() { return transactionUrl; }
+        public void setTransactionUrl(String transactionUrl) { this.transactionUrl = transactionUrl; }
+    }
+
+    /**
      * Process payment using vault ID (stored payment method)
      * @param amount Amount in dollars
      * @param vaultId Vault ID from previous transaction

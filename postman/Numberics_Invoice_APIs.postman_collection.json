@@ -316,6 +316,49 @@
           }
         }
       ]
+    },
+    {
+      "name": "Settings (Merchant NMI)",
+      "item": [
+        {
+          "name": "Get My NMI Config",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/v1/settings/nmi"
+          }
+        },
+        {
+          "name": "Save My NMI Config (API Key)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"authMethod\": \"api_key\",\n  \"securityKey\": \"YOUR_NMI_SECURITY_KEY_FROM_PORTAL\"\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/settings/nmi"
+          }
+        },
+        {
+          "name": "Save My NMI Config (Username/Password)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"authMethod\": \"username_password\",\n  \"nmiUsername\": \"YourNMIUsername\",\n  \"nmiPassword\": \"YourNMIPassword\"\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/settings/nmi"
+          }
+        }
+      ]
     }
   ]
 }

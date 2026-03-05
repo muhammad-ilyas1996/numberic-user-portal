@@ -10,8 +10,10 @@ import com.numbericsuserportal.invoice.entity.InvoiceAndTaxEntity;
 import com.numbericsuserportal.invoice.entity.InvoiceSendLog;
 import com.numbericsuserportal.invoice.repo.InvoiceAndTaxRepo;
 import com.numbericsuserportal.invoice.repo.InvoiceSendLogRepo;
+import com.numbericsuserportal.invoice.entity.MerchantNmiConfig;
 import com.numbericsuserportal.invoice.service.EmailService;
 import com.numbericsuserportal.invoice.service.InvoiceSendService;
+import com.numbericsuserportal.invoice.service.MerchantNmiConfigService;
 import com.numbericsuserportal.invoice.service.PaymentTransactionService;
 import com.numbericsuserportal.stripeintegration.service.NMIPaymentService;
 import com.numbericsuserportal.twilio.dto.TwilioResponse;
@@ -49,6 +51,8 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
     private PaymentTransactionService paymentTransactionService;
     @Autowired(required = false)
     private EmailService emailService;
+    @Autowired
+    private MerchantNmiConfigService merchantNmiConfigService;
 
     @Value("${app.invoice.payment-base-url:}")
     private String paymentBaseUrl;
@@ -228,14 +232,31 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
             customerInfo.setPhone(c.get("phone"));
         }
         try {
-            NMIPaymentService.NMIPaymentResponse nmiResponse = nmiPaymentService.processPayment(
-                amount,
-                request.getCardNumber().trim().replaceAll("\\s", ""),
-                request.getCardExpiry().trim(),
-                request.getCardCvv().trim(),
-                "Invoice #" + (invoice.getInvoiceNum() != null ? invoice.getInvoiceNum() : invoice.getId()),
-                customerInfo
-            );
+            NMIPaymentService.NMIPaymentResponse nmiResponse;
+            Long merchantUserId = parseUserId(invoice.getCreatedBy());
+            java.util.Optional<MerchantNmiConfig> merchantConfig = merchantUserId != null
+                ? merchantNmiConfigService.getEntityByUserId(merchantUserId) : java.util.Optional.empty();
+            if (merchantConfig.isPresent() && isMerchantNmiConfigured(merchantConfig.get())) {
+                NMIPaymentService.NmiCredentials creds = toNmiCredentials(merchantConfig.get());
+                nmiResponse = nmiPaymentService.processPaymentWithCredentials(
+                    amount,
+                    request.getCardNumber().trim().replaceAll("\\s", ""),
+                    request.getCardExpiry().trim(),
+                    request.getCardCvv().trim(),
+                    "Invoice #" + (invoice.getInvoiceNum() != null ? invoice.getInvoiceNum() : invoice.getId()),
+                    customerInfo,
+                    creds
+                );
+            } else {
+                nmiResponse = nmiPaymentService.processPayment(
+                    amount,
+                    request.getCardNumber().trim().replaceAll("\\s", ""),
+                    request.getCardExpiry().trim(),
+                    request.getCardCvv().trim(),
+                    "Invoice #" + (invoice.getInvoiceNum() != null ? invoice.getInvoiceNum() : invoice.getId()),
+                    customerInfo
+                );
+            }
             if (nmiResponse != null && nmiResponse.isSuccess()) {
                 invoice.setInvoiceStatus("PAID");
                 invoice.setModifiedBy("INVOICE_PAY");
@@ -331,5 +352,30 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
         dto.setSentAt(log.getSentAt());
         dto.setMessageSid(log.getMessageSid());
         return dto;
+    }
+
+    private static Long parseUserId(String createdBy) {
+        if (createdBy == null || createdBy.trim().isEmpty()) return null;
+        try {
+            return Long.parseLong(createdBy.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static boolean isMerchantNmiConfigured(MerchantNmiConfig c) {
+        if (c.getSecurityKey() != null && !c.getSecurityKey().isEmpty()) return true;
+        return c.getNmiUsername() != null && !c.getNmiUsername().isEmpty()
+            && c.getNmiPassword() != null && !c.getNmiPassword().isEmpty();
+    }
+
+    private static NMIPaymentService.NmiCredentials toNmiCredentials(MerchantNmiConfig c) {
+        NMIPaymentService.NmiCredentials creds = new NMIPaymentService.NmiCredentials();
+        creds.setAuthMethod(c.getAuthMethod() != null ? c.getAuthMethod() : "api_key");
+        creds.setSecurityKey(c.getSecurityKey());
+        creds.setNmiUsername(c.getNmiUsername());
+        creds.setNmiPassword(c.getNmiPassword());
+        creds.setTransactionUrl(c.getTransactionUrl());
+        return creds;
     }
 }
