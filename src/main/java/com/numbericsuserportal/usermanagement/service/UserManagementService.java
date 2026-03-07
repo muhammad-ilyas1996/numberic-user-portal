@@ -1,5 +1,6 @@
 package com.numbericsuserportal.usermanagement.service;
 
+import com.numbericsuserportal.registration.validation.PasswordValidator;
 import com.numbericsuserportal.usermanagement.domain.*;
 import com.numbericsuserportal.usermanagement.dto.*;
 import com.numbericsuserportal.usermanagement.repo.*;
@@ -8,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -34,6 +36,9 @@ public class UserManagementService {
     
     @Autowired
     private PasswordEncoder passwordEncoder;
+    
+    @Autowired
+    private PasswordValidator passwordValidator;
     
     // Create new user with role and permissions
     @Transactional
@@ -177,6 +182,79 @@ public class UserManagementService {
         }
         
         return getUserWithPermissions(assignmentDto.getUserId());
+    }
+    
+    /**
+     * Update user profile (email, firstName, lastName, phone)
+     * Only authenticated user can update their own profile
+     */
+    @Transactional
+    public UserWithPermissionsDto updateProfile(Long userId, UpdateProfileRequest request) {
+        // Find user
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // Validate user is active and not deleted
+        if (Boolean.TRUE.equals(user.getIsDeleted()) || !Boolean.TRUE.equals(user.getIsActive())) {
+            throw new RuntimeException("User is inactive or deleted");
+        }
+        
+        // Check email uniqueness (exclude current user)
+        Optional<User> existingUser = userRepository.findByEmailAndUserIdIsNot(request.getEmail(), userId);
+        if (existingUser.isPresent()) {
+            throw new RuntimeException("Email already exists");
+        }
+        
+        // Update fields
+        user.setEmail(request.getEmail());
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setPhone(request.getPhone()); // Can be null (optional)
+        user.setUpdatedAt(LocalDateTime.now());
+        
+        // Save user
+        userRepository.save(user);
+        
+        // Return updated user with permissions
+        return getUserWithPermissions(userId);
+    }
+    
+    /**
+     * Change user password
+     * Requires current password verification
+     */
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        // Find user
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // Validate user is active and not deleted
+        if (Boolean.TRUE.equals(user.getIsDeleted()) || !Boolean.TRUE.equals(user.getIsActive())) {
+            throw new RuntimeException("User is inactive or deleted");
+        }
+        
+        // Verify current password
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+        
+        // Check if new password is same as current password
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new RuntimeException("New password must be different from current password");
+        }
+        
+        // Validate new password strength
+        if (!passwordValidator.isValid(request.getNewPassword(), null)) {
+            throw new RuntimeException("Password must be at least 10 characters with 1 uppercase, 1 lowercase, 1 number, and 1 special character");
+        }
+        
+        // Update password
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setUpdatedAt(LocalDateTime.now());
+        
+        // Save user
+        userRepository.save(user);
     }
     
     // Helper methods

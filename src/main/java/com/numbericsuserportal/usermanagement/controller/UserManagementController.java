@@ -2,7 +2,9 @@ package com.numbericsuserportal.usermanagement.controller;
 
 import com.numbericsuserportal.usermanagement.domain.User;
 import com.numbericsuserportal.usermanagement.dto.*;
+import com.numbericsuserportal.usermanagement.repo.UserRepository;
 import com.numbericsuserportal.usermanagement.service.UserManagementService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +25,9 @@ public class UserManagementController {
     
     @Autowired
     private UserManagementService userManagementService;
+    
+    @Autowired
+    private UserRepository userRepository;
     
     // Get current user's permissions and info (for frontend)
     @GetMapping("/me")
@@ -74,6 +79,126 @@ public class UserManagementController {
             return ResponseEntity.ok(users);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    /**
+     * GET /api/user-management/profile
+     * Get current user's profile (email, firstName, lastName, phone, username)
+     */
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile(
+            @AuthenticationPrincipal User currentUser) {
+        
+        if (currentUser == null) {
+            return ResponseEntity.status(401).body(Map.of(
+                "success", false,
+                "message", "User not authenticated"
+            ));
+        }
+        
+        try {
+            User user = userRepository.findById(currentUser.getUserId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            Map<String, Object> profile = Map.of(
+                "email", user.getEmail() != null ? user.getEmail() : "",
+                "firstName", user.getFirstName() != null ? user.getFirstName() : "",
+                "lastName", user.getLastName() != null ? user.getLastName() : "",
+                "phone", user.getPhone() != null ? user.getPhone() : "",
+                "username", user.getUsername() != null ? user.getUsername() : ""
+            );
+            
+            return ResponseEntity.ok(profile);
+        } catch (RuntimeException e) {
+            logger.error("Error getting profile for userId: {}", currentUser.getUserId(), e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage() != null ? e.getMessage() : "Failed to retrieve profile"
+            ));
+        } catch (Exception e) {
+            logger.error("Error getting profile", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "Failed to retrieve profile. Please try again."
+            ));
+        }
+    }
+    
+    /**
+     * PUT /api/user-management/profile
+     * Update current user's profile (email, firstName, lastName, phone)
+     */
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        
+        if (currentUser == null) {
+            return ResponseEntity.status(401).body(Map.of(
+                "success", false,
+                "message", "User not authenticated"
+            ));
+        }
+        
+        try {
+            userManagementService.updateProfile(
+                currentUser.getUserId(), 
+                request
+            );
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Profile has been updated successfully."
+            ));
+        } catch (RuntimeException e) {
+            logger.error("Error updating profile for userId: {}", currentUser.getUserId(), e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage() != null ? e.getMessage() : "Failed to update profile"
+            ));
+        } catch (Exception e) {
+            logger.error("Error updating profile", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "Failed to update profile. Please try again."
+            ));
+        }
+    }
+    
+    /**
+     * PUT /api/user-management/change-password
+     * Change current user's password
+     */
+    @PutMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        
+        if (currentUser == null) {
+            return ResponseEntity.status(401).body(Map.of(
+                "success", false,
+                "message", "User not authenticated"
+            ));
+        }
+        
+        try {
+            userManagementService.changePassword(currentUser.getUserId(), request);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Password has been changed successfully."
+            ));
+        } catch (RuntimeException e) {
+            logger.error("Error changing password for userId: {}", currentUser.getUserId(), e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage() != null ? e.getMessage() : "Failed to change password"
+            ));
+        } catch (Exception e) {
+            logger.error("Error changing password", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "Failed to change password. Please try again."
+            ));
         }
     }
 }
