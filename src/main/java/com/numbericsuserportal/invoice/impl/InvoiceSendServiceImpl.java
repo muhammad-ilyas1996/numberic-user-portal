@@ -248,14 +248,9 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
                     creds
                 );
             } else {
-                nmiResponse = nmiPaymentService.processPayment(
-                    amount,
-                    request.getCardNumber().trim().replaceAll("\\s", ""),
-                    request.getCardExpiry().trim(),
-                    request.getCardCvv().trim(),
-                    "Invoice #" + (invoice.getInvoiceNum() != null ? invoice.getInvoiceNum() : invoice.getId()),
-                    customerInfo
-                );
+                result.put("success", false);
+                result.put("message", "NMI payment credentials are not configured. Please configure your payment settings in Settings before receiving payments.");
+                return result;
             }
             if (nmiResponse != null && nmiResponse.isSuccess()) {
                 invoice.setInvoiceStatus("PAID");
