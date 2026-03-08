@@ -50,7 +50,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByIsDeletedFalse();
 
    // Optional<User> findByUserIdAndPhone(Long userId,String Phone);
-   // Optional<User> findByResetToken(String resetToken);
+   Optional<User> findByResetToken(String resetToken);
 
     // Location: com.numbericsuserportal.usermanagement.repo.UserRepository
 
