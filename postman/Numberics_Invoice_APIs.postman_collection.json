@@ -359,6 +359,34 @@
           }
         }
       ]
+    },
+    {
+      "name": "Onboarding (Taalr)",
+      "item": [
+        {
+          "name": "GET Onboarding",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/onboarding"
+          }
+        },
+        {
+          "name": "POST Onboarding (Submit Questionnaire)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"Acme LLC\",\n  \"entityType\": \"LLC\",\n  \"registrationState\": \"California\",\n  \"industry\": \"Technology\",\n  \"revenueLastYear\": \"$100k - $500k\",\n  \"revenueExpected\": \"$500k - $1M\",\n  \"collectsSalesTax\": \"Yes\",\n  \"multiState\": \"No\",\n  \"hasEmployees\": \"Yes\",\n  \"teamSize\": \"5-10\",\n  \"filesQuarterlyTaxes\": \"Yes\",\n  \"salesTaxFrequency\": \"Quarterly\",\n  \"taxFilingsUpToDate\": \"Yes\",\n  \"accountingSoftware\": \"QuickBooks\",\n  \"connectBankAccounts\": \"Yes\",\n  \"goals\": \"Simplify bookkeeping and stay compliant\",\n  \"location\": \"San Francisco, CA\"\n}\n"
+            },
+            "url": "{{baseUrl}}/api/onboarding"
+          }
+        }
+      ]
     }
   ]
 }

@@ -60,7 +60,39 @@ public class BusinessProfile extends BaseEntity {
     
     @Column(name = "mailing_address_same")
     private Boolean mailingAddressSame = true;
-    
+
+    /** Taalr onboarding fields (update same row, never delete) */
+    @Column(name = "entity_type", length = 50)
+    private String entityType;
+    @Column(name = "registration_state", length = 100)
+    private String registrationState;
+    @Column(name = "revenue_last_year", length = 100)
+    private String revenueLastYear;
+    @Column(name = "revenue_expected", length = 100)
+    private String revenueExpected;
+    @Column(name = "collects_sales_tax", length = 50)
+    private String collectsSalesTax;
+    @Column(name = "multi_state", length = 50)
+    private String multiState;
+    @Column(name = "has_employees", length = 50)
+    private String hasEmployees;
+    @Column(name = "team_size", length = 100)
+    private String teamSize;
+    @Column(name = "files_quarterly_taxes", length = 50)
+    private String filesQuarterlyTaxes;
+    @Column(name = "sales_tax_frequency", length = 50)
+    private String salesTaxFrequency;
+    @Column(name = "tax_filings_up_to_date", length = 50)
+    private String taxFilingsUpToDate;
+    @Column(name = "accounting_software", length = 100)
+    private String accountingSoftware;
+    @Column(name = "connect_bank_accounts", length = 50)
+    private String connectBankAccounts;
+    @Column(name = "goals", length = 500)
+    private String goals;
+    @Column(name = "location", length = 255)
+    private String location;
+
     public enum BusinessType {
         llc, corp, sole_proprietor, partnership, nonprofit, other
     }
