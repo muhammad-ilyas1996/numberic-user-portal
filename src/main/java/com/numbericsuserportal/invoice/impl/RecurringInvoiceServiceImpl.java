@@ -12,7 +12,10 @@ import com.numbericsuserportal.invoice.repo.RecurringInvoiceRepo;
 import com.numbericsuserportal.invoice.service.RecurringInvoiceService;
 import com.numbericsuserportal.invoiceproduct.entity.InvoiceProductEntity;
 import com.numbericsuserportal.usermanagement.domain.User;
+import com.numbericsuserportal.usermanagement.service.UserDataScopeContext;
+import com.numbericsuserportal.usermanagement.service.UserDataScopeService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +37,8 @@ public class RecurringInvoiceServiceImpl implements RecurringInvoiceService {
     private RecurringInvoiceRepo recurringInvoiceRepo;
     @Autowired
     private InvoiceAndTaxRepo invoiceAndTaxRepo;
+    @Autowired
+    private UserDataScopeService userDataScopeService;
 
     @Override
     @Transactional
@@ -65,8 +70,10 @@ public class RecurringInvoiceServiceImpl implements RecurringInvoiceService {
     @Override
     @Transactional
     public RecurringInvoiceDto update(Long id, RecurringInvoiceCreateRequestDto request, User currentUser) {
+        UserDataScopeContext scope = userDataScopeService.resolve(currentUser);
         RecurringInvoice existing = recurringInvoiceRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Recurring invoice not found: " + id));
+        assertRecurringAccess(existing, scope);
         validateFrequency(request.getFrequency());
 
         mapCreateToEntity(request, existing);
@@ -86,32 +93,46 @@ public class RecurringInvoiceServiceImpl implements RecurringInvoiceService {
     }
 
     @Override
-    public Page<RecurringInvoiceDto> list(RecurringInvoiceSearch search) {
+    public Page<RecurringInvoiceDto> list(RecurringInvoiceSearch search, User currentUser) {
+        UserDataScopeContext scope = userDataScopeService.resolve(currentUser);
         int page = search.getPageNumber() != null && search.getPageNumber() > 0 ? search.getPageNumber() - 1 : 0;
         int size = search.getPageSize() != null && search.getPageSize() > 0 ? search.getPageSize() : 20;
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdOn"));
 
         Page<RecurringInvoice> pageResult;
-        if (search.getStatus() != null && !search.getStatus().trim().isEmpty()) {
-            pageResult = recurringInvoiceRepo.findByStatusOrderByCreatedOnDesc(search.getStatus().trim(), pageable);
+        if (scope.ownerCreatedByKey().isEmpty()) {
+            if (search.getStatus() != null && !search.getStatus().trim().isEmpty()) {
+                pageResult = recurringInvoiceRepo.findByStatusOrderByCreatedOnDesc(search.getStatus().trim(), pageable);
+            } else {
+                pageResult = recurringInvoiceRepo.findAllByOrderByCreatedOnDesc(pageable);
+            }
         } else {
-            pageResult = recurringInvoiceRepo.findAllByOrderByCreatedOnDesc(pageable);
+            String ob = scope.ownerCreatedByKey().get();
+            if (search.getStatus() != null && !search.getStatus().trim().isEmpty()) {
+                pageResult = recurringInvoiceRepo.findByStatusAndCreatedByOrderByCreatedOnDesc(search.getStatus().trim(), ob, pageable);
+            } else {
+                pageResult = recurringInvoiceRepo.findByCreatedByOrderByCreatedOnDesc(ob, pageable);
+            }
         }
         return pageResult.map(this::toDto);
     }
 
     @Override
-    public RecurringInvoiceDto getById(Long id) {
+    public RecurringInvoiceDto getById(Long id, User currentUser) {
+        UserDataScopeContext scope = userDataScopeService.resolve(currentUser);
         RecurringInvoice entity = recurringInvoiceRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Recurring invoice not found: " + id));
+        assertRecurringAccess(entity, scope);
         return toDto(entity);
     }
 
     @Override
     @Transactional
     public void pause(Long id, User currentUser) {
+        UserDataScopeContext scope = userDataScopeService.resolve(currentUser);
         RecurringInvoice entity = recurringInvoiceRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Recurring invoice not found: " + id));
+        assertRecurringAccess(entity, scope);
         entity.setStatus(RecurringInvoice.Status.PAUSED.name());
         entity.setModifiedBy(currentUser != null ? currentUser.getUserId().toString() : null);
         entity.setModifiedOn(new Date());
@@ -121,8 +142,10 @@ public class RecurringInvoiceServiceImpl implements RecurringInvoiceService {
     @Override
     @Transactional
     public void resume(Long id, User currentUser) {
+        UserDataScopeContext scope = userDataScopeService.resolve(currentUser);
         RecurringInvoice entity = recurringInvoiceRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Recurring invoice not found: " + id));
+        assertRecurringAccess(entity, scope);
         entity.setStatus(RecurringInvoice.Status.ACTIVE.name());
         entity.setModifiedBy(currentUser != null ? currentUser.getUserId().toString() : null);
         entity.setModifiedOn(new Date());
@@ -132,8 +155,10 @@ public class RecurringInvoiceServiceImpl implements RecurringInvoiceService {
     @Override
     @Transactional
     public void stop(Long id, User currentUser) {
+        UserDataScopeContext scope = userDataScopeService.resolve(currentUser);
         RecurringInvoice entity = recurringInvoiceRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Recurring invoice not found: " + id));
+        assertRecurringAccess(entity, scope);
         entity.setStatus(RecurringInvoice.Status.ENDED.name());
         entity.setModifiedBy(currentUser != null ? currentUser.getUserId().toString() : null);
         entity.setModifiedOn(new Date());
@@ -192,7 +217,8 @@ public class RecurringInvoiceServiceImpl implements RecurringInvoiceService {
         invoice.setInvoiceDueDate(dueDate);
         invoice.setInvoiceStatus("DRAFT");
 
-        invoice.setCreatedBy(SYSTEM_USER);
+        String invoiceOwner = recurring.getCreatedBy() != null ? recurring.getCreatedBy() : SYSTEM_USER;
+        invoice.setCreatedBy(invoiceOwner);
         invoice.setCreatedOn(new Date());
         invoice.setModifiedBy(SYSTEM_USER);
         invoice.setModifiedOn(new Date());
@@ -231,6 +257,17 @@ public class RecurringInvoiceServiceImpl implements RecurringInvoiceService {
             case "MONTHLY":
             default: return current.plusMonths(1);
         }
+    }
+
+    private static void assertRecurringAccess(RecurringInvoice entity, UserDataScopeContext scope) {
+        if (scope.isPlatformWideDataAccess()) {
+            return;
+        }
+        String key = scope.ownerCreatedByKey().orElseThrow();
+        if (entity.getCreatedBy() != null && entity.getCreatedBy().equals(key)) {
+            return;
+        }
+        throw new AccessDeniedException("You do not have access to this recurring invoice");
     }
 
     private void validateFrequency(String frequency) {

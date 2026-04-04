@@ -12,6 +12,7 @@ import com.numbericsuserportal.invoice.repo.InvoiceAndTaxRepo;
 import com.numbericsuserportal.invoice.repo.InvoiceSendLogRepo;
 import com.numbericsuserportal.invoice.entity.MerchantNmiConfig;
 import com.numbericsuserportal.invoice.service.EmailService;
+import com.numbericsuserportal.invoice.service.InvoiceAndTaxService;
 import com.numbericsuserportal.invoice.service.InvoiceSendService;
 import com.numbericsuserportal.invoice.service.MerchantNmiConfigService;
 import com.numbericsuserportal.invoice.service.PaymentTransactionService;
@@ -21,6 +22,8 @@ import com.numbericsuserportal.twilio.service.TwilioService;
 import com.numbericsuserportal.usermanagement.domain.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -41,6 +44,8 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
 
     @Autowired
     private InvoiceAndTaxRepo invoiceAndTaxRepo;
+    @Autowired
+    private InvoiceAndTaxService invoiceAndTaxService;
     @Autowired
     private InvoiceSendLogRepo invoiceSendLogRepo;
     @Autowired
@@ -73,6 +78,17 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
                 null);
         }
         recipient = recipient.trim();
+
+        if (currentUser == null) {
+            return new SendInvoiceResponseDto(false, "Authentication required", null);
+        }
+        try {
+            invoiceAndTaxService.requireAccessibleInvoice(request.getInvoiceId(), currentUser);
+        } catch (ResponseStatusException ex) {
+            return new SendInvoiceResponseDto(false, "Invoice not found or inactive", null);
+        } catch (AccessDeniedException ex) {
+            return new SendInvoiceResponseDto(false, "You do not have access to this invoice", null);
+        }
 
         Optional<InvoiceAndTaxEntity> invoiceOpt = invoiceAndTaxRepo.findByIdAndIsActiveTrue(request.getInvoiceId());
         if (invoiceOpt.isEmpty()) {
@@ -314,8 +330,16 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
     }
 
     @Override
-    public Page<InvoiceSendHistoryItemDto> getSendHistory(InvoiceSendHistorySearch search) {
+    public Page<InvoiceSendHistoryItemDto> getSendHistory(InvoiceSendHistorySearch search, User currentUser) {
         if (search.getInvoiceId() == null) {
+            return Page.empty(PageRequest.of(0, search.getPageSize() != null ? search.getPageSize() : 20));
+        }
+        if (currentUser == null) {
+            return Page.empty(PageRequest.of(0, search.getPageSize() != null ? search.getPageSize() : 20));
+        }
+        try {
+            invoiceAndTaxService.requireAccessibleInvoice(search.getInvoiceId(), currentUser);
+        } catch (ResponseStatusException | AccessDeniedException ex) {
             return Page.empty(PageRequest.of(0, search.getPageSize() != null ? search.getPageSize() : 20));
         }
         int page = search.getPageNumber() != null && search.getPageNumber() > 0 ? search.getPageNumber() - 1 : 0;

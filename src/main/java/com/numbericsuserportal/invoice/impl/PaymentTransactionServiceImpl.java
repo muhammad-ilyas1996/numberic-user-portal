@@ -5,9 +5,15 @@ import com.numbericsuserportal.commonpersistence.dto.SearchDate;
 import com.numbericsuserportal.commonpersistence.utils.SpecificationUtility;
 import com.numbericsuserportal.invoice.dto.PaymentTransactionDto;
 import com.numbericsuserportal.invoice.dto.PaymentTransactionSearch;
+import com.numbericsuserportal.invoice.entity.InvoiceAndTaxEntity;
 import com.numbericsuserportal.invoice.entity.PaymentTransaction;
 import com.numbericsuserportal.invoice.repo.PaymentTransactionRepo;
 import com.numbericsuserportal.invoice.service.PaymentTransactionService;
+import com.numbericsuserportal.usermanagement.domain.User;
+import com.numbericsuserportal.usermanagement.service.UserDataScopeContext;
+import com.numbericsuserportal.usermanagement.service.UserDataScopeService;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,10 +31,14 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
     private PaymentTransactionRepo paymentTransactionRepo;
     @Autowired
     private DateValidation dateValidation;
+    @Autowired
+    private UserDataScopeService userDataScopeService;
 
     @Override
     @SuppressWarnings("unchecked")
-    public Page<PaymentTransactionDto> list(PaymentTransactionSearch search) {
+    public Page<PaymentTransactionDto> list(PaymentTransactionSearch search, User currentUser) {
+        UserDataScopeContext scope = userDataScopeService.resolve(currentUser);
+
         Specification<PaymentTransaction> spec = null;
 
         if (search.getInvoiceId() != null) {
@@ -54,15 +64,34 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
             }
         }
 
+        if (scope.ownerCreatedByKey().isPresent()) {
+            Specification<PaymentTransaction> ownerSpec = forInvoiceOwner(scope.ownerCreatedByKey().get());
+            spec = spec == null ? ownerSpec : spec.and(ownerSpec);
+        }
+
         int page = search.getPageNumber() != null && search.getPageNumber() > 0 ? search.getPageNumber() - 1 : 0;
         int size = search.getPageSize() != null && search.getPageSize() > 0 ? search.getPageSize() : 20;
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "paidAt"));
 
         Page<PaymentTransaction> pageResult = spec == null
-            ? paymentTransactionRepo.findAll(pageable)
-            : paymentTransactionRepo.findAll(spec, pageable);
+                ? paymentTransactionRepo.findAll(pageable)
+                : paymentTransactionRepo.findAll(spec, pageable);
 
         return pageResult.map(this::toDto);
+    }
+
+    private static Specification<PaymentTransaction> forInvoiceOwner(String createdBy) {
+        return (root, query, cb) -> {
+            query.distinct(true);
+            Subquery<Long> sq = query.subquery(Long.class);
+            Root<InvoiceAndTaxEntity> inv = sq.from(InvoiceAndTaxEntity.class);
+            sq.select(inv.get("id"));
+            sq.where(
+                    cb.equal(inv.get("createdBy"), createdBy),
+                    cb.isTrue(inv.get("isActive"))
+            );
+            return cb.in(root.get("invoiceId")).value(sq);
+        };
     }
 
     @Override

@@ -4,8 +4,10 @@ import com.numbericsuserportal.LlcNorthwest.companies.dto.CompaniesResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.CreateCompanyRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.UpdateCompanyRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.service.CompanyService;
+import com.numbericsuserportal.usermanagement.domain.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -18,53 +20,53 @@ public class CompaniesController {
     @Autowired
     private CompanyService companyService;
 
-    /**
-     * GET /api/llc-northwest/companies
-     * Fetch companies from API
-     */
     @GetMapping
     public ResponseEntity<?> getCompanies(
+            @AuthenticationPrincipal User currentUser,
             @RequestParam(required = false) Integer limit,
             @RequestParam(required = false) Integer offset,
             @RequestParam(required = false) String[] names) {
-        
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
         try {
-            CompaniesResponseDTO response = companyService.fetchAndSaveCompanies(limit, offset, names);
+            CompaniesResponseDTO response = companyService.fetchAndSaveCompanies(currentUser, limit, offset, names);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest()
-                .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
-    /**
-     * POST /api/llc-northwest/companies
-     * Create new companies via API
-     */
     @PostMapping
-    public ResponseEntity<?> createCompanies(@RequestBody CreateCompanyRequestDTO request) {
+    public ResponseEntity<?> createCompanies(
+            @AuthenticationPrincipal User currentUser,
+            @RequestBody CreateCompanyRequestDTO request) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
         try {
-            CompaniesResponseDTO response = companyService.createAndSaveCompanies(request);
+            CompaniesResponseDTO response = companyService.createAndSaveCompanies(currentUser, request);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest()
-                .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
-    /**
-     * PATCH /api/llc-northwest/companies
-     * Update companies via API
-     */
     @PatchMapping
-    public ResponseEntity<?> updateCompanies(@RequestBody UpdateCompanyRequestDTO request) {
+    public ResponseEntity<?> updateCompanies(
+            @AuthenticationPrincipal User currentUser,
+            @RequestBody UpdateCompanyRequestDTO request) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
         try {
-            CompaniesResponseDTO response = companyService.updateAndSaveCompanies(request);
+            CompaniesResponseDTO response = companyService.updateAndSaveCompanies(currentUser, request);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest()
-                .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }
-

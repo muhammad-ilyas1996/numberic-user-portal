@@ -8,6 +8,7 @@ import com.numbericsuserportal.usermanagement.domain.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,6 +45,8 @@ public class RecurringInvoiceController {
         try {
             RecurringInvoiceDto updated = recurringInvoiceService.update(id, request, currentUser);
             return ResponseEntity.ok(updated);
+        } catch (AccessDeniedException e) {
+            throw e;
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }
@@ -53,7 +56,7 @@ public class RecurringInvoiceController {
     public ResponseEntity<Page<RecurringInvoiceDto>> list(
             @RequestBody RecurringInvoiceSearch search,
             @AuthenticationPrincipal User currentUser) {
-        return ResponseEntity.ok(recurringInvoiceService.list(search));
+        return ResponseEntity.ok(recurringInvoiceService.list(search, currentUser));
     }
 
     /** Get recurring profile by id (path). */
@@ -62,8 +65,10 @@ public class RecurringInvoiceController {
             @PathVariable Long id,
             @AuthenticationPrincipal User currentUser) {
         try {
-            RecurringInvoiceDto dto = recurringInvoiceService.getById(id);
+            RecurringInvoiceDto dto = recurringInvoiceService.getById(id, currentUser);
             return ResponseEntity.ok(dto);
+        } catch (AccessDeniedException e) {
+            throw e;
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }
@@ -79,7 +84,7 @@ public class RecurringInvoiceController {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", "id is required"));
         }
         try {
-            RecurringInvoiceDto dto = recurringInvoiceService.getById(id);
+            RecurringInvoiceDto dto = recurringInvoiceService.getById(id, currentUser);
             return ResponseEntity.ok(dto);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
@@ -93,6 +98,8 @@ public class RecurringInvoiceController {
         try {
             recurringInvoiceService.pause(id, currentUser);
             return ResponseEntity.ok(java.util.Map.of("message", "Recurring invoice paused"));
+        } catch (AccessDeniedException e) {
+            throw e;
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }
@@ -105,6 +112,8 @@ public class RecurringInvoiceController {
         try {
             recurringInvoiceService.resume(id, currentUser);
             return ResponseEntity.ok(java.util.Map.of("message", "Recurring invoice resumed"));
+        } catch (AccessDeniedException e) {
+            throw e;
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }
@@ -117,6 +126,8 @@ public class RecurringInvoiceController {
         try {
             recurringInvoiceService.stop(id, currentUser);
             return ResponseEntity.ok(java.util.Map.of("message", "Recurring invoice stopped"));
+        } catch (AccessDeniedException e) {
+            throw e;
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }

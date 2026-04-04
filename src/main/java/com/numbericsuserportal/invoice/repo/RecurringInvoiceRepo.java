@@ -16,5 +16,9 @@ public interface RecurringInvoiceRepo extends JpaRepository<RecurringInvoice, Lo
 
     Page<RecurringInvoice> findAllByOrderByCreatedOnDesc(Pageable pageable);
 
+    Page<RecurringInvoice> findByCreatedByOrderByCreatedOnDesc(String createdBy, Pageable pageable);
+
+    Page<RecurringInvoice> findByStatusAndCreatedByOrderByCreatedOnDesc(String status, String createdBy, Pageable pageable);
+
     List<RecurringInvoice> findByStatusAndNextRunOnLessThanEqualOrderByNextRunOnAsc(String status, LocalDate date);
 }

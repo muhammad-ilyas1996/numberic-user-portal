@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
@@ -53,7 +54,7 @@ public class InvoiceAndTaxController {
     @PostMapping("/list")
     //  @PreAuthorize("hasAuthority('VIEW_PATIENT')")
     public ResponseEntity<Page<InvoiceAndTaxDTO>> getProviderList(@RequestBody InvoiceSearch requestDTO, @AuthenticationPrincipal User currentUser) {
-        Page<InvoiceAndTaxDTO> invoiceAndTaxDTOS = invoiceAndTaxService.searchInvoice(requestDTO).map(entity -> InvoiceAndTaxConverter.toDTO(entity, currentUser));
+        Page<InvoiceAndTaxDTO> invoiceAndTaxDTOS = invoiceAndTaxService.searchInvoice(requestDTO, currentUser).map(entity -> InvoiceAndTaxConverter.toDTO(entity, currentUser));
         return ResponseEntity.ok(invoiceAndTaxDTOS);
     }
 
@@ -64,7 +65,7 @@ public class InvoiceAndTaxController {
         if (requestDTO.getId() == null) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", "Request body must include {\"id\": <invoiceId>}"));
         }
-        InvoiceAndTaxEntity entity = invoiceAndTaxService.getInvoiceDetail(requestDTO.getId());
+        InvoiceAndTaxEntity entity = invoiceAndTaxService.getInvoiceDetail(requestDTO.getId(), currentUser);
         if (entity.getId() == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(java.util.Map.of("error", "Invoice not found for id: " + requestDTO.getId()));
         }
@@ -75,7 +76,7 @@ public class InvoiceAndTaxController {
     @PostMapping("/view-detail-by-customer-name")
     // @PreAuthorize("hasAuthority('VIEW_PROVIDER')")
     public ResponseEntity<InvoiceAndTaxDTO> getInvoiceDataByCustomerName(@RequestBody InvoiceAndTaxRequestDto requestDTO,@AuthenticationPrincipal User currentUser) {
-        InvoiceAndTaxEntity entity = invoiceAndTaxService.getInvoiceDetailByCustomerName(requestDTO.getCustomerName());
+        InvoiceAndTaxEntity entity = invoiceAndTaxService.getInvoiceDetailByCustomerName(requestDTO.getCustomerName(), currentUser);
 
         // Convert entity → DTO (safe for JSON)
         InvoiceAndTaxDTO dto = InvoiceAndTaxConverter.toDTO(entity, currentUser);
@@ -83,7 +84,7 @@ public class InvoiceAndTaxController {
     }
     @PostMapping("/view-detail-by-invoice-num")
     public ResponseEntity<InvoiceAndTaxDTO> getInvoiceDataByInvoiceNum(@RequestBody InvoiceAndTaxRequestDto requestDTO,@AuthenticationPrincipal User currentUser) {
-        InvoiceAndTaxEntity entity = invoiceAndTaxService.getInvoiceDetailByInvoiceNumber(requestDTO.getInvoiceNum());
+        InvoiceAndTaxEntity entity = invoiceAndTaxService.getInvoiceDetailByInvoiceNumber(requestDTO.getInvoiceNum(), currentUser);
 
         // Convert entity → DTO (safe for JSON)
         InvoiceAndTaxDTO dto = InvoiceAndTaxConverter.toDTO(entity, currentUser);
@@ -98,6 +99,8 @@ public class InvoiceAndTaxController {
             }
             InvoiceAndTaxDTO updatedInvoice = invoiceAndTaxService.updateInvoice(dto.getId(), dto, currentUser);
             return ResponseEntity.ok(updatedInvoice);
+        } catch (AccessDeniedException e) {
+            throw e;
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         } catch (Exception e) {
@@ -113,6 +116,8 @@ public class InvoiceAndTaxController {
             }
             invoiceAndTaxService.deleteInvoice(requestDTO.getId(), currentUser);
             return ResponseEntity.ok(java.util.Map.of("message", "Invoice deleted successfully"));
+        } catch (AccessDeniedException e) {
+            throw e;
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         } catch (Exception e) {
@@ -136,7 +141,7 @@ public class InvoiceAndTaxController {
     public ResponseEntity<Page<com.numbericsuserportal.invoice.dto.InvoiceSendHistoryItemDto>> getSendHistory(
             @RequestBody InvoiceSendHistorySearch search,
             @AuthenticationPrincipal User currentUser) {
-        return ResponseEntity.ok(invoiceSendService.getSendHistory(search));
+        return ResponseEntity.ok(invoiceSendService.getSendHistory(search, currentUser));
     }
 
     /** Public: get invoice summary by payment link token (for pay page). No auth required. */
@@ -157,7 +162,7 @@ public class InvoiceAndTaxController {
     public ResponseEntity<Page<com.numbericsuserportal.invoice.dto.PaymentTransactionDto>> getTransactionsList(
             @RequestBody PaymentTransactionSearch search,
             @AuthenticationPrincipal User currentUser) {
-        return ResponseEntity.ok(paymentTransactionService.list(search));
+        return ResponseEntity.ok(paymentTransactionService.list(search, currentUser));
     }
 
     /** Download invoice as PDF. */
@@ -168,6 +173,7 @@ public class InvoiceAndTaxController {
         if (requestDTO.getId() == null) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", "Invoice ID is required"));
         }
+        invoiceAndTaxService.requireAccessibleInvoice(requestDTO.getId(), currentUser);
         byte[] pdf = invoicePdfService.generatePdf(requestDTO.getId());
         if (pdf == null) {
             return ResponseEntity.notFound().build();

@@ -17,6 +17,9 @@ public interface UserRoleRepository extends JpaRepository<UserRole, UserRoleId> 
     @Query("SELECT ur FROM UserRole ur WHERE ur.user.userId = :userId AND ur.isActive = true")
     List<UserRole> findByUserIdAndIsActiveTrue(@Param("userId") Long userId);
 
+    @Query("SELECT ur FROM UserRole ur JOIN FETCH ur.role WHERE ur.user.userId = :userId AND ur.isActive = true")
+    List<UserRole> findActiveWithRoleByUserId(@Param("userId") Long userId);
+
     // Alternative method using derived query
     List<UserRole> findByUserUserIdAndIsActiveTrue(Long userId);
 

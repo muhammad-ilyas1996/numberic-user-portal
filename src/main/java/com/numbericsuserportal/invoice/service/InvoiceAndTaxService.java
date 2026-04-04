@@ -9,15 +9,19 @@ import org.springframework.data.domain.Page;
 public interface InvoiceAndTaxService {
 
     InvoiceAndTaxDTO createInvoiceAndTax(InvoiceAndTaxDTO dto, User currentUser);
-    public Page<InvoiceAndTaxEntity> searchInvoice(InvoiceSearch requestDTO);
-    public InvoiceAndTaxEntity getInvoiceDetail(Long id);
-    public InvoiceAndTaxEntity getInvoiceDetailByCustomerName(String customerName);
-    public InvoiceAndTaxEntity getInvoiceDetailByInvoiceNumber(String invoiceNum);
-    
-    // Update invoice
-    InvoiceAndTaxDTO updateInvoice(Long id, InvoiceAndTaxDTO dto, User currentUser);
-    
-    // Delete invoice (soft delete)
-    void deleteInvoice(Long id, User currentUser);
 
+    Page<InvoiceAndTaxEntity> searchInvoice(InvoiceSearch requestDTO, User currentUser);
+
+    InvoiceAndTaxEntity getInvoiceDetail(Long id, User currentUser);
+
+    InvoiceAndTaxEntity getInvoiceDetailByCustomerName(String customerName, User currentUser);
+
+    InvoiceAndTaxEntity getInvoiceDetailByInvoiceNumber(String invoiceNum, User currentUser);
+
+    /** Ensures invoice exists, is active, and current user may access it. */
+    void requireAccessibleInvoice(Long invoiceId, User currentUser);
+
+    InvoiceAndTaxDTO updateInvoice(Long id, InvoiceAndTaxDTO dto, User currentUser);
+
+    void deleteInvoice(Long id, User currentUser);
 }

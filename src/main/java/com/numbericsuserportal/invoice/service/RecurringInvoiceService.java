@@ -12,9 +12,9 @@ public interface RecurringInvoiceService {
 
     RecurringInvoiceDto update(Long id, RecurringInvoiceCreateRequestDto request, User currentUser);
 
-    Page<RecurringInvoiceDto> list(RecurringInvoiceSearch search);
+    Page<RecurringInvoiceDto> list(RecurringInvoiceSearch search, User currentUser);
 
-    RecurringInvoiceDto getById(Long id);
+    RecurringInvoiceDto getById(Long id, User currentUser);
 
     void pause(Long id, User currentUser);
 

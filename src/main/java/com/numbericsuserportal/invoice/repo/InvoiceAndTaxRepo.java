@@ -12,4 +12,8 @@ public interface InvoiceAndTaxRepo extends JpaRepository<InvoiceAndTaxEntity, Lo
     Optional<InvoiceAndTaxEntity> findByIdAndIsActiveTrue(long id);
     Optional<InvoiceAndTaxEntity> findByInvoiceNum(String invoiceNum);
     Optional<InvoiceAndTaxEntity> findByCustomerName(String CustomerName);
+
+    long countByIsActiveTrue();
+
+    long countByCreatedByAndIsActiveTrue(String createdBy);
 }

@@ -22,7 +22,7 @@ public interface InvoiceSendService {
     /**
      * Get send history for an invoice (paginated).
      */
-    Page<InvoiceSendHistoryItemDto> getSendHistory(InvoiceSendHistorySearch search);
+    Page<InvoiceSendHistoryItemDto> getSendHistory(InvoiceSendHistorySearch search, User currentUser);
 
     /**
      * Get invoice summary by payment link token (public, for pay page).

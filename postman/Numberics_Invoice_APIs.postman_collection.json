@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Numberics Invoice APIs",
-    "description": "All invoice, recurring, send, pay, transactions APIs. Run Login first to set token.\n\n• view-detail: use POST with body {\"id\": <invoiceId>}; 404 = invoice not found.\n• WhatsApp: Twilio sandbox – recipient must send 'join <code>' to sandbox number first (see postman/README.md).",
+    "description": "Run Auth → Login first (sets {{token}}).\n\n• Dashboard: GET /v1/dashboard/summary\n• Invoice / recurring / transactions / NMI / pay-by-token: see folders\n• Onboarding: GET|POST /api/onboarding\n• LLC companies: GET|POST|PATCH /api/llc-northwest/companies (Bearer; user-scoped list after POST create links user_formation_company)\n• view-detail invoice: POST body {\"id\": <invoiceId>}\n• WhatsApp: Twilio sandbox — join code first (postman/README.md).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -34,6 +34,21 @@
               "raw": "{\n  \"username\": \"atiq.apo@apo.com\",\n  \"password\": \"Atiq.apo@1\"\n}\n"
             },
             "url": "{{baseUrl}}/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "description": "KPIs for dashboard cards. Import this collection, run Auth → Login, then GET Dashboard Summary. Super admin sees ALL; other users see only invoices where CREATED_BY = their userId.",
+      "item": [
+        {
+          "name": "GET Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Returns JSON: totalRevenueNmi (NMI SUCCESS payments), totalInvoices, roleCodes[], primaryRoleCode, dataScope (ALL | USER). Path: /v1/dashboard/summary under baseUrl (e.g. .../numbricsservice).",
+            "url": "{{baseUrl}}/v1/dashboard/summary"
           }
         }
       ]
@@ -356,6 +371,108 @@
               "raw": "{\n  \"authMethod\": \"username_password\",\n  \"nmiUsername\": \"YourNMIUsername\",\n  \"nmiPassword\": \"YourNMIPassword\"\n}\n"
             },
             "url": "{{baseUrl}}/v1/settings/nmi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "LLC Northwest (Companies)",
+      "description": "Corporate Tools companies. Auth: Bearer {{token}}.\n\n• INVALID_HOME_STATE: use full state name (Delaware) not DE.\n• INVALID_ENTITY_TYPE: CT rejects \"LLC\" — use \"llc\" (lowercase) or \"limited_liability_company\" (see alternate POST requests).\n• Change \"name\" each test if duplicate_name_allowed is false.\n• Optional: GET Filing Products (same folder in codebase path) to align entity/jurisdiction with CT.",
+      "item": [
+        {
+          "name": "GET Filing Products (discover entity/jurisdiction)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/llc-northwest/filing-products?url=https://example.com&jurisdiction=Delaware&entityType=llc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "llc-northwest", "filing-products"],
+              "query": [
+                { "key": "url", "value": "https://example.com" },
+                { "key": "jurisdiction", "value": "Delaware" },
+                { "key": "entityType", "value": "llc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Companies",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/llc-northwest/companies?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "llc-northwest", "companies"],
+              "query": [
+                { "key": "limit", "value": "20", "description": "optional" },
+                { "key": "offset", "value": "0", "description": "optional" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Companies (create — entity_type llc)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "description": "Use lowercase \"llc\" (CT returns INVALID_ENTITY_TYPE for \"LLC\"). Change name if duplicate error.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"duplicate_name_allowed\": false,\n  \"companies\": [\n    {\n      \"name\": \"Postman Test LLC 001\",\n      \"entity_type\": \"llc\",\n      \"home_state\": \"Delaware\"\n    }\n  ]\n}\n"
+            },
+            "url": "{{baseUrl}}/api/llc-northwest/companies"
+          }
+        },
+        {
+          "name": "POST Companies (create — entity_type limited_liability_company)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "description": "If \"llc\" still fails, try this snake_case value (some CT environments use it).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"duplicate_name_allowed\": false,\n  \"companies\": [\n    {\n      \"name\": \"Postman Test LLC 002\",\n      \"entity_type\": \"limited_liability_company\",\n      \"home_state\": \"Delaware\"\n    }\n  ]\n}\n"
+            },
+            "url": "{{baseUrl}}/api/llc-northwest/companies"
+          }
+        },
+        {
+          "name": "POST Companies (create — jurisdictions Wyoming)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "description": "CT rule: provide jurisdictions OR home_state, not both. No home_state here.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"duplicate_name_allowed\": false,\n  \"companies\": [\n    {\n      \"name\": \"Postman Test LLC 003\",\n      \"entity_type\": \"llc\",\n      \"jurisdictions\": [\"Wyoming\"]\n    }\n  ]\n}\n"
+            },
+            "url": "{{baseUrl}}/api/llc-northwest/companies"
+          }
+        },
+        {
+          "name": "PATCH Companies (update)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"duplicate_name_allowed\": false,\n  \"companies\": [\n    {\n      \"company_id\": \"PASTE-UUID-FROM-GET-OR-POST-RESPONSE\"\n    }\n  ]\n}\n"
+            },
+            "url": "{{baseUrl}}/api/llc-northwest/companies"
           }
         }
       ]
