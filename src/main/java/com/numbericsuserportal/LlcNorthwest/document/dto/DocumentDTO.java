@@ -25,7 +25,9 @@ public class DocumentDTO {
      */
     @JsonProperty("created_at")
     private String createdAt;
-    
+
+    @JsonProperty("classification_name")
+    private String classificationName;
     /**
      * Datetime of last update
      */

@@ -1,6 +1,7 @@
 package com.numbericsuserportal.LlcNorthwest.paymentmethod.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -71,5 +72,10 @@ public class PaymentMethodDTO {
      */
     @JsonProperty("billing_address")
     private BillingAddressDTO billingAddress;
+
+    /**
+     * Optional provider-specific metadata from Corporate Tools API
+     */
+    private JsonNode metadata;
 }
 

@@ -26,5 +26,7 @@ public class BillingAddressDTO {
     
     @JsonProperty("address2")
     private String address2;
+
+    private String phone;
 }
 
