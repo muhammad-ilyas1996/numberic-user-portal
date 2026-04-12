@@ -1,5 +1,7 @@
 package com.numbericsuserportal.registration.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.numbericsuserportal.registration.dto.OnboardingRequestDto;
 import com.numbericsuserportal.registration.dto.OnboardingResponseDto;
 import com.numbericsuserportal.registration.entity.BusinessProfile;
@@ -19,6 +21,9 @@ public class OnboardingService {
 
     @Autowired
     private BusinessProfileRepository businessProfileRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     /**
      * GET onboarding: return current user's business profile for pre-fill; completed = has key data.
@@ -93,6 +98,49 @@ public class OnboardingService {
             }
         }
 
+        if (request.getOnboardingTrack() != null) {
+            profile.setOnboardingTrack(request.getOnboardingTrack());
+        }
+        if (request.getFilingStatus() != null) {
+            profile.setFilingStatus(request.getFilingStatus());
+        }
+        if (request.getIncomeSourceCodes() != null) {
+            profile.setIncomeSourceCodes(request.getIncomeSourceCodes());
+        }
+        if (request.getPainPointCode() != null) {
+            profile.setPainPointCode(request.getPainPointCode());
+        }
+        if (request.getOperationsCodes() != null) {
+            profile.setOperationsCodes(request.getOperationsCodes());
+        }
+        if (request.getTaxProRelationship() != null) {
+            profile.setTaxProRelationship(request.getTaxProRelationship());
+        }
+        if (request.getBusinessTierChoice() != null) {
+            profile.setBusinessTierChoice(request.getBusinessTierChoice());
+        }
+        if (request.getTaxProCredential() != null) {
+            profile.setTaxProCredential(request.getTaxProCredential());
+        }
+        if (request.getPracticeClientBand() != null) {
+            profile.setPracticeClientBand(request.getPracticeClientBand());
+        }
+        if (request.getPracticeTaxSoftware() != null) {
+            profile.setPracticeTaxSoftware(request.getPracticeTaxSoftware());
+        }
+        if (request.getPracticePainCodes() != null) {
+            profile.setPracticePainCodes(request.getPracticePainCodes());
+        }
+        if (request.getOnboardingAnswersJson() != null) {
+            profile.setOnboardingAnswersJson(request.getOnboardingAnswersJson());
+        }
+
+        try {
+            profile.setOnboardingPayloadJson(objectMapper.writeValueAsString(request));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize onboarding request to JSON", e);
+        }
+
         BusinessProfile saved = businessProfileRepository.save(profile);
         OnboardingResponseDto dto = new OnboardingResponseDto();
         mapToResponse(saved, dto);
@@ -122,9 +170,31 @@ public class OnboardingService {
         dto.setConnectBankAccounts(p.getConnectBankAccounts());
         dto.setGoals(p.getGoals());
         dto.setLocation(p.getLocation());
+        dto.setOnboardingTrack(p.getOnboardingTrack());
+        dto.setFilingStatus(p.getFilingStatus());
+        dto.setIncomeSourceCodes(p.getIncomeSourceCodes());
+        dto.setPainPointCode(p.getPainPointCode());
+        dto.setOperationsCodes(p.getOperationsCodes());
+        dto.setTaxProRelationship(p.getTaxProRelationship());
+        dto.setBusinessTierChoice(p.getBusinessTierChoice());
+        dto.setTaxProCredential(p.getTaxProCredential());
+        dto.setPracticeClientBand(p.getPracticeClientBand());
+        dto.setPracticeTaxSoftware(p.getPracticeTaxSoftware());
+        dto.setPracticePainCodes(p.getPracticePainCodes());
+        dto.setOnboardingAnswersJson(p.getOnboardingAnswersJson());
+        dto.setOnboardingPayloadJson(p.getOnboardingPayloadJson());
     }
 
     private boolean isOnboardingCompleted(BusinessProfile p) {
+        if (p.getOnboardingPayloadJson() != null && !p.getOnboardingPayloadJson().isBlank()) {
+            return true;
+        }
+        if (p.getOnboardingAnswersJson() != null && !p.getOnboardingAnswersJson().isBlank()) {
+            return true;
+        }
+        if (p.getOnboardingTrack() != null && !p.getOnboardingTrack().isBlank()) {
+            return true;
+        }
         return (p.getCompanyName() != null && !p.getCompanyName().isBlank())
                 || (p.getBusinessLegalName() != null && !p.getBusinessLegalName().isBlank())
                 || (p.getIndustry() != null && !p.getIndustry().isBlank());

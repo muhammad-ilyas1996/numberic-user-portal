@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Numberics Invoice APIs",
-    "description": "Run Auth → Login first (sets {{token}}).\n\n• Dashboard: GET /v1/dashboard/summary\n• Invoice / recurring / transactions / NMI / pay-by-token: see folders\n• Onboarding: GET|POST /api/onboarding\n• LLC companies: GET|POST|PATCH /api/llc-northwest/companies (Bearer; user-scoped list after POST create links user_formation_company)\n• view-detail invoice: POST body {\"id\": <invoiceId>}\n• WhatsApp: Twilio sandbox — join code first (postman/README.md).",
+    "description": "Run Auth → Login first (sets {{token}}).\n\n• Dashboard: GET /v1/dashboard/summary\n• Invoice / recurring / transactions / NMI / pay-by-token: see folders\n• Onboarding: GET|POST /api/onboarding\n• Taalr chat: POST /api/chat (folder Taalr Chat — JWT; Managed Agents or Messages API per server config)\n• LLC companies: GET|POST|PATCH /api/llc-northwest/companies (Bearer; user-scoped list after POST create links user_formation_company)\n• view-detail invoice: POST body {\"id\": <invoiceId>}\n• WhatsApp: Twilio sandbox — join code first (postman/README.md).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -498,9 +498,30 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessName\": \"Acme LLC\",\n  \"entityType\": \"LLC\",\n  \"registrationState\": \"California\",\n  \"industry\": \"Technology\",\n  \"revenueLastYear\": \"$100k - $500k\",\n  \"revenueExpected\": \"$500k - $1M\",\n  \"collectsSalesTax\": \"Yes\",\n  \"multiState\": \"No\",\n  \"hasEmployees\": \"Yes\",\n  \"teamSize\": \"5-10\",\n  \"filesQuarterlyTaxes\": \"Yes\",\n  \"salesTaxFrequency\": \"Quarterly\",\n  \"taxFilingsUpToDate\": \"Yes\",\n  \"accountingSoftware\": \"QuickBooks\",\n  \"connectBankAccounts\": \"Yes\",\n  \"goals\": \"Simplify bookkeeping and stay compliant\",\n  \"location\": \"San Francisco, CA\"\n}\n"
+              "raw": "{\n  \"businessName\": \"Acme LLC\",\n  \"entityType\": \"LLC\",\n  \"registrationState\": \"California\",\n  \"industry\": \"Technology\",\n  \"revenueLastYear\": \"$100k - $500k\",\n  \"revenueExpected\": \"$500k - $1M\",\n  \"collectsSalesTax\": \"Yes\",\n  \"multiState\": \"No\",\n  \"hasEmployees\": \"Yes\",\n  \"teamSize\": \"5-10\",\n  \"filesQuarterlyTaxes\": \"Yes\",\n  \"salesTaxFrequency\": \"Quarterly\",\n  \"taxFilingsUpToDate\": \"Yes\",\n  \"accountingSoftware\": \"QuickBooks\",\n  \"connectBankAccounts\": \"Yes\",\n  \"goals\": \"Simplify bookkeeping and stay compliant\",\n  \"location\": \"San Francisco, CA\",\n  \"onboardingTrack\": \"BUSINESS_OWNER\",\n  \"filingStatus\": \"Married filing jointly\",\n  \"incomeSourceCodes\": \"1,3,5\",\n  \"painPointCode\": \"2\",\n  \"operationsCodes\": \"1,2,6\",\n  \"taxProRelationship\": \"3\",\n  \"businessTierChoice\": \"STANDARD\",\n  \"taxProCredential\": null,\n  \"practiceClientBand\": null,\n  \"practiceTaxSoftware\": null,\n  \"practicePainCodes\": null,\n  \"onboardingAnswersJson\": \"{\\\"s1\\\":\\\"3\\\",\\\"s2\\\":[\\\"1\\\",\\\"3\\\"],\\\"completed\\\":true}\"\n}\n"
             },
             "url": "{{baseUrl}}/api/onboarding"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Taalr Chat",
+      "description": "In-app Taalr (Anthropic). Requires Auth → Login.\n\nBody:\n• message (required)\n• resetSession: true = new sesn_ session (clears old chat memory)\n• includeProfileInPrompt: false = do not send saved business profile to Taalr (use with resetSession to re-run onboarding)\n\n429 = rate limit.",
+      "item": [
+        {
+          "name": "POST /api/chat",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Hi — start onboarding\",\n  \"resetSession\": false,\n  \"includeProfileInPrompt\": true\n}\n"
+            },
+            "url": "{{baseUrl}}/api/chat"
           }
         }
       ]

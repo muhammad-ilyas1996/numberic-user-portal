@@ -93,6 +93,64 @@ public class BusinessProfile extends BaseEntity {
     @Column(name = "location", length = 255)
     private String location;
 
+    /** S1: SOLOPRENEUR | BUSINESS_OWNER | TAX_PROFESSIONAL (or client-defined codes). */
+    @Column(name = "onboarding_track", length = 64)
+    private String onboardingTrack;
+
+    /** S4 filing status. */
+    @Column(name = "filing_status", length = 64)
+    private String filingStatus;
+
+    /** S2: comma-separated option indices e.g. "1,3,5". */
+    @Column(name = "income_source_codes", length = 512)
+    private String incomeSourceCodes;
+
+    /** S5 pain point option 1–6 or code. */
+    @Column(name = "pain_point_code", length = 32)
+    private String painPointCode;
+
+    /** B3 operations multi-select codes. */
+    @Column(name = "operations_codes", length = 512)
+    private String operationsCodes;
+
+    /** B4: CPA relationship choice. */
+    @Column(name = "tax_pro_relationship", length = 64)
+    private String taxProRelationship;
+
+    /** B5: STANDARD | PRO or display string. */
+    @Column(name = "business_tier_choice", length = 64)
+    private String businessTierChoice;
+
+    /** P1 Tax Professional credential. */
+    @Column(name = "tax_pro_credential", length = 64)
+    private String taxProCredential;
+
+    /** P2 client count band. */
+    @Column(name = "practice_client_band", length = 64)
+    private String practiceClientBand;
+
+    /** P2 tax software. */
+    @Column(name = "practice_tax_software", length = 128)
+    private String practiceTaxSoftware;
+
+    /** P3 practice pain multi-select codes. */
+    @Column(name = "practice_pain_codes", length = 512)
+    private String practicePainCodes;
+
+    /**
+     * Full onboarding snapshot from the frontend (one POST after chat wizard): steps, raw labels, extras.
+     * Use together with structured columns above; JSON is optional overflow / audit.
+     */
+    @Column(name = "onboarding_answers_json", columnDefinition = "LONGTEXT")
+    private String onboardingAnswersJson;
+
+    /**
+     * Canonical JSON of the entire last {@code POST /api/onboarding} body (serialized {@link com.numbericsuserportal.registration.dto.OnboardingRequestDto}).
+     * Add new fields to the DTO only — no DB migration needed to retain them here. Use for display / future steps.
+     */
+    @Column(name = "onboarding_payload_json", columnDefinition = "LONGTEXT")
+    private String onboardingPayloadJson;
+
     public enum BusinessType {
         llc, corp, sole_proprietor, partnership, nonprofit, other
     }

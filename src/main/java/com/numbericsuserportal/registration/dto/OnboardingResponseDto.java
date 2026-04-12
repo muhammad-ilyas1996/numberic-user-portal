@@ -31,6 +31,22 @@ public class OnboardingResponseDto {
     private String goals;
     private String location;
 
+    private String onboardingTrack;
+    private String filingStatus;
+    private String incomeSourceCodes;
+    private String painPointCode;
+    private String operationsCodes;
+    private String taxProRelationship;
+    private String businessTierChoice;
+    private String taxProCredential;
+    private String practiceClientBand;
+    private String practiceTaxSoftware;
+    private String practicePainCodes;
+    private String onboardingAnswersJson;
+
+    /** Full last submit payload as JSON (same as stored in DB); parse on client for dynamic questionnaire fields. */
+    private String onboardingPayloadJson;
+
     /** True if user has submitted onboarding (has profile with at least business name or key fields). */
     private Boolean completed;
 }
