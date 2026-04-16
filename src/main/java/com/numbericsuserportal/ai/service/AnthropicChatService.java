@@ -79,6 +79,61 @@ public class AnthropicChatService {
         return chatViaMessagesApi(user, profile, request.getMessage().trim(), includeProfile);
     }
 
+    /**
+     * Public website chat endpoint (no JWT): stateless, no onboarding profile, no DB history, no rate limit.
+     * <p>
+     * Note: We intentionally avoid Managed Agents here because it requires per-user session state.
+     */
+    public ChatResponseDto chatPublic(ChatRequestDto request) {
+        if (anthropicProperties.getKey() == null || anthropicProperties.getKey().isBlank()) {
+            return new ChatResponseDto(false, null,
+                    "Anthropic API is not configured. Set environment variable ANTHROPIC_API_KEY.", null, null);
+        }
+        if (request == null || request.getMessage() == null || request.getMessage().isBlank()) {
+            return new ChatResponseDto(false, null, "Message is required.", null, null);
+        }
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("model", anthropicProperties.getModel());
+        body.put("max_tokens", anthropicProperties.getMaxTokens());
+        body.put("system", buildPublicSystemPrompt());
+        body.put("messages", List.of(Map.of(
+                "role", "user",
+                "content", request.getMessage().trim()
+        )));
+
+        try {
+            String raw = anthropicRestClient.post()
+                    .uri("/v1/messages")
+                    .header("x-api-key", anthropicProperties.getKey())
+                    .header("anthropic-version", anthropicProperties.getVersion())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+
+            JsonNode root = objectMapper.readTree(raw);
+            if (root.has("error")) {
+                String msg = root.path("error").path("message").asText("Anthropic API error");
+                return new ChatResponseDto(false, null, msg, null, null);
+            }
+            JsonNode content = root.path("content");
+            if (!content.isArray() || content.isEmpty()) {
+                return new ChatResponseDto(false, null, "Empty response from model.", null, null);
+            }
+            String text = content.get(0).path("text").asText("");
+            return new ChatResponseDto(true, text, null, anthropicProperties.getModel(), null);
+        } catch (RestClientException e) {
+            return new ChatResponseDto(false, null,
+                    "Failed to reach Anthropic: " + (e.getMessage() != null ? e.getMessage() : "unknown"),
+                    null, null);
+        } catch (Exception e) {
+            return new ChatResponseDto(false, null,
+                    "Failed to parse response: " + (e.getMessage() != null ? e.getMessage() : "unknown"),
+                    null, null);
+        }
+    }
+
     private ChatResponseDto chatViaManagedAgents(User user, String userMessage, OnboardingResponseDto profile,
             boolean includeProfileInPrompt) {
         try {
@@ -189,6 +244,15 @@ public class AnthropicChatService {
             appendLine(sb, "Business tier", ob.getBusinessTierChoice());
             appendLine(sb, "Onboarding completed", ob.getCompleted() != null ? ob.getCompleted().toString() : null);
         }
+        String extra = anthropicProperties.getSystemPromptExtra();
+        if (extra != null && !extra.isBlank()) {
+            sb.append("\n\n").append(extra.trim());
+        }
+        return sb.toString();
+    }
+
+    private String buildPublicSystemPrompt() {
+        StringBuilder sb = new StringBuilder(MESSAGES_API_FALLBACK_SYSTEM);
         String extra = anthropicProperties.getSystemPromptExtra();
         if (extra != null && !extra.isBlank()) {
             sb.append("\n\n").append(extra.trim());

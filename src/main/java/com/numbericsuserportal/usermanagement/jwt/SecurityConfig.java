@@ -32,6 +32,7 @@ public class SecurityConfig {
                         .requestMatchers("/webhooks/**").permitAll() // Allow Twilio webhooks without authentication
                         .requestMatchers("/api/auth/register/**").permitAll() // Allow registration endpoints
                         .requestMatchers("/api/taxbandits/**").permitAll() // Allow all TaxBandits APIs (test-auth, form1099nec, and future endpoints)
+                        .requestMatchers("/api/public/chat/**").permitAll() // Public website chat endpoint (no JWT)
                         .requestMatchers("/v1/invoice/pay-by-token").permitAll() // Invoice pay page: get invoice by link token
                         .requestMatchers("/v1/invoice/pay-with-token").permitAll() // Invoice pay: process payment by token
                         .requestMatchers("/pay-invoice", "/pay-invoice.html").permitAll() // Public payment page (link from WhatsApp/email)
