@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Numberics Invoice APIs",
-    "description": "Run Auth → Login first (sets {{token}}).\n\n• Dashboard: GET /v1/dashboard/summary\n• Invoice / recurring / transactions / NMI / pay-by-token: see folders\n• Onboarding: GET|POST /api/onboarding\n• Taalr chat: POST /api/chat (folder Taalr Chat — JWT; Managed Agents or Messages API per server config)\n• LLC companies: GET|POST|PATCH /api/llc-northwest/companies (Bearer; user-scoped list after POST create links user_formation_company)\n• view-detail invoice: POST body {\"id\": <invoiceId>}\n• WhatsApp: Twilio sandbox — join code first (postman/README.md).",
+    "description": "Run Auth → Login first (sets {{token}}).\n\n• Dashboard: GET /v1/dashboard/summary\n• Invoice / recurring / transactions / NMI / pay-by-token: see folders\n• Onboarding: GET|POST /api/onboarding\n• Taalr chat (in-app): POST /api/chat (folder Taalr Chat — JWT; Managed Agents or Messages API per server config)\n• Public website chat (no auth): POST /api/public/chat (folder Public Website Chat)\n• LLC companies: GET|POST|PATCH /api/llc-northwest/companies (Bearer; user-scoped list after POST create links user_formation_company)\n• view-detail invoice: POST body {\"id\": <invoiceId>}\n• WhatsApp: Twilio sandbox — join code first (postman/README.md).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -522,6 +522,24 @@
               "raw": "{\n  \"message\": \"Hi — start onboarding\",\n  \"resetSession\": false,\n  \"includeProfileInPrompt\": true\n}\n"
             },
             "url": "{{baseUrl}}/api/chat"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public Website Chat",
+      "description": "Website chat widget endpoint. No JWT, no rate limit, stateless (no DB history).",
+      "item": [
+        {
+          "name": "POST /api/public/chat",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Hello from website\"\n}\n"
+            },
+            "url": "{{baseUrl}}/api/public/chat"
           }
         }
       ]
