@@ -145,7 +145,12 @@ public class Form1099KServiceImpl extends BaseFormService<CreateForm1099KRequest
             }
         }
         if (request.getReturnData() != null) {
+            int sequenceCounter = 1;
             for (var returnData : request.getReturnData()) {
+                if (returnData.getSequenceId() == null || returnData.getSequenceId().isBlank()) {
+                    returnData.setSequenceId(String.valueOf(sequenceCounter));
+                }
+                sequenceCounter++;
                 if (returnData.getIsForced() == null) returnData.setIsForced(false);
                 if (returnData.getRecipient() != null) {
                     var rec = returnData.getRecipient();
@@ -165,6 +170,7 @@ public class Form1099KServiceImpl extends BaseFormService<CreateForm1099KRequest
                     if (k.getB1bCardNotPresentTxns() == null) k.setB1bCardNotPresentTxns(0.0);
                     if (k.getB3NumPymtTxns() == null) k.setB3NumPymtTxns(0);
                     if (k.getB4FedTaxWH() == null) k.setB4FedTaxWH(0.0);
+                    alignGrossAndMonthlyAmounts(k);
                     if (k.getIs2ndTINnot() == null) k.setIs2ndTINnot(false);
                     if (k.getFilerIndicator() == null) k.setFilerIndicator("PSE");
                     if (k.getIndicateTxnsReported() == null) k.setIndicateTxnsReported("Payment_Card");
@@ -203,7 +209,12 @@ public class Form1099KServiceImpl extends BaseFormService<CreateForm1099KRequest
             }
         }
         if (request.getReturnData() != null) {
+            int sequenceCounter = 1;
             for (var rd : request.getReturnData()) {
+                if (rd.getSequenceId() == null || rd.getSequenceId().isBlank()) {
+                    rd.setSequenceId(String.valueOf(sequenceCounter));
+                }
+                sequenceCounter++;
                 if (rd.getRecipient() != null) {
                     var rec = rd.getRecipient();
                     if (rec.getIsForeign() == null) rec.setIsForeign(false);
@@ -221,11 +232,42 @@ public class Form1099KServiceImpl extends BaseFormService<CreateForm1099KRequest
                     if (k.getB1aGrossAmt() == null) k.setB1aGrossAmt(0.0);
                     if (k.getB1bCardNotPresentTxns() == null) k.setB1bCardNotPresentTxns(0.0);
                     if (k.getB3NumPymtTxns() == null) k.setB3NumPymtTxns(0);
+                    if (k.getB4FedTaxWH() == null) k.setB4FedTaxWH(0.0);
+                    alignGrossAndMonthlyAmounts(k);
                     if (k.getIs2ndTINnot() == null) k.setIs2ndTINnot(false);
                     if (k.getFilerIndicator() == null) k.setFilerIndicator("PSE");
                     if (k.getIndicateTxnsReported() == null) k.setIndicateTxnsReported("Payment_Card");
                 }
             }
+        }
+    }
+
+    private void alignGrossAndMonthlyAmounts(CreateForm1099KRequestDTO.KFormDataDTO k) {
+        if (k.getB5aJan() == null) k.setB5aJan(0.0);
+        if (k.getB5bFeb() == null) k.setB5bFeb(0.0);
+        if (k.getB5cMar() == null) k.setB5cMar(0.0);
+        if (k.getB5dApr() == null) k.setB5dApr(0.0);
+        if (k.getB5eMay() == null) k.setB5eMay(0.0);
+        if (k.getB5fJun() == null) k.setB5fJun(0.0);
+        if (k.getB5gJul() == null) k.setB5gJul(0.0);
+        if (k.getB5hAug() == null) k.setB5hAug(0.0);
+        if (k.getB5iSep() == null) k.setB5iSep(0.0);
+        if (k.getB5jOct() == null) k.setB5jOct(0.0);
+        if (k.getB5kNov() == null) k.setB5kNov(0.0);
+        if (k.getB5lDec() == null) k.setB5lDec(0.0);
+
+        double monthlyTotal = k.getB5aJan() + k.getB5bFeb() + k.getB5cMar() + k.getB5dApr()
+            + k.getB5eMay() + k.getB5fJun() + k.getB5gJul() + k.getB5hAug()
+            + k.getB5iSep() + k.getB5jOct() + k.getB5kNov() + k.getB5lDec();
+
+        if (monthlyTotal == 0.0 && k.getB1aGrossAmt() != null && k.getB1aGrossAmt() > 0.0) {
+            // Keep caller-provided annual amount and place it in Jan when months are omitted.
+            k.setB5aJan(k.getB1aGrossAmt());
+            monthlyTotal = k.getB1aGrossAmt();
+        }
+
+        if (k.getB1aGrossAmt() == null || Math.abs(k.getB1aGrossAmt() - monthlyTotal) > 0.009) {
+            k.setB1aGrossAmt(monthlyTotal);
         }
     }
 

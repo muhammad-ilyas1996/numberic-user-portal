@@ -164,6 +164,9 @@ public class CreateForm1099KRequestDTO {
     
     @Data
     public static class ReturnDataDTO {
+        @JsonProperty("SequenceId")
+        private String sequenceId;
+
         @JsonProperty("RecordId")
         private UUID recordId;
         
@@ -229,6 +232,42 @@ public class CreateForm1099KRequestDTO {
         
         @JsonProperty("B4FedTaxWH")
         private Double b4FedTaxWH;
+
+        @JsonProperty("B5aJan")
+        private Double b5aJan;
+
+        @JsonProperty("B5bFeb")
+        private Double b5bFeb;
+
+        @JsonProperty("B5cMar")
+        private Double b5cMar;
+
+        @JsonProperty("B5dApr")
+        private Double b5dApr;
+
+        @JsonProperty("B5eMay")
+        private Double b5eMay;
+
+        @JsonProperty("B5fJun")
+        private Double b5fJun;
+
+        @JsonProperty("B5gJul")
+        private Double b5gJul;
+
+        @JsonProperty("B5hAug")
+        private Double b5hAug;
+
+        @JsonProperty("B5iSep")
+        private Double b5iSep;
+
+        @JsonProperty("B5jOct")
+        private Double b5jOct;
+
+        @JsonProperty("B5kNov")
+        private Double b5kNov;
+
+        @JsonProperty("B5lDec")
+        private Double b5lDec;
         
         @JsonProperty("FederalTaxWithheld")
         private Double federalTaxWithheld;
