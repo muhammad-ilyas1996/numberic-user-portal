@@ -6,7 +6,9 @@
   },
   "variable": [
     { "key": "baseUrl", "value": "https://www.numbrics.ai/numbricsservice" },
-    { "key": "token", "value": "" }
+    { "key": "token", "value": "" },
+    { "key": "tbSubmissionId", "value": "" },
+    { "key": "tbRecordId", "value": "" }
   ],
   "item": [
     {
@@ -540,6 +542,66 @@
               "raw": "{\n  \"message\": \"Hello from website\"\n}\n"
             },
             "url": "{{baseUrl}}/api/public/chat"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TaxBandits — Form 1099-K (Webhook + PDF)",
+      "description": "TaxBandits callbacks + helper endpoints added for automated PDF zip ingestion.\n\nNotes:\n• `/api/taxbandits/**` is intentionally public in this service (see SecurityConfig).\n• Webhook must return HTTP 200 quickly; heavy work happens async on server.\n• After PDF_COMPLETE webhook is processed, artifacts land under `uploads/taxbandits/webhooks/...` and `GET pdf-artifact` returns latest manifest.",
+      "item": [
+        {
+          "name": "POST TaxBandits Webhook (ping)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"test\": \"ping\"\n}\n" },
+            "url": "{{baseUrl}}/api/taxbandits/webhook",
+            "description": "Quick health check for the registered Callback URL (TaxBandits verification / manual testing)."
+          }
+        },
+        {
+          "name": "POST TaxBandits Webhook (sample PDF_COMPLETE)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"EventType\": \"PDF_COMPLETE\",\n  \"SubmissionId\": \"{{tbSubmissionId}}\",\n  \"BusinessId\": \"\",\n  \"PayerRef\": null,\n  \"FormType\": \"Form1099K\",\n  \"Records\": [\n    {\n      \"RecordId\": \"{{tbRecordId}}\",\n      \"SequenceId\": \"1\",\n      \"FileName\": \"{{tbRecordId}}.Zip\",\n      \"FilePath\": \"PASTE_ZIP_URL_FROM_TAXBANDITS_WEBHOOK_LOG\",\n      \"Status\": \"SUCCESS\",\n      \"StatusTime\": \"2026-05-02T11:10:26.3003414-04:00\",\n      \"Errors\": null\n    }\n  ]\n}\n"
+            },
+            "url": "{{baseUrl}}/api/taxbandits/webhook",
+            "description": "Local integration test only. Paste a real `FilePath` from TaxBandits Webhook Log. Set `tbSubmissionId` + `tbRecordId` collection variables first."
+          }
+        },
+        {
+          "name": "GET Form 1099-K — latest PDF artifact manifest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/taxbandits/form1099k/pdf-artifact?submissionId={{tbSubmissionId}}&recordId={{tbRecordId}}",
+            "description": "Poll this after `GetPDF` queues generation or after webhook delivery. Returns latest `manifest.json` metadata (relative paths to zip + extracted PDFs) if processing completed."
+          }
+        },
+        {
+          "name": "GET Form 1099-K — GetPDF (queue generation)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/taxbandits/form1099k/getpdf?submissionId={{tbSubmissionId}}&recordId={{tbRecordId}}",
+            "description": "Queues PDF generation; actual URL typically arrives via TaxBandits webhook (`PDF_COMPLETE`). Requires webhook configuration in TaxBandits."
+          }
+        },
+        {
+          "name": "POST Form 1099-K — RequestPdfURLs",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"SubmissionId\": \"{{tbSubmissionId}}\",\n  \"RecordIds\": [\n    { \"RecordId\": \"{{tbRecordId}}\" }\n  ],\n  \"Customization\": {\n    \"TINMaskType\": \"BOTH\"\n  }\n}\n"
+            },
+            "url": "{{baseUrl}}/api/taxbandits/form1099k/requestpdfurls",
+            "description": "Immediate masked/unmasked PDF URLs (may be encrypted depending on TaxBandits PDF security settings)."
           }
         }
       ]
