@@ -329,4 +329,63 @@ public class TaxBanditsPdfWebhookService {
         map.put("artifactDirectory", toRelativeUploadPath(latestDir));
         return map;
     }
+
+    /**
+     * Resolves a PDF path under the latest artifact directory for a submission/record.
+     * Only filenames are accepted (no directories); callers must pass leaf names like "1099NEC_COPY1_1Up.pdf".
+     */
+    public Path resolveLatestPdfFile(String submissionId, String recordId, String fileName) throws IOException {
+        if (fileName == null || fileName.isBlank()) {
+            throw new IllegalArgumentException("fileName is required");
+        }
+        if (fileName.contains("/") || fileName.contains("\\") || fileName.contains("..")) {
+            throw new IllegalArgumentException("Invalid fileName");
+        }
+
+        Path root = Paths.get(storageProperties.getBaseDir())
+            .resolve(sanitizePathSegment(submissionId))
+            .resolve(sanitizePathSegment(recordId));
+
+        if (!Files.exists(root)) {
+            return null;
+        }
+
+        Path latestDir = null;
+        Instant latestTime = null;
+
+        try (var stream = Files.list(root)) {
+            for (Path p : stream.toList()) {
+                if (!Files.isDirectory(p)) {
+                    continue;
+                }
+                Path manifest = p.resolve("manifest.json");
+                if (!Files.exists(manifest)) {
+                    continue;
+                }
+                Instant t = Files.getLastModifiedTime(manifest).toInstant();
+                if (latestTime == null || t.isAfter(latestTime)) {
+                    latestTime = t;
+                    latestDir = p;
+                }
+            }
+        }
+
+        if (latestDir == null) {
+            return null;
+        }
+
+        String safeName = sanitizeFileName(fileName);
+        if (!safeName.toLowerCase().endsWith(".pdf")) {
+            throw new IllegalArgumentException("Only PDF downloads are allowed");
+        }
+
+        Path candidate = latestDir.resolve(safeName).normalize();
+        if (!candidate.startsWith(latestDir.normalize())) {
+            return null;
+        }
+        if (!Files.exists(candidate) || !Files.isRegularFile(candidate)) {
+            return null;
+        }
+        return candidate;
+    }
 }

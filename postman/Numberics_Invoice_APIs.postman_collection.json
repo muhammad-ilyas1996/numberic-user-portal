@@ -8,7 +8,9 @@
     { "key": "baseUrl", "value": "https://www.numbrics.ai/numbricsservice" },
     { "key": "token", "value": "" },
     { "key": "tbSubmissionId", "value": "" },
-    { "key": "tbRecordId", "value": "" }
+    { "key": "tbRecordId", "value": "" },
+    { "key": "tbPdfFile", "value": "1099NEC_COPY1_1Up.pdf" },
+    { "key": "artifactApiKey", "value": "" }
   ],
   "item": [
     {
@@ -602,6 +604,17 @@
             },
             "url": "{{baseUrl}}/api/taxbandits/form1099k/requestpdfurls",
             "description": "Immediate masked/unmasked PDF URLs (may be encrypted depending on TaxBandits PDF security settings)."
+          }
+        },
+        {
+          "name": "GET TaxBandits — Download stored PDF (latest delivery)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Numbrics-Artifact-Key", "value": "{{artifactApiKey}}" }
+            ],
+            "url": "{{baseUrl}}/api/taxbandits/artifacts/pdf?submissionId={{tbSubmissionId}}&recordId={{tbRecordId}}&file={{tbPdfFile}}",
+            "description": "Downloads a PDF from the latest webhook artifact folder on disk.\n\nRequires server config:\n• taxbandits.artifact.api-key\n• taxbandits.artifact.require-api-key (default true)\n\nSet Postman variable artifactApiKey to match the server key."
           }
         }
       ]
