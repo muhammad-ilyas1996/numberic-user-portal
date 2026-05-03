@@ -216,6 +216,8 @@ public class Form1099KController {
         try {
             Object response = form1099KService.generateFromTxns(request);
             return ResponseEntity.ok(response);
+        } catch (TaxBanditsApiException e) {
+            throw e;
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
