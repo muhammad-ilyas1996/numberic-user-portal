@@ -7,6 +7,8 @@ import com.numbericsuserportal.taxbandit.exception.TaxBanditsApiException;
 import com.numbericsuserportal.taxbandit.formnec.dto.*;
 import com.numbericsuserportal.taxbandit.form1099misc.dto.*;
 import com.numbericsuserportal.taxbandit.form1099k.dto.*;
+import com.numbericsuserportal.taxbandit.form1099transactions.dto.Form1099TransactionsRequestDTO;
+import com.numbericsuserportal.taxbandit.form1099transactions.dto.Form1099TransactionsResponseDTO;
 import java.util.UUID;
 import com.numbericsuserportal.taxbandit.service.TaxBanditsApiService;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -44,6 +46,12 @@ public class TaxBanditsApiServiceImpl implements TaxBanditsApiService {
         factory.setConnectTimeout(java.time.Duration.ofSeconds(30));
         factory.setConnectionRequestTimeout(java.time.Duration.ofSeconds(30));
         this.restTemplate = new RestTemplate(factory);
+    }
+
+    @Override
+    public Form1099TransactionsResponseDTO postForm1099Transactions(Form1099TransactionsRequestDTO request) {
+        return executeApiCall("Form1099Transactions", HttpMethod.POST, request,
+            Form1099TransactionsResponseDTO.class, "Form1099 Transactions");
     }
 
     @Override

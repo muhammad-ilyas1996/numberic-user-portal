@@ -550,8 +550,40 @@
     },
     {
       "name": "TaxBandits — Form 1099-K (Webhook + PDF)",
-      "description": "TaxBandits callbacks + helper endpoints added for automated PDF zip ingestion.\n\nNotes:\n• `/api/taxbandits/**` is intentionally public in this service (see SecurityConfig).\n• Webhook must return HTTP 200 quickly; heavy work happens async on server.\n• After PDF_COMPLETE webhook is processed, artifacts land under `uploads/taxbandits/webhooks/...` and `GET pdf-artifact` returns latest manifest.",
+      "description": "TaxBandits callbacks + helper endpoints added for automated PDF zip ingestion.\n\nNotes:\n• `/api/taxbandits/**` is intentionally public in this service (see SecurityConfig).\n• Webhook must return HTTP 200 quickly; heavy work happens async on server.\n• After PDF_COMPLETE webhook is processed, artifacts land under `uploads/taxbandits/webhooks/...` and `GET pdf-artifact` returns latest manifest.\n• `POST /api/taxbandits/form1099transactions` → TaxBandits `Form1099Transactions`; `POST .../submit-and-create` → txn then 1099-K Create with RecipientId mapping.",
       "item": [
+        {
+          "name": "POST Form1099Transactions",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"SubmissionManifest\": {\n    \"TaxYear\": \"2025\",\n    \"IRSFilingType\": \"IRIS\",\n    \"IsFederalFiling\": true,\n    \"IsStateFiling\": true,\n    \"IsPostal\": false,\n    \"IsOnlineAccess\": false,\n    \"IsScheduleFiling\": false,\n    \"ScheduleFiling\": null\n  },\n  \"ReturnHeader\": {\n    \"Business\": {\n      \"BusinessNm\": \"Snowdaze LLC\",\n      \"PayerRef\": \"Snow123\",\n      \"IsEIN\": true,\n      \"EINorSSN\": \"352145703\",\n      \"Email\": \"James@sample.com\",\n      \"ContactNm\": \"James\",\n      \"Phone\": \"9865321245\",\n      \"IsBusinessTerminated\": false,\n      \"IsForeign\": false,\n      \"USAddress\": {\n        \"Address1\": \"3576 AIRPORT WAY\",\n        \"City\": \"FAIRBANKS\",\n        \"State\": \"AK\",\n        \"ZipCd\": \"99709\"\n      },\n      \"ForeignAddress\": null\n    }\n  },\n  \"ReturnData\": [\n    {\n      \"SequenceId\": \"01\",\n      \"Transaction\": {\n        \"TransactionDate\": \"01/15/2025\",\n        \"TransactionAmount\": 1200.0,\n        \"TransactionType\": \"payment_card\",\n        \"PaymentCardIndicator\": true,\n        \"MerchantCategoryCode\": \"0742\",\n        \"AccountNumber\": \"12345\",\n        \"StateCd\": \"NM\",\n        \"StateIdNum\": \"99-999999-99-9\",\n        \"StateWH\": 20.0\n      }\n    }\n  ]\n}\n"
+            },
+            "url": "{{baseUrl}}/api/taxbandits/form1099transactions",
+            "description": "Full body per TaxBandits Form1099Transactions (V1.7.3). Expand Business/Transaction fields as in their docs. Returns SubmissionId, BusinessId, SuccessRecords (RecipientId, TransactionId, …)."
+          }
+        },
+        {
+          "name": "POST Form1099Transactions + 1099-K Create (orchestrated)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionsRequest\": { },\n  \"createRequest\": { }\n}\n"
+            },
+            "url": "{{baseUrl}}/api/taxbandits/form1099transactions/submit-and-create",
+            "description": "Body: { \"transactionsRequest\": { ...Form1099Transactions... }, \"createRequest\": { ...Form1099K Create... } }. Server copies SuccessRecords[i].RecipientId into createRequest.ReturnData[i].Recipient.RecipientId, then calls TaxBandits Form1099K/Create."
+          }
+        },
         {
           "name": "POST TaxBandits Webhook (ping)",
           "request": {

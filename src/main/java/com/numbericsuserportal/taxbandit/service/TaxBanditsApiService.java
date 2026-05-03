@@ -3,9 +3,15 @@ package com.numbericsuserportal.taxbandit.service;
 import com.numbericsuserportal.taxbandit.formnec.dto.*;
 import com.numbericsuserportal.taxbandit.form1099misc.dto.*;
 import com.numbericsuserportal.taxbandit.form1099k.dto.*;
+import com.numbericsuserportal.taxbandit.form1099transactions.dto.Form1099TransactionsRequestDTO;
+import com.numbericsuserportal.taxbandit.form1099transactions.dto.Form1099TransactionsResponseDTO;
 import java.util.UUID;
 
 public interface TaxBanditsApiService {
+
+    /** POST Form1099Transactions — post payer/recipient transaction rows before Form 1099-K Create. */
+    Form1099TransactionsResponseDTO postForm1099Transactions(Form1099TransactionsRequestDTO request);
+
     // 1099-NEC Form Operations
     CreateForm1099NECResponseDTO createForm1099NEC(CreateForm1099NECRequestDTO request);
     UpdateForm1099NECResponseDTO updateForm1099NEC(UpdateForm1099NECRequestDTO request);
