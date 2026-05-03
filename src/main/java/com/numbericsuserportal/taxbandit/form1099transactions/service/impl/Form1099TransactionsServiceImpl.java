@@ -11,6 +11,7 @@ import com.numbericsuserportal.taxbandit.service.TaxBanditsApiService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,30 +34,24 @@ public class Form1099TransactionsServiceImpl implements Form1099TransactionsServ
         if (bundle.getTransactionsRequest() == null || bundle.getCreateRequest() == null) {
             throw new IllegalArgumentException("transactionsRequest and createRequest are required");
         }
-        Form1099TransactionsResponseDTO txnResp = taxBanditsApiService.postForm1099Transactions(bundle.getTransactionsRequest());
-
-        List<Form1099TransactionsResponseDTO.SuccessRecordDTO> successes = null;
-        if (txnResp.getForm1099TransactionsRecords() != null) {
-            successes = txnResp.getForm1099TransactionsRecords().getSuccessRecords();
-        }
-        if (successes == null || successes.isEmpty()) {
-            throw new TaxBanditsApiException(
-                "Form1099Transactions returned no SuccessRecords; cannot set RecipientId for Form 1099-K Create.",
-                HttpStatus.BAD_REQUEST);
-        }
+        taxBanditsApiService.postForm1099Transactions(bundle.getTransactionsRequest());
 
         CreateForm1099KRequestDTO create = bundle.getCreateRequest();
         if (create.getReturnData() == null || create.getReturnData().isEmpty()) {
             throw new IllegalArgumentException("createRequest.returnData is required");
         }
 
+        List<UUID> recipientIds = extractRecipientIdsFromTxnRequest(bundle.getTransactionsRequest());
+        if (recipientIds.isEmpty()) {
+            throw new TaxBanditsApiException(
+                "transactionsRequest.TxnData must include Recipients with RecipientId to align Form 1099-K Create.",
+                HttpStatus.BAD_REQUEST);
+        }
+
         List<CreateForm1099KRequestDTO.ReturnDataDTO> rows = create.getReturnData();
-        int n = Math.min(rows.size(), successes.size());
+        int n = Math.min(rows.size(), recipientIds.size());
         for (int i = 0; i < n; i++) {
-            UUID recipientId = successes.get(i).getRecipientId();
-            if (recipientId == null) {
-                continue;
-            }
+            UUID recipientId = recipientIds.get(i);
             CreateForm1099KRequestDTO.ReturnDataDTO row = rows.get(i);
             if (row.getRecipient() == null) {
                 row.setRecipient(new CreateForm1099KRequestDTO.RecipientDTO());
@@ -65,5 +60,26 @@ public class Form1099TransactionsServiceImpl implements Form1099TransactionsServ
         }
 
         return taxBanditsApiService.createForm1099K(create);
+    }
+
+    /**
+     * Collects RecipientIds in order: each TxnData block's recipients, in array order.
+     */
+    static List<UUID> extractRecipientIdsFromTxnRequest(Form1099TransactionsRequestDTO req) {
+        List<UUID> out = new ArrayList<>();
+        if (req.getTxnData() == null) {
+            return out;
+        }
+        for (Form1099TransactionsRequestDTO.TxnDataBlockDTO block : req.getTxnData()) {
+            if (block.getRecipients() == null) {
+                continue;
+            }
+            for (Form1099TransactionsRequestDTO.RecipientTxnsDTO r : block.getRecipients()) {
+                if (r.getRecipientId() != null) {
+                    out.add(r.getRecipientId());
+                }
+            }
+        }
+        return out;
     }
 }

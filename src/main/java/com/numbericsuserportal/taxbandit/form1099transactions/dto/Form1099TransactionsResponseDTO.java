@@ -1,5 +1,6 @@
 package com.numbericsuserportal.taxbandit.form1099transactions.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
@@ -7,9 +8,12 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Success response for TaxBandits POST Form1099Transactions.
+ * Response for TaxBandits POST Form1099Transactions.
+ * Official success body is typically SubmissionId + StatusMsg + StatusTs (+ optional Errors).
+ * Extra fields are ignored if present in alternate samples.
  */
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Form1099TransactionsResponseDTO {
 
     @JsonProperty("StatusCode")
@@ -27,13 +31,20 @@ public class Form1099TransactionsResponseDTO {
     @JsonProperty("BusinessId")
     private UUID businessId;
 
+    @JsonProperty("StatusMsg")
+    private String statusMsg;
+
+    @JsonProperty("StatusTs")
+    private String statusTs;
+
     @JsonProperty("Form1099TransactionsRecords")
     private Form1099TransactionsRecordsDTO form1099TransactionsRecords;
 
     @JsonProperty("Errors")
-    private List<Object> errors;
+    private Object errors;
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Form1099TransactionsRecordsDTO {
         @JsonProperty("SuccessRecords")
         private List<SuccessRecordDTO> successRecords;
@@ -43,6 +54,7 @@ public class Form1099TransactionsResponseDTO {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class SuccessRecordDTO {
         @JsonProperty("SequenceId")
         private String sequenceId;
@@ -70,6 +82,7 @@ public class Form1099TransactionsResponseDTO {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ErrorRecordDTO {
         @JsonProperty("RecordId")
         private UUID recordId;

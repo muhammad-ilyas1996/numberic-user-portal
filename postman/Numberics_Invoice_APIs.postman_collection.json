@@ -562,10 +562,10 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"SubmissionManifest\": {\n    \"TaxYear\": \"2025\",\n    \"IRSFilingType\": \"IRIS\",\n    \"IsFederalFiling\": true,\n    \"IsStateFiling\": true,\n    \"IsPostal\": false,\n    \"IsOnlineAccess\": false,\n    \"IsScheduleFiling\": false,\n    \"ScheduleFiling\": null\n  },\n  \"ReturnHeader\": {\n    \"Business\": {\n      \"BusinessNm\": \"Snowdaze LLC\",\n      \"PayerRef\": \"Snow123\",\n      \"IsEIN\": true,\n      \"EINorSSN\": \"352145703\",\n      \"Email\": \"James@sample.com\",\n      \"ContactNm\": \"James\",\n      \"Phone\": \"9865321245\",\n      \"IsBusinessTerminated\": false,\n      \"IsForeign\": false,\n      \"USAddress\": {\n        \"Address1\": \"3576 AIRPORT WAY\",\n        \"City\": \"FAIRBANKS\",\n        \"State\": \"AK\",\n        \"ZipCd\": \"99709\"\n      },\n      \"ForeignAddress\": null\n    }\n  },\n  \"ReturnData\": [\n    {\n      \"SequenceId\": \"01\",\n      \"Transaction\": {\n        \"TransactionDate\": \"01/15/2025\",\n        \"TransactionAmount\": 1200.0,\n        \"TransactionType\": \"payment_card\",\n        \"PaymentCardIndicator\": true,\n        \"MerchantCategoryCode\": \"0742\",\n        \"AccountNumber\": \"12345\",\n        \"StateCd\": \"NM\",\n        \"StateIdNum\": \"99-999999-99-9\",\n        \"StateWH\": 20.0\n      }\n    }\n  ]\n}\n"
+              "raw": "{\n  \"TxnData\": [\n    {\n      \"Business\": {\n        \"PayerRef\": \"Snow123\",\n        \"BusinessId\": \"8f8739c6-6598-461c-9188-66f22d6fcc2d\",\n        \"TINType\": \"EIN\",\n        \"TIN\": \"352145703\"\n      },\n      \"Recipients\": [\n        {\n          \"PayeeRef\": \"Dairy001\",\n          \"RecipientId\": \"74593903-6d5d-447c-845b-15d2c3300723\",\n          \"Txns\": [\n            {\n              \"SequenceId\": \"01\",\n              \"TxnDate\": \"01/15/2025\",\n              \"TxnAmt\": \"1200.00\",\n              \"PaymentType\": \"OTHERINCOME\",\n              \"WHAmt\": \"0\"\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}\n"
             },
             "url": "{{baseUrl}}/api/taxbandits/form1099transactions",
-            "description": "Full body per TaxBandits Form1099Transactions (V1.7.3). Expand Business/Transaction fields as in their docs. Returns SubmissionId, BusinessId, SuccessRecords (RecipientId, TransactionId, …)."
+            "description": "Official POST shape: root `TxnData` (see developer.taxbandits.com Form1099Transactions/Post). Replace BusinessId/RecipientId with your sandbox GUIDs. PaymentType per docs (e.g. NEC, RENT, ROYALTY, OTHERINCOME). Response: SubmissionId, StatusMsg, StatusTs."
           }
         },
         {
@@ -581,7 +581,7 @@
               "raw": "{\n  \"transactionsRequest\": { },\n  \"createRequest\": { }\n}\n"
             },
             "url": "{{baseUrl}}/api/taxbandits/form1099transactions/submit-and-create",
-            "description": "Body: { \"transactionsRequest\": { ...Form1099Transactions... }, \"createRequest\": { ...Form1099K Create... } }. Server copies SuccessRecords[i].RecipientId into createRequest.ReturnData[i].Recipient.RecipientId, then calls TaxBandits Form1099K/Create."
+            "description": "Body: { \"transactionsRequest\": { \"TxnData\": [ ... ] }, \"createRequest\": { ...Form1099K Create... } }. Server sets createRequest.ReturnData[i].Recipient.RecipientId from transactionsRequest.TxnData[*].Recipients[*].RecipientId (order), then calls Form1099K/Create."
           }
         },
         {
