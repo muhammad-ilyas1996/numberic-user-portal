@@ -550,7 +550,7 @@
     },
     {
       "name": "TaxBandits — Form 1099-K (Webhook + PDF)",
-      "description": "TaxBandits callbacks + helper endpoints added for automated PDF zip ingestion.\n\nNotes:\n• `/api/taxbandits/**` is intentionally public in this service (see SecurityConfig).\n• Webhook must return HTTP 200 quickly; heavy work happens async on server.\n• After PDF_COMPLETE webhook is processed, artifacts land under `uploads/taxbandits/webhooks/...` and `GET pdf-artifact` returns latest manifest.\n• `POST /api/taxbandits/form1099transactions` → TaxBandits `Form1099Transactions`; `POST .../submit-and-create` → txn then 1099-K Create with RecipientId mapping.",
+      "description": "TaxBandits callbacks + helper endpoints added for automated PDF zip ingestion.\n\nNotes:\n• `/api/taxbandits/**` is intentionally public in this service (see SecurityConfig).\n• Webhook must return HTTP 200 quickly; heavy work happens async on server.\n• After PDF_COMPLETE webhook is processed, artifacts land under `uploads/taxbandits/webhooks/...` and `GET pdf-artifact` returns latest manifest.\n• `POST /api/taxbandits/form1099transactions` → TaxBandits `Form1099Transactions`; `submit-and-create` (K), `submit-and-create-nec`, `submit-and-create-misc` → txn then Create with RecipientId mapping.",
       "item": [
         {
           "name": "POST Form1099Transactions",
@@ -582,6 +582,38 @@
             },
             "url": "{{baseUrl}}/api/taxbandits/form1099transactions/submit-and-create",
             "description": "Body: { \"transactionsRequest\": { \"TxnData\": [ ... ] }, \"createRequest\": { ...Form1099K Create... } }. Server sets createRequest.ReturnData[i].Recipient.RecipientId from transactionsRequest.TxnData[*].Recipients[*].RecipientId (order), then calls Form1099K/Create."
+          }
+        },
+        {
+          "name": "POST Form1099Transactions + 1099-NEC Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionsRequest\": { \"TxnData\": [] },\n  \"createRequest\": { }\n}\n"
+            },
+            "url": "{{baseUrl}}/api/taxbandits/form1099transactions/submit-and-create-nec",
+            "description": "Same as submit-and-create but createRequest = Form 1099-NEC Create JSON; RecipientId UUID applied from TxnData order."
+          }
+        },
+        {
+          "name": "POST Form1099Transactions + 1099-MISC Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionsRequest\": { \"TxnData\": [] },\n  \"createRequest\": { }\n}\n"
+            },
+            "url": "{{baseUrl}}/api/taxbandits/form1099transactions/submit-and-create-misc",
+            "description": "Same as submit-and-create but createRequest = Form 1099-MISC Create JSON; RecipientId UUID applied from TxnData order."
           }
         },
         {

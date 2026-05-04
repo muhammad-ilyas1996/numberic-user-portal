@@ -5,6 +5,7 @@ import lombok.Data;
 
 /**
  * Bundles TaxBandits transaction post + Form 1099-K Create for a single backend-orchestrated call.
+ * For NEC / MISC use {@link Form1099TransactionsSubmitAndCreateNecRequestDTO} / {@link Form1099TransactionsSubmitAndCreateMiscRequestDTO}.
  * JSON: { "transactionsRequest": {...}, "createRequest": {...} }
  */
 @Data
