@@ -151,7 +151,9 @@ public class Form1099NECController {
     
     /**
      * POST /api/taxbandits/form1099nec/generatefromtxns
-     * Generate Form 1099-NEC from recorded transactions
+     * Generate Form 1099-NEC from recorded transactions.
+     * Body must use TaxBandits shape: {@code TaxYear}, nested {@code Business} (BusinessId or PayerRef or TIN+TINType),
+     * and {@code Recipients} array (RecipientId and/or PayeeRef per row).
      */
     @PostMapping("/generatefromtxns")
     public ResponseEntity<?> generateFromTxns(@RequestBody GenerateFromTxnsForm1099NECRequestDTO request) {
