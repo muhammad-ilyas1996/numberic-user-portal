@@ -23,6 +23,9 @@ public class CreateForm1099MISCRequestDTO {
     
     @Data
     public static class SubmissionManifestDTO {
+        @JsonProperty("SubmissionId")
+        private UUID submissionId;
+
         @JsonProperty("TaxYear")
         private String taxYear;
         

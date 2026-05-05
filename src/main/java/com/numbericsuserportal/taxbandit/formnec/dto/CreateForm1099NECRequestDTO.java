@@ -19,6 +19,9 @@ public class CreateForm1099NECRequestDTO {
     
     @Data
     public static class SubmissionManifestDTO {
+        @JsonProperty("SubmissionId")
+        private UUID submissionId;
+
         @JsonProperty("TaxYear")
         private String taxYear;
         
