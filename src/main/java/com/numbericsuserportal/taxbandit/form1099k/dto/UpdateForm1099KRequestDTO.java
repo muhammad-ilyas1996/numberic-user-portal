@@ -15,6 +15,9 @@ public class UpdateForm1099KRequestDTO {
     
     @JsonProperty("RecordId")
     private UUID recordId;
+
+    @JsonProperty("SubmissionManifest")
+    private CreateForm1099KRequestDTO.SubmissionManifestDTO submissionManifest;
     
     // Reuse the same structure as CreateForm1099KRequestDTO for the update data
     @JsonProperty("ReturnHeader")
