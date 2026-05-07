@@ -14,7 +14,15 @@ import com.numbericsuserportal.LlcNorthwest.paymentmethod.dto.PaymentMethodsResp
 import com.numbericsuserportal.LlcNorthwest.paymentmethod.dto.UpdatePaymentMethodRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.registeredagent.dto.RegisteredAgentProductsResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.signedforms.dto.SignedFormsResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.corporatetools.FilingCreateRequestDTO;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.corporatetools.FilingResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.corporatetools.NameCheckRequestDTO;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.corporatetools.NameCheckResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.corporatetools.RegisteredAgentAvailabilityResponseDTO;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
+import java.util.List;
 import java.util.UUID;
 
 public interface CorporateToolsApiService {
@@ -45,6 +53,12 @@ public interface CorporateToolsApiService {
     
     // Registered Agent Products API methods
     RegisteredAgentProductsResponseDTO getRegisteredAgentProducts(String url);
+
+    // LLC Formation (missing endpoints)
+    NameCheckResponseDTO nameCheck(NameCheckRequestDTO request);
+    RegisteredAgentAvailabilityResponseDTO getRegisteredAgentByRefId(String refId);
+    FilingResponseDTO createFiling(FilingCreateRequestDTO request);
+    FilingResponseDTO getFilingById(String filingId);
     
     // Signed Forms API methods
     SignedFormsResponseDTO getSignedForms(UUID filingMethodId, UUID websiteId);
@@ -71,5 +85,27 @@ public interface CorporateToolsApiService {
     PageUrlResponseDTO getDocumentPageUrl(UUID id, Integer pageNumber, Integer dpi);
     BulkDownloadResponseDTO bulkDownloadDocuments(UUID[] ids);
     UnlockDocumentResponseDTO unlockDocument(UUID id, UnlockDocumentRequestDTO request);
+
+    // Northwest extended endpoints (LLC formation flow)
+    JsonNode getWebsites(String websiteUrl);
+
+    JsonNode shoppingCartPost(String requestBody);
+
+    JsonNode shoppingCartGet(List<UUID> companyIds);
+
+    /** requestBody may be "{}" or empty string depending on Corporate Tools contract */
+    JsonNode shoppingCartCheckoutPost(String requestBody);
+
+    JsonNode getOrderItemsRequiringAttention(UUID companyId);
+
+    JsonNode postOrderItemsRequiringAttention(String requestBody);
+
+    JsonNode postServices(String requestBody);
+
+    JsonNode postServiceInfo(UUID serviceId, String requestBody);
+
+    JsonNode postCallbacks(String requestBody);
+
+    JsonNode getCallbacks();
 }
 

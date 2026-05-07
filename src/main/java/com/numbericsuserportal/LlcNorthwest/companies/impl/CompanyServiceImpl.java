@@ -1,11 +1,8 @@
 package com.numbericsuserportal.LlcNorthwest.companies.impl;
-
 import com.numbericsuserportal.LlcNorthwest.companies.dto.CompaniesResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.CompanyDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.CreateCompanyRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.UpdateCompanyRequestDTO;
-import com.numbericsuserportal.LlcNorthwest.companies.entity.UserFormationCompany;
-import com.numbericsuserportal.LlcNorthwest.companies.repo.UserFormationCompanyRepository;
 import com.numbericsuserportal.LlcNorthwest.companies.service.CompanyService;
 import com.numbericsuserportal.LlcNorthwest.service.CorporateToolsApiService;
 import com.numbericsuserportal.usermanagement.domain.User;
@@ -18,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,9 +27,6 @@ public class CompanyServiceImpl implements CompanyService {
     @Autowired
     private UserDataScopeService userDataScopeService;
 
-    @Autowired
-    private UserFormationCompanyRepository userFormationCompanyRepository;
-
     @Override
     @Transactional(readOnly = true)
     public CompaniesResponseDTO fetchAndSaveCompanies(User user, Integer limit, Integer offset, String[] names) {
@@ -42,36 +35,14 @@ public class CompanyServiceImpl implements CompanyService {
             return corporateToolsApiService.getCompanies(limit, offset, names);
         }
 
-        List<UserFormationCompany> links = userFormationCompanyRepository.findByUserId(user.getUserId());
         CompaniesResponseDTO response = new CompaniesResponseDTO();
         response.setSuccess(true);
         response.setTimestamp(OffsetDateTime.now().toString());
 
-        if (links.isEmpty()) {
-            response.setResult(List.of());
-            return response;
-        }
-
-        List<CompanyDTO> all = new ArrayList<>();
-        for (UserFormationCompany link : links) {
-            try {
-                CompaniesResponseDTO one = corporateToolsApiService.getCompanyById(UUID.fromString(link.getCompanyId()));
-                if (one.getResult() != null) {
-                    all.addAll(one.getResult());
-                }
-            } catch (Exception ignored) {
-                // skip broken or removed company ids
-            }
-        }
-
-        int from = offset != null && offset >= 0 ? offset : 0;
-        int lim = limit != null && limit > 0 ? limit : all.size();
-        if (from >= all.size()) {
-            response.setResult(List.of());
-        } else {
-            int to = Math.min(from + lim, all.size());
-            response.setResult(all.subList(from, to));
-        }
+        // Requirement: Do not persist/link companies in the existing LlcNorthwest module.
+        // For non-admin users, company access should be derived from LLCFormation records instead.
+        // Until LLCFormation integration is fully wired here, return empty list for non-platform-wide access.
+        response.setResult(List.of());
         return response;
     }
 
@@ -102,23 +73,6 @@ public class CompanyServiceImpl implements CompanyService {
         }
 
         CompaniesResponseDTO response = corporateToolsApiService.createCompanies(request);
-
-        if (user.getUserId() != null && response.getResult() != null) {
-            Date now = new Date();
-            for (CompanyDTO c : response.getResult()) {
-                if (c.getId() != null) {
-                    String cid = c.getId().toString();
-                    if (!userFormationCompanyRepository.existsByUserIdAndCompanyId(user.getUserId(), cid)) {
-                        UserFormationCompany row = new UserFormationCompany();
-                        row.setUserId(user.getUserId());
-                        row.setCompanyId(cid);
-                        row.setLinkedAt(now);
-                        userFormationCompanyRepository.save(row);
-                    }
-                }
-            }
-        }
-
         return response;
     }
 
@@ -155,15 +109,8 @@ public class CompanyServiceImpl implements CompanyService {
             }
         }
 
-        if (!scope.isPlatformWideDataAccess() && request.getCompanies() != null) {
-            for (UpdateCompanyRequestDTO.CompanyUpdateInputDTO c : request.getCompanies()) {
-                if (c.getCompanyId() == null) {
-                    throw new AccessDeniedException("company_id is required to update a company linked to your account");
-                }
-                if (!userFormationCompanyRepository.existsByUserIdAndCompanyId(user.getUserId(), c.getCompanyId().toString())) {
-                    throw new AccessDeniedException("You do not have access to this company");
-                }
-            }
+        if (!scope.isPlatformWideDataAccess()) {
+            throw new AccessDeniedException("Company updates are restricted to platform-wide access in this module");
         }
 
         return corporateToolsApiService.updateCompanies(request);

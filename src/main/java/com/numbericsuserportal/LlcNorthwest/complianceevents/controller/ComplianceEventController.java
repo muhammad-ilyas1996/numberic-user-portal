@@ -13,7 +13,6 @@ import java.util.UUID;
 @RequestMapping("/api/llc-northwest/compliance-events")
 @CrossOrigin(origins = "*")
 public class ComplianceEventController {
-
     @Autowired
     private ComplianceEventService complianceEventService;
 

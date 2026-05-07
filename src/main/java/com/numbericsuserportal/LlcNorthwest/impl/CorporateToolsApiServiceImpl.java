@@ -2,6 +2,7 @@ package com.numbericsuserportal.LlcNorthwest.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.numbericsuserportal.LlcNorthwest.auth.CorporateToolsAuthService;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.CompaniesResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.CompanyDTO;
@@ -18,17 +19,28 @@ import com.numbericsuserportal.LlcNorthwest.paymentmethod.dto.PaymentMethodsResp
 import com.numbericsuserportal.LlcNorthwest.paymentmethod.dto.UpdatePaymentMethodRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.registeredagent.dto.RegisteredAgentProductsResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.signedforms.dto.SignedFormsResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.corporatetools.FilingCreateRequestDTO;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.corporatetools.FilingResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.corporatetools.NameCheckRequestDTO;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.corporatetools.NameCheckResponseDTO;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.corporatetools.RegisteredAgentAvailabilityResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.service.CorporateToolsApiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -59,58 +71,49 @@ public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
             String jurisdiction,
             String entityType) {
         
+        String path = "/filing-products";
         try {
-            String path = "/filing-products";
-            
-            // Build query string manually (without encoding) - EXACT format as Postman script
-            StringBuilder queryBuilder = new StringBuilder();
-            queryBuilder.append("url=").append(websiteUrl);
-            
+            LinkedHashMap<String, String> q = new LinkedHashMap<>();
+            q.put("url", websiteUrl);
             if (jurisdiction != null && !jurisdiction.isEmpty()) {
-                queryBuilder.append("&jurisdiction=").append(jurisdiction);
+                q.put("jurisdiction", jurisdiction);
             }
-            
             if (entityType != null && !entityType.isEmpty()) {
-                queryBuilder.append("&entity_type=").append(entityType);
+                q.put("entity_type", entityType);
             }
-            
-            String queryString = queryBuilder.toString();
-            
-            // Debug logging
+            URI uri = buildCorporateToolsUri(path, q);
+            String queryForJwt = rawQueryForJwt(uri);
+
             System.out.println("=== Corporate Tools API Debug ===");
             System.out.println("Path: " + path);
-            System.out.println("Query String: " + queryString);
+            System.out.println("Raw query (JWT + wire): " + queryForJwt);
             System.out.println("Access Key loaded: " + (authService != null ? "YES" : "NO"));
-            
-            // Generate token
-            String token = authService.generateTokenForGet(path, queryString);
-            System.out.println("Generated Token: " + token);
-            
-            // Build URL manually (without UriComponentsBuilder encoding)
-            String url = baseUrl + path + "?" + queryString;
-            System.out.println("Full URL: " + url);
-            
+
+            String token = authService.generateTokenForGet(path, queryForJwt);
+            System.out.println("Request URI: " + uri);
+            System.out.println("=================================");
+
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + token);
             headers.setContentType(MediaType.APPLICATION_JSON);
-            
-            System.out.println("Authorization Header: Bearer " + (token.length() > 50 ? token.substring(0, 50) + "..." : token));
-            System.out.println("=================================");
-            
             HttpEntity<String> entity = new HttpEntity<>(headers);
-            
+
             ResponseEntity<String> response = restTemplate.exchange(
-                url,
+                uri,
                 HttpMethod.GET,
                 entity,
                 String.class
             );
-            
+
             System.out.println("Response Status: " + response.getStatusCode());
-            System.out.println("Response Body: " + response.getBody());
-            
             return objectMapper.readValue(response.getBody(), FilingProductsResponseDTO.class);
-            
+
+        } catch (HttpStatusCodeException e) {
+            FilingProductsResponseDTO body = readJsonBodyQuietly(e.getResponseBodyAsString(StandardCharsets.UTF_8), FilingProductsResponseDTO.class);
+            if (body != null) {
+                return body;
+            }
+            throw new RuntimeException("Failed to get filing products: " + e.getStatusCode() + " " + safeBody(e), e);
         } catch (Exception e) {
             System.err.println("Error Details: " + e.getMessage());
             e.printStackTrace();
@@ -123,33 +126,35 @@ public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
             String companyId,
             String jurisdiction) {
         
+        String path = "/filing-products/offerings";
         try {
-            String path = "/filing-products/offerings";
-            
-            // Build query string manually
-            StringBuilder queryBuilder = new StringBuilder();
-            queryBuilder.append("company_id=").append(companyId);
-            queryBuilder.append("&jurisdiction=").append(jurisdiction);
-            
-            String queryString = queryBuilder.toString();
-            String token = authService.generateTokenForGet(path, queryString);
-            
+            LinkedHashMap<String, String> q = new LinkedHashMap<>();
+            q.put("company_id", companyId);
+            q.put("jurisdiction", jurisdiction);
+            URI uri = buildCorporateToolsUri(path, q);
+            String queryForJwt = rawQueryForJwt(uri);
+            String token = authService.generateTokenForGet(path, queryForJwt);
+
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + token);
             headers.setContentType(MediaType.APPLICATION_JSON);
-            
             HttpEntity<String> entity = new HttpEntity<>(headers);
-            String url = baseUrl + path + "?" + queryString;
-            
+
             ResponseEntity<String> response = restTemplate.exchange(
-                url,
+                uri,
                 HttpMethod.GET,
                 entity,
                 String.class
             );
-            
+
             return objectMapper.readValue(response.getBody(), FilingProductsResponseDTO.class);
-            
+
+        } catch (HttpStatusCodeException e) {
+            FilingProductsResponseDTO body = readJsonBodyQuietly(e.getResponseBodyAsString(StandardCharsets.UTF_8), FilingProductsResponseDTO.class);
+            if (body != null) {
+                return body;
+            }
+            throw new RuntimeException("Failed to get filing products offerings: " + e.getStatusCode() + " " + safeBody(e), e);
         } catch (Exception e) {
             System.err.println("Error Details: " + e.getMessage());
             e.printStackTrace();
@@ -453,32 +458,35 @@ public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
 
     @Override
     public RegisteredAgentProductsResponseDTO getRegisteredAgentProducts(String url) {
+        String path = "/registered-agent-products";
         try {
-            String path = "/registered-agent-products";
-            
-            // Build query string manually
-            StringBuilder queryBuilder = new StringBuilder();
-            queryBuilder.append("url=").append(url);
-            
-            String queryString = queryBuilder.toString();
-            String token = authService.generateTokenForGet(path, queryString);
-            
+            LinkedHashMap<String, String> q = new LinkedHashMap<>();
+            q.put("url", url);
+            URI uri = buildCorporateToolsUri(path, q);
+            String queryForJwt = rawQueryForJwt(uri);
+            String token = authService.generateTokenForGet(path, queryForJwt);
+
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + token);
             headers.setContentType(MediaType.APPLICATION_JSON);
-            
             HttpEntity<String> entity = new HttpEntity<>(headers);
-            String fullUrl = baseUrl + path + "?" + queryString;
-            
+
             ResponseEntity<String> response = restTemplate.exchange(
-                fullUrl,
+                uri,
                 HttpMethod.GET,
                 entity,
                 String.class
             );
-            
+
             return objectMapper.readValue(response.getBody(), RegisteredAgentProductsResponseDTO.class);
-            
+
+        } catch (HttpStatusCodeException e) {
+            RegisteredAgentProductsResponseDTO body =
+                    readJsonBodyQuietly(e.getResponseBodyAsString(StandardCharsets.UTF_8), RegisteredAgentProductsResponseDTO.class);
+            if (body != null) {
+                return body;
+            }
+            throw new RuntimeException("Failed to get registered agent products: " + e.getStatusCode() + " " + safeBody(e), e);
         } catch (Exception e) {
             System.err.println("Error getting registered agent products: " + e.getMessage());
             e.printStackTrace();
@@ -519,6 +527,114 @@ public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
             System.err.println("Error getting signed forms: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Failed to get signed forms: " + e.getMessage(), e);
+        }
+    }
+
+    // ==================== LLC FORMATION (EXTENSIONS) ====================
+
+    @Override
+    public NameCheckResponseDTO nameCheck(NameCheckRequestDTO request) {
+        try {
+            String path = "/name-check";
+            String requestBody = objectMapper.writeValueAsString(request);
+            String token = authService.generateTokenForPost(path, requestBody);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+            String url = baseUrl + path;
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    String.class
+            );
+
+            return objectMapper.readValue(response.getBody(), NameCheckResponseDTO.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to name-check: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public RegisteredAgentAvailabilityResponseDTO getRegisteredAgentByRefId(String refId) {
+        try {
+            String path = "/registered-agents/" + refId;
+            String token = authService.generateTokenForGet(path, "");
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path;
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    String.class
+            );
+
+            return objectMapper.readValue(response.getBody(), RegisteredAgentAvailabilityResponseDTO.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get registered agent by refId: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public FilingResponseDTO createFiling(FilingCreateRequestDTO request) {
+        try {
+            String path = "/filings";
+            String requestBody = objectMapper.writeValueAsString(request);
+            String token = authService.generateTokenForPost(path, requestBody);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+            String url = baseUrl + path;
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    String.class
+            );
+
+            return objectMapper.readValue(response.getBody(), FilingResponseDTO.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create filing: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public FilingResponseDTO getFilingById(String filingId) {
+        try {
+            String path = "/filings/" + filingId;
+            String token = authService.generateTokenForGet(path, "");
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path;
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    String.class
+            );
+
+            return objectMapper.readValue(response.getBody(), FilingResponseDTO.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get filing: " + e.getMessage(), e);
         }
     }
 
@@ -970,6 +1086,202 @@ public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
             System.err.println("Error unlocking document: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Failed to unlock document: " + e.getMessage(), e);
+        }
+    }
+
+    // ==================== NORTHWEST LLC FORMATION (EXTENDED) ====================
+
+    @Override
+    public JsonNode getWebsites(String websiteUrl) {
+        try {
+            String path = "/websites";
+            LinkedHashMap<String, String> q = new LinkedHashMap<>();
+            q.put("url", websiteUrl);
+            URI uri = buildCorporateToolsUri(path, q);
+            String queryForJwt = rawQueryForJwt(uri);
+            String token = authService.generateTokenForGet(path, queryForJwt);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.GET, entity, String.class);
+            return readJsonResponseBody(response.getBody());
+        } catch (HttpStatusCodeException e) {
+            return parseCorporateToolsErrorBody(e);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get websites: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public JsonNode shoppingCartPost(String requestBody) {
+        return exchangeJsonPost("/shopping-cart", requestBody != null ? requestBody : "");
+    }
+
+    @Override
+    public JsonNode shoppingCartGet(List<UUID> companyIds) {
+        try {
+            if (companyIds == null || companyIds.isEmpty()) {
+                throw new IllegalArgumentException("companyIds is required");
+            }
+            String path = "/shopping-cart";
+            StringBuilder queryBuilder = new StringBuilder();
+            for (int i = 0; i < companyIds.size(); i++) {
+                if (i > 0) {
+                    queryBuilder.append("&");
+                }
+                queryBuilder.append("company_ids[]=").append(companyIds.get(i).toString());
+            }
+            String queryString = queryBuilder.toString();
+            String token = authService.generateTokenForGet(path, queryString);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path + "?" + queryString;
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+            return readJsonResponseBody(response.getBody());
+        } catch (HttpStatusCodeException e) {
+            return parseCorporateToolsErrorBody(e);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get shopping cart: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public JsonNode shoppingCartCheckoutPost(String requestBody) {
+        return exchangeJsonPost("/shopping-cart/checkout", requestBody != null ? requestBody : "");
+    }
+
+    @Override
+    public JsonNode getOrderItemsRequiringAttention(UUID companyId) {
+        try {
+            String path = "/order-items/requiring-attention";
+            String queryString = "company_id=" + companyId.toString();
+            String token = authService.generateTokenForGet(path, queryString);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path + "?" + queryString;
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+            return readJsonResponseBody(response.getBody());
+        } catch (HttpStatusCodeException e) {
+            return parseCorporateToolsErrorBody(e);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get order items requiring attention: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public JsonNode postOrderItemsRequiringAttention(String requestBody) {
+        return exchangeJsonPost("/order-items/requiring-attention", requestBody != null ? requestBody : "");
+    }
+
+    @Override
+    public JsonNode postServices(String requestBody) {
+        return exchangeJsonPost("/services", requestBody != null ? requestBody : "");
+    }
+
+    @Override
+    public JsonNode postServiceInfo(UUID serviceId, String requestBody) {
+        return exchangeJsonPost("/services/" + serviceId + "/info", requestBody != null ? requestBody : "");
+    }
+
+    @Override
+    public JsonNode postCallbacks(String requestBody) {
+        return exchangeJsonPost("/callbacks", requestBody != null ? requestBody : "");
+    }
+
+    @Override
+    public JsonNode getCallbacks() {
+        try {
+            String path = "/callbacks";
+            String token = authService.generateTokenForGet(path, "");
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = baseUrl + path;
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+            return readJsonResponseBody(response.getBody());
+        } catch (HttpStatusCodeException e) {
+            return parseCorporateToolsErrorBody(e);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get callbacks: " + e.getMessage(), e);
+        }
+    }
+
+    private JsonNode exchangeJsonPost(String path, String requestBody) {
+        try {
+            String token = authService.generateTokenForPost(path, requestBody);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+            String url = baseUrl + path;
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+            return readJsonResponseBody(response.getBody());
+        } catch (HttpStatusCodeException e) {
+            return parseCorporateToolsErrorBody(e);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed POST " + path + ": " + e.getMessage(), e);
+        }
+    }
+
+    /** Corporate Tools often returns JSON error bodies with HTTP 4xx — expose them instead of only throwing. */
+    private JsonNode parseCorporateToolsErrorBody(HttpStatusCodeException e) {
+        String body = e.getResponseBodyAsString(StandardCharsets.UTF_8);
+        try {
+            return readJsonResponseBody(body);
+        } catch (Exception parseErr) {
+            ObjectNode n = objectMapper.createObjectNode();
+            n.put("httpStatus", e.getStatusCode().value());
+            n.put("rawBody", body != null ? body : "");
+            return n;
+        }
+    }
+
+    private JsonNode readJsonResponseBody(String body) throws Exception {
+        if (body == null || body.isBlank()) {
+            return objectMapper.createObjectNode();
+        }
+        return objectMapper.readTree(body);
+    }
+
+    /**
+     * Builds a request URI with UTF-8 encoding so {@code uri.getRawQuery()} matches what RestTemplate sends;
+     * Corporate Tools JWT content hash must use that exact raw query (not a loosely concatenated string).
+     */
+    private URI buildCorporateToolsUri(String path, LinkedHashMap<String, String> queryParams) {
+        UriComponentsBuilder b = UriComponentsBuilder.fromUriString(baseUrl + path);
+        for (Map.Entry<String, String> e : queryParams.entrySet()) {
+            String v = e.getValue();
+            if (v != null && !v.isEmpty()) {
+                b.queryParam(e.getKey(), v);
+            }
+        }
+        return b.encode(StandardCharsets.UTF_8).build().toUri();
+    }
+
+    private static String rawQueryForJwt(URI uri) {
+        String q = uri.getRawQuery();
+        return q != null ? q : "";
+    }
+
+    private static String safeBody(HttpStatusCodeException e) {
+        String b = e.getResponseBodyAsString(StandardCharsets.UTF_8);
+        return b != null && !b.isBlank() ? b : "[no body]";
+    }
+
+    private <T> T readJsonBodyQuietly(String body, Class<T> type) {
+        if (body == null || body.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(body, type);
+        } catch (Exception ignored) {
+            return null;
         }
     }
 }
