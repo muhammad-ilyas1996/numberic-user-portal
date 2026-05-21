@@ -9,6 +9,9 @@ import java.util.Map;
 public class InvoicePayWithTokenRequestDto {
 
     private String token;
+    /** Preferred: single-use NMI Collect.js payment_token so raw card data does not hit this backend. */
+    private String paymentToken;
+    /** Legacy fallback. Prefer paymentToken for lower PCI exposure. */
     private String cardNumber;
     private String cardExpiry;   // MMYY
     private String cardCvv;

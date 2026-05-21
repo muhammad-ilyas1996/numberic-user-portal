@@ -251,6 +251,35 @@
             },
             "url": "{{baseUrl}}/v1/invoice/pay-with-token"
           }
+        },
+        {
+          "name": "Pay with Token (NMI Collect.js paymentToken)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"PASTE_TOKEN_FROM_LINK\",\n  \"paymentToken\": \"PASTE_NMI_COLLECTJS_PAYMENT_TOKEN\",\n  \"customerInfo\": {\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"email\": \"test@example.com\"\n  }\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/invoice/pay-with-token",
+            "description": "Preferred PCI-reduced flow: frontend gets a single-use NMI Collect.js payment_token and sends it as paymentToken. Do not include raw cardNumber/cardExpiry/cardCvv in this request."
+          }
+        },
+        {
+          "name": "NMI Webhook (sample)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-NMI-Webhook-Secret", "value": "{{nmiWebhookSecret}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionid\": \"PASTE_NMI_TRANSACTION_ID\",\n  \"event_type\": \"settled\",\n  \"responsetext\": \"Transaction settled\"\n}\n"
+            },
+            "url": "{{baseUrl}}/webhooks/nmi",
+            "description": "Optional NMI callback endpoint. If nmi.webhook.secret is configured, send it as X-NMI-Webhook-Secret or webhook_secret."
+          }
         }
       ]
     },

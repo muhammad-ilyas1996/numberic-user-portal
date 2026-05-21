@@ -204,9 +204,11 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
             result.put("message", "Token is required");
             return result;
         }
-        if (request.getCardNumber() == null || request.getCardExpiry() == null || request.getCardCvv() == null) {
+        boolean hasPaymentToken = hasText(request.getPaymentToken());
+        boolean hasRawCard = hasText(request.getCardNumber()) && hasText(request.getCardExpiry()) && hasText(request.getCardCvv());
+        if (!hasPaymentToken && !hasRawCard) {
             result.put("success", false);
-            result.put("message", "Card details are required");
+            result.put("message", "NMI payment token or card details are required");
             return result;
         }
         Optional<InvoiceSendLog> logOpt = invoiceSendLogRepo.findByToken(request.getToken().trim());
@@ -233,6 +235,7 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
             result.put("message", "Invalid invoice amount");
             return result;
         }
+        String description = "Invoice #" + (invoice.getInvoiceNum() != null ? invoice.getInvoiceNum() : invoice.getId());
         NMIPaymentService.CustomerInfo customerInfo = null;
         if (request.getCustomerInfo() != null && !request.getCustomerInfo().isEmpty()) {
             Map<String, String> c = request.getCustomerInfo();
@@ -254,16 +257,36 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
                 ? merchantNmiConfigService.getEntityByUserId(merchantUserId) : java.util.Optional.empty();
             if (merchantConfig.isPresent() && isMerchantNmiConfigured(merchantConfig.get())) {
                 NMIPaymentService.NmiCredentials creds = toNmiCredentials(merchantConfig.get());
-                nmiResponse = nmiPaymentService.processPaymentWithCredentials(
-                    amount,
-                    request.getCardNumber().trim().replaceAll("\\s", ""),
-                    request.getCardExpiry().trim(),
-                    request.getCardCvv().trim(),
-                    "Invoice #" + (invoice.getInvoiceNum() != null ? invoice.getInvoiceNum() : invoice.getId()),
-                    customerInfo,
-                    creds
-                );
+                if (hasPaymentToken) {
+                    nmiResponse = nmiPaymentService.processPaymentTokenWithCredentials(
+                        amount,
+                        request.getPaymentToken().trim(),
+                        description,
+                        customerInfo,
+                        creds
+                    );
+                } else {
+                    nmiResponse = nmiPaymentService.processPaymentWithCredentials(
+                        amount,
+                        request.getCardNumber().trim().replaceAll("\\s", ""),
+                        request.getCardExpiry().trim(),
+                        request.getCardCvv().trim(),
+                        description,
+                        customerInfo,
+                        creds
+                    );
+                }
             } else {
+                paymentTransactionService.saveFailure(
+                    invoice.getId(),
+                    invoice.getInvoiceNum(),
+                    amount,
+                    invoice.getCurrency() != null ? invoice.getCurrency() : "USD",
+                    "NMI",
+                    null,
+                    customerInfo != null ? customerInfo.getEmail() : null,
+                    description + " - NMI credentials missing"
+                );
                 result.put("success", false);
                 result.put("message", "NMI payment credentials are not configured. Please configure your payment settings in Settings before receiving payments.");
                 return result;
@@ -283,7 +306,7 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
                     nmiResponse.getTransactionId(),
                     nmiResponse.getAuthCode(),
                     payerEmail,
-                    "Invoice #" + (invoice.getInvoiceNum() != null ? invoice.getInvoiceNum() : invoice.getId())
+                    description
                 );
                 result.put("success", true);
                 result.put("message", "Payment successful");
@@ -291,10 +314,30 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
                 result.put("authCode", nmiResponse.getAuthCode());
                 return result;
             }
+            paymentTransactionService.saveFailure(
+                invoice.getId(),
+                invoice.getInvoiceNum(),
+                amount,
+                invoice.getCurrency() != null ? invoice.getCurrency() : "USD",
+                "NMI",
+                nmiResponse != null ? nmiResponse.getTransactionId() : null,
+                customerInfo != null ? customerInfo.getEmail() : null,
+                description + " - " + (nmiResponse != null ? nmiResponse.getMessage() : "Payment failed")
+            );
             result.put("success", false);
             result.put("message", nmiResponse != null ? nmiResponse.getMessage() : "Payment failed");
             return result;
         } catch (Exception e) {
+            paymentTransactionService.saveFailure(
+                invoice.getId(),
+                invoice.getInvoiceNum(),
+                amount,
+                invoice.getCurrency() != null ? invoice.getCurrency() : "USD",
+                "NMI",
+                null,
+                customerInfo != null ? customerInfo.getEmail() : null,
+                description + " - " + (e.getMessage() != null ? e.getMessage() : "Unknown error")
+            );
             result.put("success", false);
             result.put("message", "Payment failed: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
             return result;
@@ -309,6 +352,10 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
             return invoice.getTaxableAmount();
         }
         return 0.0;
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     private InvoicePayByTokenDto invalidDto() {
