@@ -21,6 +21,9 @@ public class MerchantNmiConfigDto {
     /** Masked for GET; full for PUT */
     private String nmiPassword;
     private String transactionUrl;
+    private String nmiMerchantId;
+    private String boardingStatus;
+    private String boardingApplicationId;
     /** True if merchant has configured NMI (any credential set) */
     private Boolean configured;
 }
