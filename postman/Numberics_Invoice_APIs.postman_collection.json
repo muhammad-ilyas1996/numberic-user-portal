@@ -251,6 +251,35 @@
             },
             "url": "{{baseUrl}}/v1/invoice/pay-with-token"
           }
+        },
+        {
+          "name": "Pay with Token (NMI Collect.js paymentToken)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"PASTE_TOKEN_FROM_LINK\",\n  \"paymentToken\": \"PASTE_NMI_COLLECTJS_PAYMENT_TOKEN\",\n  \"customerInfo\": {\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"email\": \"test@example.com\"\n  }\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/invoice/pay-with-token",
+            "description": "Preferred PCI-reduced flow: frontend gets a single-use NMI Collect.js payment_token and sends it as paymentToken. Do not include raw cardNumber/cardExpiry/cardCvv in this request."
+          }
+        },
+        {
+          "name": "NMI Webhook (sample)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-NMI-Webhook-Secret", "value": "{{nmiWebhookSecret}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionid\": \"PASTE_NMI_TRANSACTION_ID\",\n  \"event_type\": \"settled\",\n  \"responsetext\": \"Transaction settled\"\n}\n"
+            },
+            "url": "{{baseUrl}}/webhooks/nmi",
+            "description": "Optional NMI callback endpoint. If nmi.webhook.secret is configured, send it as X-NMI-Webhook-Secret or webhook_secret."
+          }
         }
       ]
     },
@@ -375,6 +404,59 @@
               "raw": "{\n  \"authMethod\": \"username_password\",\n  \"nmiUsername\": \"YourNMIUsername\",\n  \"nmiPassword\": \"YourNMIPassword\"\n}\n"
             },
             "url": "{{baseUrl}}/v1/settings/nmi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "NMI Merchant Onboarding",
+      "description": "Platform/reseller merchant onboarding. Requires backend config nmi.reseller.boarding.url and reseller auth credentials for live NMI submission. If not configured, submit returns PENDING_RESELLER_CONFIGURATION and stores the local application.",
+      "item": [
+        {
+          "name": "Submit Merchant Onboarding",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"Acme Services LLC\",\n  \"legalName\": \"Acme Services LLC\",\n  \"dbaName\": \"Acme Services\",\n  \"ein\": \"123456789\",\n  \"businessType\": \"LLC\",\n  \"mcc\": \"7399\",\n  \"website\": \"https://example.com\",\n  \"contactFirstName\": \"Jane\",\n  \"contactLastName\": \"Merchant\",\n  \"contactEmail\": \"merchant@example.com\",\n  \"contactPhone\": \"5551234567\",\n  \"address1\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zip\": \"10001\",\n  \"country\": \"US\",\n  \"ownerFirstName\": \"Jane\",\n  \"ownerLastName\": \"Merchant\",\n  \"ownerEmail\": \"merchant@example.com\",\n  \"ownerPhone\": \"5551234567\",\n  \"ownerSsnLast4\": \"1234\",\n  \"ownershipPercent\": 100,\n  \"monthlyVolume\": 25000,\n  \"averageTicket\": 150,\n  \"highTicket\": 1000,\n  \"settlementBankName\": \"Test Bank\",\n  \"settlementRoutingNumber\": \"110000000\",\n  \"settlementAccountNumber\": \"000123456789\",\n  \"settlementAccountType\": \"checking\",\n  \"resellerPayload\": {}\n}\n"
+            },
+            "url": "{{baseUrl}}/v1/merchant/nmi/onboarding"
+          }
+        },
+        {
+          "name": "Get Merchant NMI Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/v1/merchant/nmi/dashboard",
+            "description": "Single response for UI card/grid: paymentReady, nextAction, masked credentials, onboarding status, merchant/account ids."
+          }
+        },
+        {
+          "name": "Get Merchant Onboarding Status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/v1/merchant/nmi/onboarding/status"
+          }
+        },
+        {
+          "name": "NMI Onboarding Webhook (sample)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-NMI-Webhook-Secret", "value": "{{nmiWebhookSecret}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"APP-123\",\n  \"status\": \"APPROVED\",\n  \"merchantId\": \"MID-123\",\n  \"securityKey\": \"NMI_SECURITY_KEY_FROM_RESELLER\",\n  \"transactionUrl\": \"https://secure.networkmerchants.com/api/transact.php\"\n}\n"
+            },
+            "url": "{{baseUrl}}/webhooks/nmi/onboarding"
           }
         }
       ]

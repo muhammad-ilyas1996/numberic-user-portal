@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
+
 /**
  * Per-merchant (user) NMI credentials. Merchant onboarded on NMI portal, then configures here via Settings.
  */
@@ -38,4 +40,20 @@ public class MerchantNmiConfig {
     /** NMI transaction URL (optional; default from app config if null) */
     @Column(name = "transaction_url", length = 512)
     private String transactionUrl;
+
+    /** Merchant/gateway id returned by NMI reseller boarding, when available. */
+    @Column(name = "nmi_merchant_id", length = 128)
+    private String nmiMerchantId;
+
+    /** Latest onboarding status for this merchant (PENDING, APPROVED, ACTIVE, DECLINED, etc.). */
+    @Column(name = "boarding_status", length = 64)
+    private String boardingStatus;
+
+    /** Reseller/boarding application id used for status polling or webhook updates. */
+    @Column(name = "boarding_application_id", length = 128)
+    private String boardingApplicationId;
+
+    @Column(name = "approved_at")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date approvedAt;
 }

@@ -164,10 +164,73 @@ public class NMIPaymentService {
             credentials.getTransactionUrl() != null ? credentials.getTransactionUrl() : nmiConfig.getNmiTransactionUrl());
     }
 
+    /**
+     * Process payment using an NMI Collect.js single-use payment_token.
+     * This is preferred over sending raw PAN/CVV through this backend.
+     */
+    public NMIPaymentResponse processPaymentTokenWithCredentials(
+            Double amount,
+            String paymentToken,
+            String description,
+            CustomerInfo customerInfo,
+            NmiCredentials credentials) throws Exception {
+        if (amount == null || amount <= 0) {
+            throw new IllegalArgumentException("Amount must be greater than 0");
+        }
+        if (paymentToken == null || paymentToken.trim().isEmpty()) {
+            throw new IllegalArgumentException("NMI payment token is required");
+        }
+        if (credentials == null || !credentials.isConfigured()) {
+            throw new IllegalStateException("Merchant NMI credentials not configured");
+        }
+        return doProcessPaymentToken(amount, paymentToken.trim(), description, customerInfo,
+            credentials.getAuthMethod(), credentials.getSecurityKey(), credentials.getNmiUsername(), credentials.getNmiPassword(),
+            credentials.getTransactionUrl() != null ? credentials.getTransactionUrl() : nmiConfig.getNmiTransactionUrl());
+    }
+
+    private NMIPaymentResponse doProcessPaymentToken(Double amount, String paymentToken,
+            String description, CustomerInfo customerInfo, String authMethod, String securityKey, String username, String password,
+            String transactionUrl) throws Exception {
+        MultiValueMap<String, String> requestParams = new LinkedMultiValueMap<>();
+        addAuthentication(requestParams, authMethod, securityKey, username, password);
+        requestParams.add("type", "sale");
+        requestParams.add("amount", String.format("%.2f", amount));
+        requestParams.add("payment_token", paymentToken);
+        if (description != null && !description.trim().isEmpty()) {
+            requestParams.add("description", description);
+        }
+        addCustomerInfo(requestParams, customerInfo);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(requestParams, headers);
+        ResponseEntity<String> response = restTemplate.postForEntity(transactionUrl, request, String.class);
+        return parseNMIResponse(response.getBody());
+    }
+
     private NMIPaymentResponse doProcessPayment(Double amount, String cardNumber, String cardExpiry, String cardCvv,
             String description, CustomerInfo customerInfo, String authMethod, String securityKey, String username, String password,
             String transactionUrl) throws Exception {
         MultiValueMap<String, String> requestParams = new LinkedMultiValueMap<>();
+        addAuthentication(requestParams, authMethod, securityKey, username, password);
+        requestParams.add("type", "sale");
+        requestParams.add("amount", String.format("%.2f", amount));
+        requestParams.add("ccnumber", cardNumber.replaceAll("\\s", ""));
+        requestParams.add("ccexp", cardExpiry);
+        requestParams.add("cvv", cardCvv);
+        if (description != null && !description.trim().isEmpty()) {
+            requestParams.add("description", description);
+        }
+        addCustomerInfo(requestParams, customerInfo);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(requestParams, headers);
+        ResponseEntity<String> response = restTemplate.postForEntity(transactionUrl, request, String.class);
+        return parseNMIResponse(response.getBody());
+    }
+
+    private void addAuthentication(MultiValueMap<String, String> requestParams, String authMethod,
+            String securityKey, String username, String password) {
         boolean useUsernamePassword = "username_password".equalsIgnoreCase(authMethod != null ? authMethod.trim() : "")
             && username != null && !username.isEmpty() && password != null;
         if (useUsernamePassword) {
@@ -181,30 +244,21 @@ public class NMIPaymentService {
         } else {
             throw new IllegalStateException("NMI credentials incomplete");
         }
-        requestParams.add("type", "sale");
-        requestParams.add("amount", String.format("%.2f", amount));
-        requestParams.add("ccnumber", cardNumber.replaceAll("\\s", ""));
-        requestParams.add("ccexp", cardExpiry);
-        requestParams.add("cvv", cardCvv);
-        if (description != null && !description.trim().isEmpty()) {
-            requestParams.add("description", description);
+    }
+
+    private void addCustomerInfo(MultiValueMap<String, String> requestParams, CustomerInfo customerInfo) {
+        if (customerInfo == null) {
+            return;
         }
-        if (customerInfo != null) {
-            if (customerInfo.getFirstName() != null) requestParams.add("firstname", customerInfo.getFirstName());
-            if (customerInfo.getLastName() != null) requestParams.add("lastname", customerInfo.getLastName());
-            if (customerInfo.getEmail() != null) requestParams.add("email", customerInfo.getEmail());
-            if (customerInfo.getAddress() != null) requestParams.add("address1", customerInfo.getAddress());
-            if (customerInfo.getCity() != null) requestParams.add("city", customerInfo.getCity());
-            if (customerInfo.getState() != null) requestParams.add("state", customerInfo.getState());
-            if (customerInfo.getZip() != null) requestParams.add("zip", customerInfo.getZip());
-            if (customerInfo.getCountry() != null) requestParams.add("country", customerInfo.getCountry());
-            if (customerInfo.getPhone() != null) requestParams.add("phone", customerInfo.getPhone());
-        }
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(requestParams, headers);
-        ResponseEntity<String> response = restTemplate.postForEntity(transactionUrl, request, String.class);
-        return parseNMIResponse(response.getBody());
+        if (customerInfo.getFirstName() != null) requestParams.add("firstname", customerInfo.getFirstName());
+        if (customerInfo.getLastName() != null) requestParams.add("lastname", customerInfo.getLastName());
+        if (customerInfo.getEmail() != null) requestParams.add("email", customerInfo.getEmail());
+        if (customerInfo.getAddress() != null) requestParams.add("address1", customerInfo.getAddress());
+        if (customerInfo.getCity() != null) requestParams.add("city", customerInfo.getCity());
+        if (customerInfo.getState() != null) requestParams.add("state", customerInfo.getState());
+        if (customerInfo.getZip() != null) requestParams.add("zip", customerInfo.getZip());
+        if (customerInfo.getCountry() != null) requestParams.add("country", customerInfo.getCountry());
+        if (customerInfo.getPhone() != null) requestParams.add("phone", customerInfo.getPhone());
     }
 
     /** Per-merchant NMI credentials (from DB). */

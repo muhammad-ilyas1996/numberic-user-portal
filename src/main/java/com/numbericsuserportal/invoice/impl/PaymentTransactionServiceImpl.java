@@ -114,6 +114,42 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
         paymentTransactionRepo.save(t);
     }
 
+    @Override
+    public void saveFailure(Long invoiceId, String invoiceNum, Double amount, String currency,
+                            String gateway, String gatewayTransactionId, String payerEmail,
+                            String description) {
+        PaymentTransaction t = new PaymentTransaction();
+        t.setInvoiceId(invoiceId);
+        t.setInvoiceNum(invoiceNum);
+        t.setAmount(amount);
+        t.setCurrency(currency != null ? currency : "USD");
+        t.setGateway(gateway);
+        t.setGatewayTransactionId(gatewayTransactionId);
+        t.setStatus("FAILED");
+        t.setPaidAt(new Date());
+        t.setPayerEmail(payerEmail);
+        t.setDescription(truncate(description, 500));
+        t.setCreatedOn(new Date());
+        paymentTransactionRepo.save(t);
+    }
+
+    @Override
+    public boolean updateStatusByGatewayTransactionId(String gateway, String gatewayTransactionId,
+                                                      String status, String description) {
+        if (gatewayTransactionId == null || gatewayTransactionId.trim().isEmpty()) {
+            return false;
+        }
+        return paymentTransactionRepo
+                .findFirstByGatewayAndGatewayTransactionIdOrderByIdDesc(gateway, gatewayTransactionId.trim())
+                .map(t -> {
+                    t.setStatus(status);
+                    t.setDescription(truncate(description, 500));
+                    paymentTransactionRepo.save(t);
+                    return true;
+                })
+                .orElse(false);
+    }
+
     private PaymentTransactionDto toDto(PaymentTransaction t) {
         PaymentTransactionDto dto = new PaymentTransactionDto();
         dto.setId(t.getId());
@@ -129,5 +165,12 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
         dto.setPayerEmail(t.getPayerEmail());
         dto.setDescription(t.getDescription());
         return dto;
+    }
+
+    private static String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
     }
 }

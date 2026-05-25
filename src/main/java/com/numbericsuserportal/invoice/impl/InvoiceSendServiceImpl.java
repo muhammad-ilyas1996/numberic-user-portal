@@ -96,6 +96,14 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
         }
 
         InvoiceAndTaxEntity invoice = invoiceOpt.get();
+        Long merchantUserId = parseUserId(invoice.getCreatedBy());
+        Optional<MerchantNmiConfig> merchantConfig = merchantUserId != null
+            ? merchantNmiConfigService.getEntityByUserId(merchantUserId)
+            : Optional.empty();
+        if (merchantConfig.isEmpty() || !isMerchantNmiReady(merchantConfig.get())) {
+            return new SendInvoiceResponseDto(false, merchantNotReadyMessage(merchantConfig.orElse(null)), null);
+        }
+
         String token = UUID.randomUUID().toString().replace("-", "");
         String paymentLink = paymentBaseUrl != null && !paymentBaseUrl.isEmpty()
             ? (paymentBaseUrl + (paymentBaseUrl.contains("?") ? "&" : "?") + "token=" + token)
@@ -204,9 +212,11 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
             result.put("message", "Token is required");
             return result;
         }
-        if (request.getCardNumber() == null || request.getCardExpiry() == null || request.getCardCvv() == null) {
+        boolean hasPaymentToken = hasText(request.getPaymentToken());
+        boolean hasRawCard = hasText(request.getCardNumber()) && hasText(request.getCardExpiry()) && hasText(request.getCardCvv());
+        if (!hasPaymentToken && !hasRawCard) {
             result.put("success", false);
-            result.put("message", "Card details are required");
+            result.put("message", "NMI payment token or card details are required");
             return result;
         }
         Optional<InvoiceSendLog> logOpt = invoiceSendLogRepo.findByToken(request.getToken().trim());
@@ -233,6 +243,7 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
             result.put("message", "Invalid invoice amount");
             return result;
         }
+        String description = "Invoice #" + (invoice.getInvoiceNum() != null ? invoice.getInvoiceNum() : invoice.getId());
         NMIPaymentService.CustomerInfo customerInfo = null;
         if (request.getCustomerInfo() != null && !request.getCustomerInfo().isEmpty()) {
             Map<String, String> c = request.getCustomerInfo();
@@ -252,20 +263,41 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
             Long merchantUserId = parseUserId(invoice.getCreatedBy());
             java.util.Optional<MerchantNmiConfig> merchantConfig = merchantUserId != null
                 ? merchantNmiConfigService.getEntityByUserId(merchantUserId) : java.util.Optional.empty();
-            if (merchantConfig.isPresent() && isMerchantNmiConfigured(merchantConfig.get())) {
+            if (merchantConfig.isPresent() && isMerchantNmiReady(merchantConfig.get())) {
                 NMIPaymentService.NmiCredentials creds = toNmiCredentials(merchantConfig.get());
-                nmiResponse = nmiPaymentService.processPaymentWithCredentials(
-                    amount,
-                    request.getCardNumber().trim().replaceAll("\\s", ""),
-                    request.getCardExpiry().trim(),
-                    request.getCardCvv().trim(),
-                    "Invoice #" + (invoice.getInvoiceNum() != null ? invoice.getInvoiceNum() : invoice.getId()),
-                    customerInfo,
-                    creds
-                );
+                if (hasPaymentToken) {
+                    nmiResponse = nmiPaymentService.processPaymentTokenWithCredentials(
+                        amount,
+                        request.getPaymentToken().trim(),
+                        description,
+                        customerInfo,
+                        creds
+                    );
+                } else {
+                    nmiResponse = nmiPaymentService.processPaymentWithCredentials(
+                        amount,
+                        request.getCardNumber().trim().replaceAll("\\s", ""),
+                        request.getCardExpiry().trim(),
+                        request.getCardCvv().trim(),
+                        description,
+                        customerInfo,
+                        creds
+                    );
+                }
             } else {
+                String message = merchantNotReadyMessage(merchantConfig.orElse(null));
+                paymentTransactionService.saveFailure(
+                    invoice.getId(),
+                    invoice.getInvoiceNum(),
+                    amount,
+                    invoice.getCurrency() != null ? invoice.getCurrency() : "USD",
+                    "NMI",
+                    null,
+                    customerInfo != null ? customerInfo.getEmail() : null,
+                    description + " - " + message
+                );
                 result.put("success", false);
-                result.put("message", "NMI payment credentials are not configured. Please configure your payment settings in Settings before receiving payments.");
+                result.put("message", message);
                 return result;
             }
             if (nmiResponse != null && nmiResponse.isSuccess()) {
@@ -283,7 +315,7 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
                     nmiResponse.getTransactionId(),
                     nmiResponse.getAuthCode(),
                     payerEmail,
-                    "Invoice #" + (invoice.getInvoiceNum() != null ? invoice.getInvoiceNum() : invoice.getId())
+                    description
                 );
                 result.put("success", true);
                 result.put("message", "Payment successful");
@@ -291,10 +323,30 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
                 result.put("authCode", nmiResponse.getAuthCode());
                 return result;
             }
+            paymentTransactionService.saveFailure(
+                invoice.getId(),
+                invoice.getInvoiceNum(),
+                amount,
+                invoice.getCurrency() != null ? invoice.getCurrency() : "USD",
+                "NMI",
+                nmiResponse != null ? nmiResponse.getTransactionId() : null,
+                customerInfo != null ? customerInfo.getEmail() : null,
+                description + " - " + (nmiResponse != null ? nmiResponse.getMessage() : "Payment failed")
+            );
             result.put("success", false);
             result.put("message", nmiResponse != null ? nmiResponse.getMessage() : "Payment failed");
             return result;
         } catch (Exception e) {
+            paymentTransactionService.saveFailure(
+                invoice.getId(),
+                invoice.getInvoiceNum(),
+                amount,
+                invoice.getCurrency() != null ? invoice.getCurrency() : "USD",
+                "NMI",
+                null,
+                customerInfo != null ? customerInfo.getEmail() : null,
+                description + " - " + (e.getMessage() != null ? e.getMessage() : "Unknown error")
+            );
             result.put("success", false);
             result.put("message", "Payment failed: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
             return result;
@@ -309,6 +361,10 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
             return invoice.getTaxableAmount();
         }
         return 0.0;
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     private InvoicePayByTokenDto invalidDto() {
@@ -386,6 +442,30 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
         if (c.getSecurityKey() != null && !c.getSecurityKey().isEmpty()) return true;
         return c.getNmiUsername() != null && !c.getNmiUsername().isEmpty()
             && c.getNmiPassword() != null && !c.getNmiPassword().isEmpty();
+    }
+
+    private static boolean isMerchantNmiReady(MerchantNmiConfig c) {
+        return c != null && isMerchantNmiConfigured(c) && isMerchantBoardingActive(c);
+    }
+
+    private static boolean isMerchantBoardingActive(MerchantNmiConfig c) {
+        String status = c.getBoardingStatus();
+        if (status == null || status.trim().isEmpty()) {
+            // Existing manually configured NMI merchants did not have an onboarding status.
+            return true;
+        }
+        String normalized = status.trim().toUpperCase();
+        return "ACTIVE".equals(normalized) || "APPROVED".equals(normalized);
+    }
+
+    private static String merchantNotReadyMessage(MerchantNmiConfig c) {
+        if (c == null || !isMerchantNmiConfigured(c)) {
+            return "NMI payment credentials are not configured. Please complete merchant onboarding before receiving invoice payments.";
+        }
+        String status = c.getBoardingStatus();
+        return "NMI merchant onboarding is not active"
+            + (status != null && !status.trim().isEmpty() ? " (current status: " + status.trim() + ")" : "")
+            + ". Invoice payments are disabled until onboarding is approved.";
     }
 
     private static NMIPaymentService.NmiCredentials toNmiCredentials(MerchantNmiConfig c) {

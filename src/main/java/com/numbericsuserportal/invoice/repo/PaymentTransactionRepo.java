@@ -9,10 +9,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface PaymentTransactionRepo extends JpaRepository<PaymentTransaction, Long>, JpaSpecificationExecutor<PaymentTransaction> {
 
     Page<PaymentTransaction> findByInvoiceIdOrderByPaidAtDesc(Long invoiceId, Pageable pageable);
+
+    Optional<PaymentTransaction> findFirstByGatewayAndGatewayTransactionIdOrderByIdDesc(String gateway, String gatewayTransactionId);
 
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM PaymentTransaction p WHERE p.gateway = 'NMI' AND p.status = 'SUCCESS'")
     Double sumNmiSuccessAmountAll();

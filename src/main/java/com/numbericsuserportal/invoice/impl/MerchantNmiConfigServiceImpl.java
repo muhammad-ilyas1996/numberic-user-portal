@@ -50,6 +50,15 @@ public class MerchantNmiConfigServiceImpl implements MerchantNmiConfigService {
         if (dto.getTransactionUrl() != null) {
             entity.setTransactionUrl(dto.getTransactionUrl().trim().isEmpty() ? null : dto.getTransactionUrl().trim());
         }
+        if (dto.getNmiMerchantId() != null) {
+            entity.setNmiMerchantId(dto.getNmiMerchantId().trim().isEmpty() ? null : dto.getNmiMerchantId().trim());
+        }
+        if (dto.getBoardingStatus() != null) {
+            entity.setBoardingStatus(dto.getBoardingStatus().trim().isEmpty() ? null : dto.getBoardingStatus().trim());
+        }
+        if (dto.getBoardingApplicationId() != null) {
+            entity.setBoardingApplicationId(dto.getBoardingApplicationId().trim().isEmpty() ? null : dto.getBoardingApplicationId().trim());
+        }
         MerchantNmiConfig saved = merchantNmiConfigRepo.save(entity);
         return toDto(saved, true);
     }
@@ -65,6 +74,9 @@ public class MerchantNmiConfigServiceImpl implements MerchantNmiConfigService {
         dto.setAuthMethod(e.getAuthMethod());
         dto.setNmiUsername(e.getNmiUsername());
         dto.setTransactionUrl(e.getTransactionUrl());
+        dto.setNmiMerchantId(e.getNmiMerchantId());
+        dto.setBoardingStatus(e.getBoardingStatus());
+        dto.setBoardingApplicationId(e.getBoardingApplicationId());
         if (maskSecrets) {
             dto.setSecurityKey(mask(e.getSecurityKey()));
             dto.setNmiPassword(e.getNmiPassword() != null ? MASK : null);

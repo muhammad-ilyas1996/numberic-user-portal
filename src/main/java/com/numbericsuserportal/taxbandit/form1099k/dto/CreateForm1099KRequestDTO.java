@@ -54,11 +54,12 @@ public class CreateForm1099KRequestDTO {
     
     @Data
     public static class ScheduleFilingDTO {
-        @JsonProperty("IsScheduleFiling")
+        @JsonProperty(value = "IsScheduleFiling", access = JsonProperty.Access.WRITE_ONLY)
         private Boolean isScheduleFiling;
         
-        @JsonProperty("ScheduleFilingDate")
-        private String scheduleFilingDate;
+        @JsonProperty("EfileDate")
+        @JsonAlias("ScheduleFilingDate")
+        private String efileDate;
     }
     
     @Data
