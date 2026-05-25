@@ -27,6 +27,9 @@ public class LlcFormationService {
     @Autowired
     private LlcFormationMemberService memberService;
 
+    @Autowired
+    private LlcFormationStateCatalogService stateCatalogService;
+
     @Transactional
     public LlcFormation createDraft(User user) {
         if (user == null || user.getUserId() == null) {
@@ -57,7 +60,13 @@ public class LlcFormationService {
     @Transactional
     public LlcFormation updateStep1(Long formationId, User user, UpdateStep1StateRequestDTO req) {
         LlcFormation f = getForUserOrThrow(formationId, user);
-        if (req.getJurisdiction() != null) f.setJurisdiction(req.getJurisdiction().trim().toUpperCase());
+        if (req.getJurisdiction() != null) {
+            String jurisdiction = req.getJurisdiction().trim().toUpperCase();
+            if (stateCatalogService.hasActiveCatalog()) {
+                stateCatalogService.validateStateCode(jurisdiction);
+            }
+            f.setJurisdiction(jurisdiction);
+        }
         if (req.getOperatesInFormationState() != null) f.setOperatesInFormationState(req.getOperatesInFormationState());
         if (req.getOwnershipType() != null) f.setOwnershipType(req.getOwnershipType().trim().toLowerCase());
 

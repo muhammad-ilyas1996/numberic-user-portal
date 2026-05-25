@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class LlcFormationRateService {
@@ -61,29 +62,57 @@ public class LlcFormationRateService {
     }
 
     @Transactional
+    public void upsertStateFee(String stateCode, int amountCents) {
+        UpdateRateRequestDTO req = new UpdateRateRequestDTO();
+        req.setRateType("STATE_FEE");
+        req.setStateCode(stateCode);
+        req.setAmountCents(amountCents);
+        req.setActive(true);
+        upsert(req);
+    }
+
+    @Transactional
+    public void ensureGlobalFormationRates() {
+        upsertGlobal("NUMBRICS_FEE", LlcFormationStateCatalogService.DEFAULT_NUMBRICS_SERVICE_FEE_CENTS);
+        upsertGlobal("NW_RA_YR1", LlcFormationStateCatalogService.DEFAULT_NW_RA_YR1_PASS_THROUGH_CENTS);
+        upsertGlobal("EIN_FEE", 4900);
+        upsertGlobal("SCORP_FEE", 14900);
+    }
+
+    @Transactional(readOnly = true)
+    public int resolveGlobalRateCents(String rateType, int defaultValue) {
+        return resolveRate(rateType, null, null, defaultValue);
+    }
+
+    @Transactional(readOnly = true)
+    public int resolveStateFeeCents(String stateCode, int defaultValue) {
+        return resolveRate("STATE_FEE", stateCode, null, defaultValue);
+    }
+
+    @Transactional
     public void seedDefaultsIfEmpty() {
-        if (rateRepository.count() > 0) return;
+        if (rateRepository.count() > 0) {
+            ensureGlobalFormationRates();
+            return;
+        }
 
-        upsertRow("NUMBRICS_FEE", null, null, 9900);
-        upsertRow("EIN_FEE", null, null, 4900);
-        upsertRow("SCORP_FEE", null, null, 14900);
-
-        upsertRow("STATE_FEE", "TX", null, 5000);
-        upsertRow("STATE_FEE", "FL", null, 12500);
-        upsertRow("STATE_FEE", "CA", null, 7000);
-        upsertRow("STATE_FEE", "NY", null, 20000);
-        upsertRow("STATE_FEE", "WY", null, 10000);
-        upsertRow("STATE_FEE", "DE", null, 9000);
-        upsertRow("STATE_FEE", "WA", null, 20000);
-        upsertRow("STATE_FEE", "CO", null, 5000);
-        upsertRow("STATE_FEE", "GA", null, 10000);
-        upsertRow("STATE_FEE", "IL", null, 15000);
-        upsertRow("STATE_FEE", "NV", null, 7500);
-        upsertRow("STATE_FEE", "AZ", null, 5000);
+        ensureGlobalFormationRates();
 
         upsertRow("SPEED_FEE", "TX", "standard", 0);
         upsertRow("SPEED_FEE", "TX", "expedited", 20000);
         upsertRow("SPEED_FEE", "TX", "sameday", 40000);
+    }
+
+    private void upsertGlobal(String rateType, int amountCents) {
+        Optional<LlcFormationRate> existing = rateRepository.findByRateTypeAndStateCodeAndSpeedCode(rateType, null, null);
+        if (existing.isPresent()) {
+            LlcFormationRate row = existing.get();
+            row.setAmountCents(amountCents);
+            row.setActive(true);
+            rateRepository.save(row);
+        } else {
+            upsertRow(rateType, null, null, amountCents);
+        }
     }
 
     private void upsertRow(String rateType, String stateCode, String speedCode, int amount) {
@@ -95,5 +124,11 @@ public class LlcFormationRateService {
         r.setActive(true);
         rateRepository.save(r);
     }
-}
 
+    private int resolveRate(String rateType, String stateCode, String speedCode, int defaultValue) {
+        Optional<LlcFormationRate> rate = rateRepository.findByRateTypeAndStateCodeAndSpeedCode(rateType, stateCode, speedCode);
+        return rate.filter(r -> Boolean.TRUE.equals(r.getActive()))
+                .map(LlcFormationRate::getAmountCents)
+                .orElse(defaultValue);
+    }
+}
