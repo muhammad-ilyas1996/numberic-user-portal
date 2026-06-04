@@ -48,6 +48,12 @@ public class NmiMerchantOnboardingRequestDto {
     private String settlementRoutingNumber;
     private String settlementAccountNumber;
     private String settlementAccountType;
+    private String accountHolderType;
+
+    /** NMI gateway login username. Auto-generated from email when omitted. */
+    private String username;
+    private String timezone;
+    private String language;
 
     /** Exact reseller/NMI boarding payload. Values here override common-field defaults. */
     private Map<String, Object> resellerPayload;

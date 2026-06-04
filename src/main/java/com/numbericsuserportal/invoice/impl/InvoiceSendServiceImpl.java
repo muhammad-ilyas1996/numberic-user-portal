@@ -100,14 +100,16 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
         Optional<MerchantNmiConfig> merchantConfig = merchantUserId != null
             ? merchantNmiConfigService.getEntityByUserId(merchantUserId)
             : Optional.empty();
-        if (merchantConfig.isEmpty() || !isMerchantNmiReady(merchantConfig.get())) {
-            return new SendInvoiceResponseDto(false, merchantNotReadyMessage(merchantConfig.orElse(null)), null);
-        }
+        boolean paymentReady = merchantConfig.isPresent() && isMerchantNmiReady(merchantConfig.get());
 
-        String token = UUID.randomUUID().toString().replace("-", "");
-        String paymentLink = paymentBaseUrl != null && !paymentBaseUrl.isEmpty()
-            ? (paymentBaseUrl + (paymentBaseUrl.contains("?") ? "&" : "?") + "token=" + token)
-            : "";
+        String token = null;
+        String paymentLink = "";
+        if (paymentReady) {
+            token = UUID.randomUUID().toString().replace("-", "");
+            if (paymentBaseUrl != null && !paymentBaseUrl.isEmpty()) {
+                paymentLink = paymentBaseUrl + (paymentBaseUrl.contains("?") ? "&" : "?") + "token=" + token;
+            }
+        }
 
         InvoiceSendLog log = new InvoiceSendLog();
         log.setInvoiceId(invoice.getId());
@@ -122,18 +124,21 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
             if (emailService == null) {
                 return new SendInvoiceResponseDto(false, "Email service is not configured", null);
             }
-            String subject = "Invoice " + (invoice.getInvoiceNum() != null ? "#" + invoice.getInvoiceNum() : invoice.getId()) + " – Pay now";
-            String htmlBody = buildInvoiceEmailBody(invoice, paymentLink);
+            String invoiceLabel = invoice.getInvoiceNum() != null ? "#" + invoice.getInvoiceNum() : String.valueOf(invoice.getId());
+            String subject = paymentReady
+                ? "Invoice " + invoiceLabel + " – Pay now"
+                : "Invoice " + invoiceLabel;
+            String htmlBody = buildInvoiceEmailBody(invoice, paymentLink, paymentReady);
             boolean sent = emailService.sendEmail(recipient, subject, htmlBody);
             log.setMessageSid(null);
             InvoiceSendLog saved = invoiceSendLogRepo.save(log);
             return sent
-                ? new SendInvoiceResponseDto(true, "Invoice sent via email successfully", saved.getId())
+                ? new SendInvoiceResponseDto(true, sendSuccessMessage("email", paymentReady), saved.getId())
                 : new SendInvoiceResponseDto(false, "Failed to send email. Check SMTP configuration.", saved.getId());
         }
 
         // WHATSAPP
-        String messageBody = buildWhatsAppMessage(invoice, paymentLink);
+        String messageBody = buildWhatsAppMessage(invoice, paymentLink, paymentReady);
         TwilioResponse twilioResponse = twilioService.sendWhatsApp(recipient, messageBody);
         log.setMessageSid(twilioResponse != null ? twilioResponse.getMessageSid() : null);
         InvoiceSendLog saved = invoiceSendLogRepo.save(log);
@@ -141,7 +146,7 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
         if (twilioResponse != null && twilioResponse.isSuccess()) {
             org.slf4j.LoggerFactory.getLogger(InvoiceSendServiceImpl.class)
                 .info("WhatsApp sent to {} for invoice {}; Twilio SID: {}", recipient, invoice.getId(), twilioResponse.getMessageSid());
-            return new SendInvoiceResponseDto(true, "Invoice sent via WhatsApp successfully", saved.getId());
+            return new SendInvoiceResponseDto(true, sendSuccessMessage("WhatsApp", paymentReady), saved.getId());
         }
         if (twilioResponse != null && twilioResponse.getError() != null) {
             org.slf4j.LoggerFactory.getLogger(InvoiceSendServiceImpl.class)
@@ -154,7 +159,7 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
         );
     }
 
-    private String buildInvoiceEmailBody(InvoiceAndTaxEntity invoice, String paymentLink) {
+    private String buildInvoiceEmailBody(InvoiceAndTaxEntity invoice, String paymentLink, boolean paymentReady) {
         StringBuilder html = new StringBuilder();
         html.append("<html><body style='font-family: Arial, sans-serif;'>");
         html.append("<h2>Your invoice is ready</h2>");
@@ -164,14 +169,24 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
         if (invoice.getCustomerName() != null) {
             html.append("<p>Dear ").append(escapeHtml(invoice.getCustomerName())).append(",</p>");
         }
-        html.append("<p>Please click the link below to view and pay your invoice.</p>");
-        if (paymentLink != null && !paymentLink.isEmpty()) {
+        if (paymentReady && paymentLink != null && !paymentLink.isEmpty()) {
+            html.append("<p>Please click the link below to view and pay your invoice.</p>");
             html.append("<p><a href=\"").append(escapeHtml(paymentLink)).append("\" style='display:inline-block;padding:10px 20px;background:#007bff;color:white;text-decoration:none;border-radius:5px;'>Pay now</a></p>");
             html.append("<p>Or copy this link: ").append(escapeHtml(paymentLink)).append("</p>");
+        } else {
+            html.append("<p>Please find your invoice details below. Online payment is not available yet; the merchant will share payment instructions separately.</p>");
         }
         html.append("<p>Thank you.</p>");
         html.append("</body></html>");
         return html.toString();
+    }
+
+    private static String sendSuccessMessage(String channel, boolean paymentReady) {
+        String base = "Invoice sent via " + channel + " successfully";
+        if (paymentReady) {
+            return base;
+        }
+        return base + ". Payment link was not included because merchant payment setup is not complete.";
     }
 
     private String escapeHtml(String s) {
@@ -200,6 +215,7 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
         }
         InvoicePayByTokenDto dto = toPayByTokenDto(inv);
         dto.setValid(true);
+        dto.setPaymentEnabled(isPaymentEnabledForInvoice(inv));
         return dto;
     }
 
@@ -405,17 +421,29 @@ public class InvoiceSendServiceImpl implements InvoiceSendService {
         return logPage.map(this::toHistoryItemDto);
     }
 
-    private String buildWhatsAppMessage(InvoiceAndTaxEntity invoice, String paymentLink) {
+    private String buildWhatsAppMessage(InvoiceAndTaxEntity invoice, String paymentLink, boolean paymentReady) {
         StringBuilder sb = new StringBuilder();
         sb.append("Your invoice ");
         if (invoice.getInvoiceNum() != null && !invoice.getInvoiceNum().isEmpty()) {
             sb.append("#").append(invoice.getInvoiceNum()).append(" ");
         }
         sb.append("is ready.");
-        if (paymentLink != null && !paymentLink.isEmpty()) {
+        if (paymentReady && paymentLink != null && !paymentLink.isEmpty()) {
             sb.append(" Pay here: ").append(paymentLink);
+        } else {
+            sb.append(" Online payment is not available yet; the merchant will follow up with payment instructions.");
         }
         return sb.toString();
+    }
+
+    private boolean isPaymentEnabledForInvoice(InvoiceAndTaxEntity invoice) {
+        Long merchantUserId = parseUserId(invoice.getCreatedBy());
+        if (merchantUserId == null) {
+            return false;
+        }
+        return merchantNmiConfigService.getEntityByUserId(merchantUserId)
+            .map(InvoiceSendServiceImpl::isMerchantNmiReady)
+            .orElse(false);
     }
 
     private InvoiceSendHistoryItemDto toHistoryItemDto(InvoiceSendLog log) {

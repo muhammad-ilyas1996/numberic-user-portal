@@ -20,4 +20,5 @@ public class InvoicePayByTokenDto {
     private String description;
     private LocalDate dueDate;
     private boolean valid;       // true if token matched and invoice is active and not already PAID
+    private boolean paymentEnabled; // false when merchant NMI is not ready for online payment
 }
