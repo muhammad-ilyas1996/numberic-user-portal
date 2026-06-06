@@ -215,22 +215,26 @@ public class NmiResellerOnboardingClient {
                 return result;
             }
 
-            if (processorPayloadTemplate != null && !processorPayloadTemplate.isBlank()) {
+            Map<String, Object> requestProcessor = resolveProcessorPayload(request, gatewayId);
+            if (requestProcessor != null) {
+                Map<String, Object> processorResponse = postJson(processorsUrl(), requestProcessor);
+                result.addStep("ADD_PROCESSOR");
+                result.putResponse("addProcessor", processorResponse);
+            } else if (processorPayloadTemplate != null && !processorPayloadTemplate.isBlank()) {
                 Map<String, Object> processorPayload = parseTemplate(processorPayloadTemplate, gatewayId, request);
                 Map<String, Object> processorResponse = postJson(processorsUrl(), processorPayload);
                 result.addStep("ADD_PROCESSOR");
                 result.putResponse("addProcessor", processorResponse);
             }
 
-            for (String vasTemplate : splitTemplates(vasPayloadTemplates)) {
-                Map<String, Object> vasPayload = parseTemplate(vasTemplate, gatewayId, request);
+            for (Map<String, Object> vasPayload : resolveVasPayloads(request, gatewayId)) {
                 Map<String, Object> vasResponse = postJson(processorsUrl(), vasPayload);
                 String serviceId = asString(vasPayload.get("serviceId"));
                 result.addStep("ADD_VAS_" + (serviceId != null ? serviceId.toUpperCase(Locale.ROOT) : "SERVICE"));
                 result.putResponse("vas_" + serviceId, vasResponse);
             }
 
-            Map<String, Object> patchBody = buildCompletionPatchBody();
+            Map<String, Object> patchBody = buildCompletionPatchBody(request);
             if (!patchBody.isEmpty()) {
                 Map<String, Object> patchResponse = patchJson(merchantUrl(gatewayId), patchBody);
                 if (patchBody.containsKey("costPlan") && !patchBody.containsKey("status")) {
@@ -294,8 +298,9 @@ public class NmiResellerOnboardingClient {
         payload.put("language", firstNonBlank(r.getLanguage(), defaultLanguage));
         payload.put("username", resolveUsername(r, userId));
 
-        if (feeScheduleId != null && !feeScheduleId.isBlank()) {
-            payload.put("costPlan", parseNumericIfPossible(feeScheduleId.trim()));
+        String resolvedFeeScheduleId = resolveFeeScheduleId(r);
+        if (resolvedFeeScheduleId != null) {
+            payload.put("costPlan", parseNumericIfPossible(resolvedFeeScheduleId));
         }
 
         Map<String, Object> accountInfo = new LinkedHashMap<>();
@@ -311,19 +316,96 @@ public class NmiResellerOnboardingClient {
         return payload;
     }
 
-    private Map<String, Object> buildCompletionPatchBody() {
+    private Map<String, Object> buildCompletionPatchBody(NmiMerchantOnboardingRequestDto request) {
         Map<String, Object> patch = new LinkedHashMap<>();
-        if (feeScheduleId != null && !feeScheduleId.isBlank()) {
-            patch.put("costPlan", parseNumericIfPossible(feeScheduleId.trim()));
+        String resolvedFeeScheduleId = resolveFeeScheduleId(request);
+        if (resolvedFeeScheduleId != null) {
+            patch.put("costPlan", parseNumericIfPossible(resolvedFeeScheduleId));
         }
-        if (autoComplete) {
+        if (resolveAutoComplete(request)) {
             patch.put("status", "active");
             patch.put("activatePendingServices", true);
-            if (agreementTextId != null && !agreementTextId.isBlank()) {
-                patch.put("agreementTextId", agreementTextId.trim());
+            String resolvedAgreementTextId = resolveAgreementTextId(request);
+            if (resolvedAgreementTextId != null) {
+                patch.put("agreementTextId", resolvedAgreementTextId);
             }
         }
         return patch;
+    }
+
+    private Map<String, Object> resolveProcessorPayload(NmiMerchantOnboardingRequestDto request, String gatewayId) {
+        if (request.getProcessorPayload() == null || request.getProcessorPayload().isEmpty()) {
+            return null;
+        }
+        return applyGatewayPlaceholders(new LinkedHashMap<>(request.getProcessorPayload()), gatewayId, request);
+    }
+
+    private List<Map<String, Object>> resolveVasPayloads(NmiMerchantOnboardingRequestDto request, String gatewayId) {
+        List<Map<String, Object>> payloads = new ArrayList<>();
+        if (request.getVasPayloads() != null) {
+            for (Map<String, Object> vas : request.getVasPayloads()) {
+                if (vas != null && !vas.isEmpty()) {
+                    payloads.add(applyGatewayPlaceholders(new LinkedHashMap<>(vas), gatewayId, request));
+                }
+            }
+        }
+        if (!payloads.isEmpty()) {
+            return payloads;
+        }
+        for (String vasTemplate : splitTemplates(vasPayloadTemplates)) {
+            payloads.add(parseTemplate(vasTemplate, gatewayId, request));
+        }
+        return payloads;
+    }
+
+    private String resolveFeeScheduleId(NmiMerchantOnboardingRequestDto request) {
+        return firstNonBlank(request.getFeeScheduleId(), feeScheduleId);
+    }
+
+    private String resolveAgreementTextId(NmiMerchantOnboardingRequestDto request) {
+        return firstNonBlank(request.getAgreementTextId(), agreementTextId);
+    }
+
+    private boolean resolveAutoComplete(NmiMerchantOnboardingRequestDto request) {
+        if (request.getAutoComplete() != null) {
+            return request.getAutoComplete();
+        }
+        return autoComplete;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> applyGatewayPlaceholders(Map<String, Object> payload, String gatewayId,
+                                                         NmiMerchantOnboardingRequestDto request) {
+        Map<String, String> values = templateValues(gatewayId, request);
+        payload.replaceAll((key, value) -> replacePlaceholders(value, values));
+        if (!payload.containsKey("merchantId") || payload.get("merchantId") == null
+                || String.valueOf(payload.get("merchantId")).isBlank()) {
+            payload.put("merchantId", gatewayId);
+        }
+        return payload;
+    }
+
+    private Object replacePlaceholders(Object value, Map<String, String> values) {
+        if (value instanceof String s) {
+            String replaced = s;
+            for (Map.Entry<String, String> entry : values.entrySet()) {
+                replaced = replaced.replace("{" + entry.getKey() + "}", entry.getValue());
+            }
+            return replaced;
+        }
+        if (value instanceof Map<?, ?> nested) {
+            Map<String, Object> copy = new LinkedHashMap<>();
+            nested.forEach((k, v) -> copy.put(String.valueOf(k), replacePlaceholders(v, values)));
+            return copy;
+        }
+        if (value instanceof List<?> list) {
+            List<Object> copy = new ArrayList<>();
+            for (Object item : list) {
+                copy.add(replacePlaceholders(item, values));
+            }
+            return copy;
+        }
+        return value;
     }
 
     private Map<String, Object> buildLegacyPayload(Long userId, NmiMerchantOnboardingRequestDto r) {

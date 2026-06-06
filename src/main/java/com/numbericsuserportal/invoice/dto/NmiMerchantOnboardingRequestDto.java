@@ -55,6 +55,22 @@ public class NmiMerchantOnboardingRequestDto {
     private String timezone;
     private String language;
 
-    /** Exact reseller/NMI boarding payload. Values here override common-field defaults. */
+    /** Per-merchant fee plan (NMI costPlan). Overrides platform default in application.properties. */
+    private String feeScheduleId;
+    /** Per-merchant TOS/fees agreement id for complete step. Overrides platform default. */
+    private String agreementTextId;
+    /** When true, run NMI complete/active step for this merchant. Null = use platform default. */
+    private Boolean autoComplete;
+
+    /**
+     * Full POST /v4/processors JSON for this merchant. merchantId/gatewayId filled at runtime if omitted.
+     * Overrides platform processor template when provided.
+     */
+    private Map<String, Object> processorPayload;
+
+    /** Optional value-added services for this merchant (each item = one POST /v4/processors body). */
+    private java.util.List<Map<String, Object>> vasPayloads;
+
+    /** Exact reseller/NMI boarding payload. Values here override common-field defaults on create merchant. */
     private Map<String, Object> resellerPayload;
 }
