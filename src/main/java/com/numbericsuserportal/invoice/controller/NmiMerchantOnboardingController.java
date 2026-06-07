@@ -1,5 +1,6 @@
 package com.numbericsuserportal.invoice.controller;
 
+import com.numbericsuserportal.invoice.dto.NmiFeeScheduleListDto;
 import com.numbericsuserportal.invoice.dto.NmiMerchantOnboardingRequestDto;
 import com.numbericsuserportal.invoice.dto.NmiMerchantOnboardingStatusDto;
 import com.numbericsuserportal.invoice.dto.NmiMerchantDashboardDto;
@@ -33,6 +34,14 @@ public class NmiMerchantOnboardingController {
                                            MerchantNmiConfigService merchantNmiConfigService) {
         this.onboardingService = onboardingService;
         this.merchantNmiConfigService = merchantNmiConfigService;
+    }
+
+    @GetMapping("/v1/merchant/nmi/fee-schedules")
+    public ResponseEntity<NmiFeeScheduleListDto> feeSchedules(@AuthenticationPrincipal User currentUser) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(onboardingService.listFeeSchedules());
     }
 
     @PostMapping("/v1/merchant/nmi/onboarding")

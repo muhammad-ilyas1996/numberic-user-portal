@@ -3,6 +3,8 @@ package com.numbericsuserportal.invoice.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.numbericsuserportal.invoice.dto.NmiBoardingFlowResult;
+import com.numbericsuserportal.invoice.dto.NmiFeeScheduleListDto;
+import com.numbericsuserportal.invoice.dto.NmiFeeScheduleOptionDto;
 import com.numbericsuserportal.invoice.dto.NmiMerchantOnboardingRequestDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -146,6 +148,52 @@ public class NmiResellerOnboardingClient {
         return getJson(url);
     }
 
+    public NmiFeeScheduleListDto listFeeSchedules() {
+        NmiFeeScheduleListDto dto = new NmiFeeScheduleListDto();
+        if (!isV4Mode()) {
+            dto.setNmiConfigured(false);
+            dto.setMessage("NMI Partner API is not configured");
+            return dto;
+        }
+        if (!isBoardingConfigured()) {
+            dto.setNmiConfigured(false);
+            dto.setMessage("NMI reseller API key is not configured");
+            return dto;
+        }
+        dto.setNmiConfigured(true);
+        try {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("maxResults", 500);
+            body.put("offset", 0);
+            body.put("includeCustomFeeSchedules", true);
+            Map<String, Object> response = postJson(feeSchedulesUrl(), body);
+            dto.setPlans(mapFeeScheduleResults(extractResultsList(response)));
+            dto.setMessage(dto.getPlans().isEmpty() ? "No fee schedules found in NMI partner account" : null);
+            return dto;
+        } catch (HttpStatusCodeException e) {
+            dto.setMessage(extractErrorMessage(e));
+            return dto;
+        } catch (Exception e) {
+            dto.setMessage(e.getMessage());
+            return dto;
+        }
+    }
+
+    public String fetchAgreementTextId(String gatewayId) {
+        if (gatewayId == null || gatewayId.isBlank() || !isV4Mode()) {
+            return null;
+        }
+        try {
+            Map<String, Object> response = getJson(agreementTextUrl(gatewayId));
+            return firstNonBlank(
+                    asString(response.get("id")),
+                    asString(response.get("agreementTextId"))
+            );
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     public String createPaymentKeyIfConfigured(String gatewayId, String merchantStatus) {
         if (!autoCreatePaymentKey || gatewayId == null || gatewayId.isBlank() || !isV4Mode()) {
             return null;
@@ -237,18 +285,7 @@ public class NmiResellerOnboardingClient {
                 result.putResponse("vas_" + serviceId, vasResponse);
             }
 
-            Map<String, Object> patchBody = buildCompletionPatchBody(request);
-            if (!patchBody.isEmpty()) {
-                Map<String, Object> patchResponse = patchJson(merchantUrl(gatewayId), patchBody);
-                if (patchBody.containsKey("costPlan") && !patchBody.containsKey("status")) {
-                    result.addStep("ASSIGN_FEE_SCHEDULE");
-                    result.putResponse("assignFeeSchedule", patchResponse);
-                } else {
-                    result.addStep("COMPLETE_MERCHANT");
-                    result.putResponse("completeMerchant", patchResponse);
-                }
-                result.setStatus(asString(patchResponse.get("status")));
-            }
+            applyBoardingCompletionSteps(result, request, gatewayId);
 
             Map<String, Object> merchant = getJson(merchantUrl(gatewayId));
             result.putResponse("merchant", merchant);
@@ -319,21 +356,46 @@ public class NmiResellerOnboardingClient {
         return payload;
     }
 
-    private Map<String, Object> buildCompletionPatchBody(NmiMerchantOnboardingRequestDto request) {
-        Map<String, Object> patch = new LinkedHashMap<>();
+    private void applyBoardingCompletionSteps(NmiBoardingFlowResult result,
+                                              NmiMerchantOnboardingRequestDto request,
+                                              String gatewayId) {
         String resolvedFeeScheduleId = resolveFeeScheduleId(request);
+        boolean autoComplete = resolveAutoComplete(request);
+
         if (resolvedFeeScheduleId != null) {
-            patch.put("costPlan", parseNumericIfPossible(resolvedFeeScheduleId));
+            Map<String, Object> feePatch = new LinkedHashMap<>();
+            feePatch.put("costPlan", parseNumericIfPossible(resolvedFeeScheduleId));
+            Map<String, Object> feeResponse = patchJson(merchantUrl(gatewayId), feePatch);
+            result.addStep("ASSIGN_FEE_SCHEDULE");
+            result.putResponse("assignFeeSchedule", feeResponse);
+            result.setStatus(asString(feeResponse.get("status")));
         }
-        if (resolveAutoComplete(request)) {
-            patch.put("status", "active");
-            patch.put("activatePendingServices", true);
-            String resolvedAgreementTextId = resolveAgreementTextId(request);
-            if (resolvedAgreementTextId != null) {
-                patch.put("agreementTextId", resolvedAgreementTextId);
+
+        if (!autoComplete) {
+            return;
+        }
+
+        String agreementTextId = resolveAgreementTextId(request);
+        if (agreementTextId == null) {
+            agreementTextId = fetchAgreementTextId(gatewayId);
+            if (agreementTextId != null) {
+                result.addStep("FETCH_AGREEMENT_TEXT");
+                Map<String, Object> agreementMeta = new LinkedHashMap<>();
+                agreementMeta.put("agreementTextId", agreementTextId);
+                result.putResponse("agreementText", agreementMeta);
             }
         }
-        return patch;
+
+        Map<String, Object> completePatch = new LinkedHashMap<>();
+        completePatch.put("status", "active");
+        completePatch.put("activatePendingServices", true);
+        if (agreementTextId != null) {
+            completePatch.put("agreementTextId", agreementTextId);
+        }
+        Map<String, Object> completeResponse = patchJson(merchantUrl(gatewayId), completePatch);
+        result.addStep("COMPLETE_MERCHANT");
+        result.putResponse("completeMerchant", completeResponse);
+        result.setStatus(asString(completeResponse.get("status")));
     }
 
     private Map<String, Object> resolveProcessorPayload(NmiMerchantOnboardingRequestDto request, String gatewayId) {
@@ -558,6 +620,60 @@ public class NmiResellerOnboardingClient {
 
     private String securityKeysUrl(String gatewayId) {
         return trimSlash(apiBaseUrl) + "/v4/merchants/" + gatewayId + "/security_keys";
+    }
+
+    private String feeSchedulesUrl() {
+        return trimSlash(apiBaseUrl) + "/v4/fee-schedules";
+    }
+
+    private String agreementTextUrl(String gatewayId) {
+        return trimSlash(apiBaseUrl) + "/v4/merchants/" + gatewayId + "/agreement_text";
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<?> extractResultsList(Map<String, Object> response) {
+        if (response == null || response.isEmpty()) {
+            return List.of();
+        }
+        Object results = response.get("results");
+        if (results instanceof List<?> list) {
+            return list;
+        }
+        return List.of();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<NmiFeeScheduleOptionDto> mapFeeScheduleResults(List<?> results) {
+        List<NmiFeeScheduleOptionDto> plans = new ArrayList<>();
+        if (results == null) {
+            return plans;
+        }
+        for (Object item : results) {
+            if (!(item instanceof Map<?, ?> raw)) {
+                continue;
+            }
+            Map<String, Object> map = new LinkedHashMap<>();
+            raw.forEach((key, value) -> map.put(String.valueOf(key), value));
+
+            String scheduleId = asString(map.get("id"));
+            String costPlan = firstNonBlank(asString(map.get("costPlan")), scheduleId);
+            if (costPlan == null) {
+                continue;
+            }
+            NmiFeeScheduleOptionDto option = new NmiFeeScheduleOptionDto();
+            option.setFeeScheduleId(costPlan);
+            option.setScheduleId(scheduleId);
+            option.setName(firstNonBlank(asString(map.get("name")), asString(map.get("description")), "Fee plan " + costPlan));
+            option.setCurrency(asString(map.get("currency")));
+            Object merchants = map.get("merchants");
+            if (merchants instanceof List<?> merchantList) {
+                option.setInUse(!merchantList.isEmpty());
+            } else {
+                option.setInUse(false);
+            }
+            plans.add(option);
+        }
+        return plans;
     }
 
     private static String resolveUsername(NmiMerchantOnboardingRequestDto request, Long userId) {

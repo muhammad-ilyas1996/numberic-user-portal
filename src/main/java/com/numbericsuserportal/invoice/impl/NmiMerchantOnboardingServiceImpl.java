@@ -2,6 +2,7 @@ package com.numbericsuserportal.invoice.impl;
 
 import com.numbericsuserportal.invoice.dto.MerchantNmiConfigDto;
 import com.numbericsuserportal.invoice.dto.NmiBoardingFlowResult;
+import com.numbericsuserportal.invoice.dto.NmiFeeScheduleListDto;
 import com.numbericsuserportal.invoice.dto.NmiMerchantOnboardingRequestDto;
 import com.numbericsuserportal.invoice.dto.NmiMerchantOnboardingStatusDto;
 import com.numbericsuserportal.invoice.entity.MerchantNmiConfig;
@@ -74,6 +75,7 @@ public class NmiMerchantOnboardingServiceImpl implements NmiMerchantOnboardingSe
         }
 
         validateRequiredFields(request);
+        validateFeeScheduleSelection(request);
 
         NmiBoardingFlowResult flowResult = resellerClient.runBoardingFlow(request, userId);
         applyFlowResult(app, flowResult);
@@ -169,6 +171,18 @@ public class NmiMerchantOnboardingServiceImpl implements NmiMerchantOnboardingSe
             maybeSaveCredentials(app.getUserId(), app, payload);
         }
         return toDto(app, "Webhook processed");
+    }
+
+    @Override
+    public NmiFeeScheduleListDto listFeeSchedules() {
+        return resellerClient.listFeeSchedules();
+    }
+
+    private void validateFeeScheduleSelection(NmiMerchantOnboardingRequestDto request) {
+        if (request.getFeeScheduleId() != null && !request.getFeeScheduleId().isBlank()) {
+            return;
+        }
+        throw new IllegalArgumentException("feeScheduleId is required. Load plans from GET /v1/merchant/nmi/fee-schedules and select one.");
     }
 
     private void validateRequiredFields(NmiMerchantOnboardingRequestDto request) {

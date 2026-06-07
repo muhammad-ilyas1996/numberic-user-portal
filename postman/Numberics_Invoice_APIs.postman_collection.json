@@ -413,6 +413,15 @@
       "description": "Platform/reseller merchant onboarding via NMI Partner v4 API. Configure nmi.reseller.api-base-url + nmi.reseller.api.key in application.properties.",
       "item": [
         {
+          "name": "List Fee Schedules (onboarding dropdown)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/v1/merchant/nmi/fee-schedules",
+            "description": "Returns NMI partner fee plans for UI dropdown. Use plans[].feeScheduleId in onboarding submit."
+          }
+        },
+        {
           "name": "Submit Merchant Onboarding",
           "request": {
             "method": "POST",
@@ -422,7 +431,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessName\": \"Acme Services LLC\",\n  \"legalName\": \"Acme Services LLC\",\n  \"dbaName\": \"Acme Services\",\n  \"ein\": \"123456789\",\n  \"businessType\": \"LLC\",\n  \"mcc\": \"7399\",\n  \"website\": \"https://example.com\",\n  \"username\": \"acme.merchant\",\n  \"timezone\": \"America/New_York\",\n  \"language\": \"en_US\",\n  \"contactFirstName\": \"Jane\",\n  \"contactLastName\": \"Merchant\",\n  \"contactEmail\": \"merchant@example.com\",\n  \"contactPhone\": \"5551234567\",\n  \"address1\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zip\": \"10001\",\n  \"country\": \"US\",\n  \"ownerFirstName\": \"Jane\",\n  \"ownerLastName\": \"Merchant\",\n  \"ownerEmail\": \"merchant@example.com\",\n  \"ownerPhone\": \"5551234567\",\n  \"ownerSsnLast4\": \"1234\",\n  \"ownershipPercent\": 100,\n  \"monthlyVolume\": 25000,\n  \"averageTicket\": 150,\n  \"highTicket\": 1000,\n  \"settlementBankName\": \"Test Bank\",\n  \"settlementRoutingNumber\": \"110000000\",\n  \"settlementAccountNumber\": \"000123456789\",\n  \"settlementAccountType\": \"checking\",\n  \"accountHolderType\": \"business\",\n  \"resellerPayload\": {}\n}\n"
+              "raw": "{\n  \"feeScheduleId\": \"681312\",\n  \"businessName\": \"Acme Services LLC\",\n  \"legalName\": \"Acme Services LLC\",\n  \"dbaName\": \"Acme Services\",\n  \"ein\": \"123456789\",\n  \"businessType\": \"LLC\",\n  \"mcc\": \"7399\",\n  \"website\": \"https://example.com\",\n  \"username\": \"acme.merchant\",\n  \"timezone\": \"America/New_York\",\n  \"language\": \"en_US\",\n  \"contactFirstName\": \"Jane\",\n  \"contactLastName\": \"Merchant\",\n  \"contactEmail\": \"merchant@example.com\",\n  \"contactPhone\": \"5551234567\",\n  \"address1\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zip\": \"10001\",\n  \"country\": \"US\",\n  \"ownerFirstName\": \"Jane\",\n  \"ownerLastName\": \"Merchant\",\n  \"ownerEmail\": \"merchant@example.com\",\n  \"ownerPhone\": \"5551234567\",\n  \"ownerSsnLast4\": \"1234\",\n  \"ownershipPercent\": 100,\n  \"monthlyVolume\": 25000,\n  \"averageTicket\": 150,\n  \"highTicket\": 1000,\n  \"settlementBankName\": \"Test Bank\",\n  \"settlementRoutingNumber\": \"110000000\",\n  \"settlementAccountNumber\": \"000123456789\",\n  \"settlementAccountType\": \"checking\",\n  \"accountHolderType\": \"business\",\n  \"resellerPayload\": {}\n}\n"
             },
             "url": "{{baseUrl}}/v1/merchant/nmi/onboarding"
           }

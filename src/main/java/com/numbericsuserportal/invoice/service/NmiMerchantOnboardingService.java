@@ -1,5 +1,6 @@
 package com.numbericsuserportal.invoice.service;
 
+import com.numbericsuserportal.invoice.dto.NmiFeeScheduleListDto;
 import com.numbericsuserportal.invoice.dto.NmiMerchantOnboardingRequestDto;
 import com.numbericsuserportal.invoice.dto.NmiMerchantOnboardingStatusDto;
 
@@ -12,4 +13,6 @@ public interface NmiMerchantOnboardingService {
     NmiMerchantOnboardingStatusDto getLatestStatus(Long userId);
 
     NmiMerchantOnboardingStatusDto handleWebhook(Map<String, Object> payload);
+
+    NmiFeeScheduleListDto listFeeSchedules();
 }
