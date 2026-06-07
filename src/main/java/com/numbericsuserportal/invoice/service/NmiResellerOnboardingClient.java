@@ -146,8 +146,11 @@ public class NmiResellerOnboardingClient {
         return getJson(url);
     }
 
-    public String createPaymentKeyIfConfigured(String gatewayId) {
+    public String createPaymentKeyIfConfigured(String gatewayId, String merchantStatus) {
         if (!autoCreatePaymentKey || gatewayId == null || gatewayId.isBlank() || !isV4Mode()) {
+            return null;
+        }
+        if (!isActiveStatus(merchantStatus)) {
             return null;
         }
         try {

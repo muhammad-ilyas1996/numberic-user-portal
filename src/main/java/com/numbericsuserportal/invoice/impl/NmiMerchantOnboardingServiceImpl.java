@@ -107,7 +107,16 @@ public class NmiMerchantOnboardingServiceImpl implements NmiMerchantOnboardingSe
                 Map<String, Object> response = resellerClient.fetchStatus(app.getNmiApplicationId());
                 applyResellerResponse(app, response);
 
-                String paymentKey = resellerClient.createPaymentKeyIfConfigured(app.getNmiApplicationId());
+                boolean credentialsExist = merchantNmiConfigService.getEntityByUserId(userId)
+                        .map(c -> (c.getSecurityKey() != null && !c.getSecurityKey().isBlank())
+                                || (c.getNmiUsername() != null && !c.getNmiUsername().isBlank()
+                                && c.getNmiPassword() != null && !c.getNmiPassword().isBlank()))
+                        .orElse(false);
+                String paymentKey = credentialsExist
+                        ? null
+                        : resellerClient.createPaymentKeyIfConfigured(
+                                app.getNmiApplicationId(),
+                                firstNonBlank(app.getStatus(), asString(response.get("status"))));
                 if (paymentKey != null) {
                     Map<String, Object> keyResponse = new LinkedHashMap<>();
                     keyResponse.put("keyText", paymentKey);
