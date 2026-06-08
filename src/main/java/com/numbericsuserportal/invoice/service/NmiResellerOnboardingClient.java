@@ -12,9 +12,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -99,11 +102,16 @@ public class NmiResellerOnboardingClient {
     @Value("${nmi.reseller.payment-key-permissions:transaction,tokenization}")
     private String paymentKeyPermissions;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
     public NmiResellerOnboardingClient(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
+        factory.setConnectTimeout(java.time.Duration.ofSeconds(30));
+        factory.setConnectionRequestTimeout(java.time.Duration.ofSeconds(30));
+        this.restTemplate = new RestTemplate(factory);
     }
 
     public boolean isBoardingConfigured() {

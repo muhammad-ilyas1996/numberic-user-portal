@@ -6,7 +6,10 @@
   },
   "variable": [
     { "key": "baseUrl", "value": "https://www.numbrics.ai/numbricsservice" },
+    { "key": "localBaseUrl", "value": "http://localhost:8081/numbricsservice" },
     { "key": "token", "value": "" },
+    { "key": "feeScheduleId", "value": "681312" },
+    { "key": "nmiWebhookSecret", "value": "" },
     { "key": "tbSubmissionId", "value": "" },
     { "key": "tbRecordId", "value": "" },
     { "key": "tbPdfFile", "value": "1099NEC_COPY1_1Up.pdf" },
@@ -410,19 +413,34 @@
     },
     {
       "name": "NMI Merchant Onboarding",
-      "description": "Platform/reseller merchant onboarding via NMI Partner v4 API. Configure nmi.reseller.api-base-url + nmi.reseller.api.key in application.properties.",
+      "description": "Run in order for local/production test:\n1. Auth → Login (sets {{token}})\n2. Set baseUrl to {{localBaseUrl}} for local OR production {{baseUrl}}\n3. List Fee Schedules → copies first plan id to {{feeScheduleId}}\n4. Submit Merchant Onboarding\n5. Get Merchant NMI Dashboard (expect paymentReady true + ACTIVE)\n\nServer application.properties required:\n• nmi.reseller.api-base-url=https://secure.nmi.com/api\n• nmi.reseller.api.key=your v4 key\n• nmi.reseller.auto-complete=true\n• nmi.reseller.processor.payload-template=... test_cc ...\n\nChange contactEmail/username each test run (collection body uses {{$timestamp}}).",
       "item": [
         {
-          "name": "List Fee Schedules (onboarding dropdown)",
+          "name": "1. List Fee Schedules (dropdown)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json && json.plans && json.plans.length > 0) {",
+                  "  pm.collectionVariables.set('feeScheduleId', json.plans[0].feeScheduleId);",
+                  "  console.log('feeScheduleId set to', json.plans[0].feeScheduleId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{baseUrl}}/v1/merchant/nmi/fee-schedules",
-            "description": "Returns NMI partner fee plans for UI dropdown. Use plans[].feeScheduleId in onboarding submit."
+            "url": "{{localBaseUrl}}/v1/merchant/nmi/fee-schedules",
+            "description": "Returns NMI partner fee plans. Test script saves plans[0].feeScheduleId to {{feeScheduleId}} for step 2."
           }
         },
         {
-          "name": "Submit Merchant Onboarding",
+          "name": "2. Submit Merchant Onboarding",
           "request": {
             "method": "POST",
             "header": [
@@ -431,26 +449,51 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"feeScheduleId\": \"681312\",\n  \"businessName\": \"Acme Services LLC\",\n  \"legalName\": \"Acme Services LLC\",\n  \"dbaName\": \"Acme Services\",\n  \"ein\": \"123456789\",\n  \"businessType\": \"LLC\",\n  \"mcc\": \"7399\",\n  \"website\": \"https://example.com\",\n  \"username\": \"acme.merchant\",\n  \"timezone\": \"America/New_York\",\n  \"language\": \"en_US\",\n  \"contactFirstName\": \"Jane\",\n  \"contactLastName\": \"Merchant\",\n  \"contactEmail\": \"merchant@example.com\",\n  \"contactPhone\": \"5551234567\",\n  \"address1\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zip\": \"10001\",\n  \"country\": \"US\",\n  \"ownerFirstName\": \"Jane\",\n  \"ownerLastName\": \"Merchant\",\n  \"ownerEmail\": \"merchant@example.com\",\n  \"ownerPhone\": \"5551234567\",\n  \"ownerSsnLast4\": \"1234\",\n  \"ownershipPercent\": 100,\n  \"monthlyVolume\": 25000,\n  \"averageTicket\": 150,\n  \"highTicket\": 1000,\n  \"settlementBankName\": \"Test Bank\",\n  \"settlementRoutingNumber\": \"110000000\",\n  \"settlementAccountNumber\": \"000123456789\",\n  \"settlementAccountType\": \"checking\",\n  \"accountHolderType\": \"business\",\n  \"resellerPayload\": {}\n}\n"
+              "raw": "{\n  \"feeScheduleId\": \"{{feeScheduleId}}\",\n  \"businessName\": \"Numbrics Test LLC\",\n  \"legalName\": \"Numbrics Test LLC\",\n  \"dbaName\": \"Numbrics Test\",\n  \"ein\": \"123456789\",\n  \"businessType\": \"LLC\",\n  \"mcc\": \"5999\",\n  \"website\": \"https://example.com\",\n  \"username\": \"numbrics{{$timestamp}}\",\n  \"timezone\": \"America/New_York\",\n  \"language\": \"en_US\",\n  \"contactFirstName\": \"Jane\",\n  \"contactLastName\": \"Merchant\",\n  \"contactEmail\": \"merchant.{{$timestamp}}@example.com\",\n  \"contactPhone\": \"5551234567\",\n  \"address1\": \"123 Main St\",\n  \"address2\": \"Suite 100\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zip\": \"10001\",\n  \"country\": \"US\",\n  \"ownerFirstName\": \"Jane\",\n  \"ownerLastName\": \"Merchant\",\n  \"ownerEmail\": \"owner.{{$timestamp}}@example.com\",\n  \"ownerPhone\": \"5551234567\",\n  \"ownerSsnLast4\": \"1234\",\n  \"ownershipPercent\": 100,\n  \"monthlyVolume\": 25000,\n  \"averageTicket\": 150,\n  \"highTicket\": 1000,\n  \"settlementBankName\": \"Test Bank\",\n  \"settlementRoutingNumber\": \"110000000\",\n  \"settlementAccountNumber\": \"000123456789\",\n  \"settlementAccountType\": \"checking\",\n  \"accountHolderType\": \"business\"\n}\n"
+            },
+            "url": "{{localBaseUrl}}/v1/merchant/nmi/onboarding",
+            "description": "Required: feeScheduleId + business/contact/address/bank fields. Processor/agreement/autoComplete handled by server config."
+          }
+        },
+        {
+          "name": "3. Get Merchant NMI Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{localBaseUrl}}/v1/merchant/nmi/dashboard",
+            "description": "Expect paymentReady=true, nextAction=READY_TO_COLLECT, onboarding.status=ACTIVE after successful onboarding."
+          }
+        },
+        {
+          "name": "4. Get Merchant Onboarding Status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{localBaseUrl}}/v1/merchant/nmi/onboarding/status"
+          }
+        },
+        {
+          "name": "5. Get My NMI Config (Settings read-only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{localBaseUrl}}/v1/settings/nmi",
+            "description": "Masked security key + boardingStatus after auto onboarding."
+          }
+        },
+        {
+          "name": "Submit Merchant Onboarding (production baseUrl)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"feeScheduleId\": \"{{feeScheduleId}}\",\n  \"businessName\": \"Numbrics Test LLC\",\n  \"legalName\": \"Numbrics Test LLC\",\n  \"contactFirstName\": \"Jane\",\n  \"contactLastName\": \"Merchant\",\n  \"contactEmail\": \"merchant.{{$timestamp}}@example.com\",\n  \"contactPhone\": \"5551234567\",\n  \"address1\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zip\": \"10001\",\n  \"country\": \"US\",\n  \"settlementRoutingNumber\": \"110000000\",\n  \"settlementAccountNumber\": \"000123456789\",\n  \"settlementAccountType\": \"checking\",\n  \"accountHolderType\": \"business\"\n}\n"
             },
             "url": "{{baseUrl}}/v1/merchant/nmi/onboarding"
-          }
-        },
-        {
-          "name": "Get Merchant NMI Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{baseUrl}}/v1/merchant/nmi/dashboard",
-            "description": "Single response for UI card/grid: paymentReady, nextAction, masked credentials, onboarding status, merchant/account ids."
-          }
-        },
-        {
-          "name": "Get Merchant Onboarding Status",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{baseUrl}}/v1/merchant/nmi/onboarding/status"
           }
         },
         {
