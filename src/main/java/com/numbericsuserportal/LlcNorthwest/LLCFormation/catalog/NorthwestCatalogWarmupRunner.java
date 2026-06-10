@@ -19,7 +19,7 @@ public class NorthwestCatalogWarmupRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(NorthwestCatalogWarmupRunner.class);
 
-    @Value("${llc.northwest.website-url:https://www.numbrics.ai}")
+    @Value("${llc.northwest.website-url:www.northwestregisteredagent.com}")
     private String websiteUrl;
 
     @Autowired

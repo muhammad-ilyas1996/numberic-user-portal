@@ -151,7 +151,13 @@ public class LlcFormationService {
         }
         return repo.save(f);
     }
-
+    @Transactional(readOnly = true)
+    public java.util.List<LlcFormation> getFormationsForUser(User user) {
+        if (user == null || user.getUserId() == null) {
+            throw new IllegalArgumentException("User is required");
+        }
+        return repo.findByUserIdOrderByCreatedAtDesc(user.getUserId());
+    }
     private boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
     }

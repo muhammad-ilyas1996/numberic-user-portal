@@ -2,7 +2,12 @@ package com.numbericsuserportal.LlcNorthwest.LLCFormation.controller;
 
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.entity.LlcFormation;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.repo.LlcFormationRepository;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.service.LlcFormationNorthwestIntegrationService;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.service.LlcFormationNorthwestShoppingCartService;
+import com.numbericsuserportal.usermanagement.domain.User;
+import com.numbericsuserportal.usermanagement.repo.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
 import com.stripe.model.PaymentIntent;
@@ -20,8 +25,16 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class StripeWebhookController {
 
+    private static final Logger log = LoggerFactory.getLogger(StripeWebhookController.class);
+
     @Autowired
     private LlcFormationRepository formationRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private LlcFormationNorthwestIntegrationService northwestIntegrationService;
 
     @Autowired
     private LlcFormationNorthwestShoppingCartService llcFormationNorthwestShoppingCartService;
@@ -68,8 +81,21 @@ public class StripeWebhookController {
             return;
         }
         markPaid(f, paymentIntentId);
-        formationRepository.findById(formationId).ifPresent(fresh ->
-                llcFormationNorthwestShoppingCartService.submitAfterPaymentIfNeeded(fresh));
+        formationRepository.findById(formationId).ifPresent(fresh -> {
+            User user = userRepository.findById(fresh.getUserId()).orElse(null);
+            if (user != null) {
+                try {
+                    northwestIntegrationService.ensureReadyForSubmit(fresh, user);
+                } catch (Exception e) {
+                    log.error("NW prepare failed for formation {} on webhook", formationId, e);
+                    return;
+                }
+            } else {
+                log.warn("User not found for formation {} — skipping NW prepare", formationId);
+            }
+            formationRepository.findById(formationId).ifPresent(updated ->
+                    llcFormationNorthwestShoppingCartService.submitAfterPaymentIfNeeded(updated));
+        });
     }
 
     private void markPaid(LlcFormation f, String paymentIntentId) {

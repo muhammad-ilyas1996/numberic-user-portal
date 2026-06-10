@@ -4,6 +4,7 @@ import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.CalculatePaymentRes
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.CreatePaymentIntentResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.entity.LlcFormation;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.repo.LlcFormationRepository;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.service.LlcFormationNorthwestIntegrationService;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.service.LlcFormationPricingService;
 import com.numbericsuserportal.usermanagement.domain.User;
 import com.stripe.exception.StripeException;
@@ -27,6 +28,9 @@ public class LlcFormationPaymentsController {
 
     @Autowired
     private LlcFormationPricingService pricingService;
+
+    @Autowired
+    private LlcFormationNorthwestIntegrationService northwestIntegrationService;
 
     @PostMapping("/{formationId}/payments/calculate")
     public ResponseEntity<?> calculate(@AuthenticationPrincipal User currentUser, @PathVariable Long formationId) {
@@ -52,6 +56,10 @@ public class LlcFormationPaymentsController {
 
             CalculatePaymentResponseDTO calc = pricingService.calculate(f);
             pricingService.applySnapshotToFormation(f, calc);
+
+            northwestIntegrationService.prepare(f, currentUser);
+            f = formationRepository.findByIdAndUserId(formationId, currentUser.getUserId())
+                    .orElseThrow(() -> new IllegalArgumentException("Formation not found"));
 
             // Stripe amount in cents. client never sends amount.
             PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()

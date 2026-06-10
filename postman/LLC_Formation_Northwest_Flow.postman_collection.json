@@ -1,0 +1,311 @@
+{
+  "info": {
+    "name": "LLC Formation — Full Northwest Flow",
+    "description": "Run in order: Auth → Login, then Setup (once), then 01–12.\n\nLocal default baseUrl: http://localhost:8081/numbricsservice\n\nAfter Login, {{token}} is set automatically.\nAfter Create Draft, {{formationId}} is set.\nAfter Northwest Prepare, {{companyId}}, {{filingProductId}}, {{filingMethodId}} are set.\n\nChange LLC name in Step 2 if duplicate company error on prepare.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081/numbricsservice" },
+    { "key": "token", "value": "" },
+    { "key": "formationId", "value": "" },
+    { "key": "companyId", "value": "" },
+    { "key": "filingProductId", "value": "" },
+    { "key": "filingMethodId", "value": "" },
+    { "key": "jurisdictionCode", "value": "WY" },
+    { "key": "jurisdictionFull", "value": "Wyoming" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json && json.token) {",
+                  "  pm.collectionVariables.set('token', json.token);",
+                  "  pm.test('Token saved', function () { pm.expect(json.token).to.be.a('string'); });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"your-username\",\n  \"password\": \"your-password\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Update username/password. Sets collection variable {{token}}."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Setup (run once)",
+      "item": [
+        {
+          "name": "POST States bulk-seed-defaults",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/llc-northwest/llc-formation/states/bulk-seed-defaults",
+            "description": "Seeds llc_formation_state_catalog + rates. Run once per environment."
+          }
+        },
+        {
+          "name": "GET State by code (WY)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/llc-northwest/llc-formation/states/{{jurisdictionCode}}",
+            "description": "Verify catalog. Change jurisdictionCode variable for other states."
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 — Create draft",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "if (json && json.id) {",
+              "  pm.collectionVariables.set('formationId', String(json.id));",
+              "  pm.test('formationId saved: ' + json.id, function () { pm.expect(json.id).to.be.ok; });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/llc-northwest/llc-formation",
+        "description": "Creates new DRAFT formation. Saves {{formationId}}."
+      }
+    },
+    {
+      "name": "02 — Step1 state",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jurisdiction\": \"{{jurisdictionCode}}\",\n  \"operatesInFormationState\": true,\n  \"ownershipType\": \"single\"\n}"
+        },
+        "url": "{{baseUrl}}/api/llc-northwest/llc-formation/{{formationId}}/step1/state"
+      }
+    },
+    {
+      "name": "03 — Step2 LLC name",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.variables.set('uniqueLlcName', 'Postman LLC ' + Date.now());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"llcName\": \"{{uniqueLlcName}}\",\n  \"businessPurpose\": \"General business purposes\"\n}"
+        },
+        "url": "{{baseUrl}}/api/llc-northwest/llc-formation/{{formationId}}/step2/name",
+        "description": "Auto-generates unique LLC name via pre-request script."
+      }
+    },
+    {
+      "name": "04 — Step3 owner details",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ownerFirstName\": \"John\",\n  \"ownerLastName\": \"Doe\",\n  \"ownerDob\": \"1990-01-15\",\n  \"ownershipPct\": 100,\n  \"managementType\": \"member\",\n  \"filingSpeed\": \"standard\",\n  \"addonEin\": false,\n  \"addonScorp\": false\n}"
+        },
+        "url": "{{baseUrl}}/api/llc-northwest/llc-formation/{{formationId}}/step3/details"
+      }
+    },
+    {
+      "name": "05 — Step4 registered agent (OWN)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"agentType\": \"OWN\",\n  \"agentName\": \"Jane Agent\",\n  \"street\": \"123 Main Street\",\n  \"city\": \"Cheyenne\",\n  \"state\": \"{{jurisdictionCode}}\",\n  \"zip\": \"82001\"\n}"
+        },
+        "url": "{{baseUrl}}/api/llc-northwest/llc-formation/{{formationId}}/step4/registered-agent",
+        "description": "agent state must match formation state (jurisdictionCode)."
+      }
+    },
+    {
+      "name": "06 — Northwest prepare",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "if (json && json.companyId) { pm.collectionVariables.set('companyId', json.companyId); }",
+              "if (json && json.filingProductId) { pm.collectionVariables.set('filingProductId', json.filingProductId); }",
+              "if (json && json.filingMethodId) { pm.collectionVariables.set('filingMethodId', json.filingMethodId); }",
+              "if (json && json.jurisdictionFullName) { pm.collectionVariables.set('jurisdictionFull', json.jurisdictionFullName); }",
+              "pm.test('companyId present', function () { pm.expect(json.companyId).to.be.a('string'); });",
+              "pm.test('shoppingCartReady', function () { pm.expect(json.shoppingCartReady).to.eql(true); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/llc-northwest/llc-formation/{{formationId}}/northwest/prepare",
+        "description": "No body. Creates NW company, filing IDs, shopping cart JSON."
+      }
+    },
+    {
+      "name": "07 — GET formation (verify DB)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var f = pm.response.json();",
+              "pm.test('companyId set', function () { pm.expect(f.companyId).to.be.a('string').and.not.empty; });",
+              "pm.test('filingProductId set', function () { pm.expect(f.filingProductId).to.be.a('string').and.not.empty; });",
+              "pm.test('filingMethodId set', function () { pm.expect(f.filingMethodId).to.be.a('string').and.not.empty; });",
+              "pm.test('northwestShoppingCartJson set', function () { pm.expect(f.northwestShoppingCartJson).to.be.a('string').and.not.empty; });",
+              "pm.test('filingStatus prepare complete', function () { pm.expect(f.filingStatus).to.eql('northwest_prepare_complete'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/llc-northwest/llc-formation/{{formationId}}"
+      }
+    },
+    {
+      "name": "08 — NW live check (filing-methods)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('NW company reachable', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/llc-northwest/filing-methods?companyId={{companyId}}&filingProductId={{filingProductId}}&jurisdiction={{jurisdictionFull}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "llc-northwest", "filing-methods"],
+          "query": [
+            { "key": "companyId", "value": "{{companyId}}" },
+            { "key": "filingProductId", "value": "{{filingProductId}}" },
+            { "key": "jurisdiction", "value": "{{jurisdictionFull}}" }
+          ]
+        },
+        "description": "200 = company exists on Northwest. No auth required."
+      }
+    },
+    {
+      "name": "09 — Payment calculate (optional)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/llc-northwest/llc-formation/{{formationId}}/payments/calculate"
+      }
+    },
+    {
+      "name": "10 — Payment intent (optional)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/llc-northwest/llc-formation/{{formationId}}/payments/intent",
+        "description": "Returns Stripe clientSecret. Also calls prepare() internally."
+      }
+    },
+    {
+      "name": "11 — NW submit after payment (local dev)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "pm.test('checkout complete', function () { pm.expect(json.filingStatus).to.eql('northwest_checkout_complete'); });",
+              "pm.test('status SUBMITTED', function () { pm.expect(json.status).to.eql('SUBMITTED'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/llc-northwest/llc-formation/{{formationId}}/northwest/submit-after-payment",
+        "description": "Use on localhost when Stripe webhook is unavailable."
+      }
+    },
+    {
+      "name": "12 — GET formation (final)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var f = pm.response.json();",
+              "pm.test('SUBMITTED', function () { pm.expect(f.status).to.eql('SUBMITTED'); });",
+              "pm.test('northwest_checkout_complete', function () { pm.expect(f.filingStatus).to.eql('northwest_checkout_complete'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/llc-northwest/llc-formation/{{formationId}}"
+      }
+    }
+  ]
+}

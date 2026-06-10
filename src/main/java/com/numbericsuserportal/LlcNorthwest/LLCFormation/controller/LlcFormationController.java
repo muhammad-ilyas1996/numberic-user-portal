@@ -40,7 +40,17 @@ public class LlcFormationController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
-
+    @GetMapping
+    public ResponseEntity<?> getAllFormations(@AuthenticationPrincipal User currentUser) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            return ResponseEntity.ok(formationService.getFormationsForUser(currentUser));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
     @GetMapping("/{formationId}")
     public ResponseEntity<?> getFormation(@AuthenticationPrincipal User currentUser, @PathVariable Long formationId) {
         if (currentUser == null) {
