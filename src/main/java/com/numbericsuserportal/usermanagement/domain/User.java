@@ -1,5 +1,6 @@
 package com.numbericsuserportal.usermanagement.domain;
 
+import com.numbericsuserportal.kintsugi.domain.SalesTaxBusinessType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -155,6 +156,23 @@ public class User {
 
     @Column(name = "consent_to_share_data", columnDefinition = "BIT(1) DEFAULT 0")
     private Boolean consentToShareData = false;
+
+    // ============================================
+    // KINTSUGI / SALES TAX FIELDS
+    // ============================================
+
+    @Column(name = "kintsugi_customer_id", length = 100)
+    private String kintsugiCustomerId;
+
+    @Column(name = "sales_tax_enabled")
+    private Boolean salesTaxEnabled = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "business_type", length = 30)
+    private SalesTaxBusinessType businessType;
+
+    @Column(name = "business_type_description", columnDefinition = "TEXT")
+    private String businessTypeDescription;
 
     // ============================================
     // EXISTING ENUMS

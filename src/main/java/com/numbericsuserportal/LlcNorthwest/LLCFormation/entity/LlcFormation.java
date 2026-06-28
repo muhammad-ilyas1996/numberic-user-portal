@@ -154,7 +154,7 @@ public class LlcFormation {
     @Column(name = "filing_reference")
     private String filingReference;
 
-    @Column(name = "filing_status")
+    @Column(name = "filing_status", length = 255)
     private String filingStatus;
 
     /** Exact JSON POST body for Corporate Tools POST /shopping-cart (preferred over server-side fallback). */

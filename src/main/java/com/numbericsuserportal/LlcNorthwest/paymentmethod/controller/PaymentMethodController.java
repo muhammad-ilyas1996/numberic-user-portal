@@ -25,6 +25,36 @@ public class PaymentMethodController {
     private PaymentMethodService paymentMethodService;
 
     /**
+     * GET /api/llc-northwest/payment-methods/checkout-token
+     * Returns the payment_token (NW saved card id) used for shopping-cart checkout.
+     */
+    @GetMapping("/checkout-token")
+    public ResponseEntity<?> getCheckoutToken() {
+        try {
+            PaymentMethodsResponseDTO response = paymentMethodService.getPaymentMethods();
+            if (response.getResult() != null && !response.getResult().isEmpty()
+                    && response.getResult().get(0).getId() != null) {
+                var method = response.getResult().get(0);
+                return ResponseEntity.ok(Map.of(
+                        "payment_token", method.getId().toString(),
+                        "last4", method.getLast4() != null ? method.getLast4() : "",
+                        "brand", method.getBrand() != null ? method.getBrand() : "",
+                        "configProperty", "llc.northwest.payment-method-id"));
+            }
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "No saved NW payment methods on this wholesaler account",
+                    "setup", Map.of(
+                            "step1", "POST /api/llc-northwest/payment-methods with card details",
+                            "step2", "GET /api/llc-northwest/payment-methods to read id",
+                            "step3", "Set llc.northwest.payment-method-id=<uuid> on the server")));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    /**
      * GET /api/llc-northwest/payment-methods
      * Returns a list of all saved card payment methods for the authorized account
      */

@@ -1,11 +1,14 @@
 package com.numbericsuserportal.LlcNorthwest.LLCFormation.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.NorthwestEntityTypes;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.NorthwestPrepareResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.entity.LlcFormation;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.repo.LlcFormationMemberRepository;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.repo.LlcFormationRegisteredAgentRepository;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.repo.LlcFormationRepository;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.CompaniesResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.companies.dto.CompanyDTO;
@@ -52,6 +55,18 @@ public class LlcFormationNorthwestIntegrationService {
     @Autowired
     private UserFormationCompanyRepository userFormationCompanyRepository;
 
+    @Autowired
+    private LlcFormationRegisteredAgentRepository registeredAgentRepository;
+
+    @Autowired
+    private LlcFormationMemberRepository memberRepository;
+
+    @Autowired
+    private NorthwestShoppingCartFormDataBuilder shoppingCartFormDataBuilder;
+
+    @Autowired
+    private NorthwestFilingProductSelector filingProductSelector;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -64,7 +79,7 @@ public class LlcFormationNorthwestIntegrationService {
         String jurisdictionFull = resolveJurisdictionFullName(formation);
         String companyId = ensureCompanyCreated(formation, user, jurisdictionFull);
         resolveFilingIds(formation, companyId, jurisdictionFull);
-        buildAndSaveShoppingCart(formation);
+        buildAndSaveShoppingCart(formation, jurisdictionFull);
 
         if (!"PAID".equals(formation.getStatus()) && !"SUBMITTED".equals(formation.getStatus())) {
             formation.setStatus("READY_FOR_PAYMENT");
@@ -90,10 +105,24 @@ public class LlcFormationNorthwestIntegrationService {
             prepare(formation, user);
         } catch (Exception e) {
             log.error("Failed to prepare NW integration for formation {} on payment webhook", formation.getId(), e);
-            formation.setFilingStatus("northwest_prepare_failed: " + e.getMessage());
+            formation.setFilingStatus(FilingStatusFormatter.failure("northwest_prepare_failed", e.getMessage()));
             formationRepository.save(formation);
             throw e;
         }
+    }
+
+    /**
+     * Rebuilds cart JSON from latest wizard data (steps 1–4) before NW checkout.
+     */
+    @Transactional
+    public void rebuildShoppingCartJson(LlcFormation formation) {
+        if (formation.getCompanyId() == null || formation.getCompanyId().isBlank()
+                || formation.getFilingMethodId() == null || formation.getFilingMethodId().isBlank()) {
+            return;
+        }
+        String jurisdictionFull = resolveJurisdictionFullName(formation);
+        buildAndSaveShoppingCart(formation, jurisdictionFull);
+        formationRepository.save(formation);
     }
 
     private void validateFormationReady(LlcFormation formation) {
@@ -232,29 +261,52 @@ public class LlcFormationNorthwestIntegrationService {
     }
 
     private void resolveFilingIds(LlcFormation formation, String companyId, String jurisdictionFull) {
+        if (formation.getNorthwestCheckoutCompletedAt() != null) {
+            return;
+        }
+
         UUID companyUuid = UUID.fromString(companyId);
 
-        if (formation.getFilingProductId() == null || formation.getFilingProductId().isBlank()) {
-            FilingProductDTO product = resolveFilingProduct(jurisdictionFull);
-            if (product == null || product.getId() == null) {
-                throw new IllegalStateException("No filing product found for " + jurisdictionFull);
-            }
-            formation.setFilingProductId(product.getId().toString());
+        FilingProductDTO product = resolveFilingProduct(companyId, jurisdictionFull);
+        if (product == null || product.getId() == null) {
+            throw new IllegalStateException(
+                    "No LLC formation filing product found for " + jurisdictionFull
+                            + ". Check NW catalog or set llc.northwest.filing-product-name.");
         }
+        formation.setFilingProductId(product.getId().toString());
 
-        if (formation.getFilingMethodId() == null || formation.getFilingMethodId().isBlank()) {
-            UUID filingProductUuid = UUID.fromString(formation.getFilingProductId().trim());
-            FilingMethodsResponseDTO methods = corporateToolsApiService.getFilingMethods(
-                    companyUuid, filingProductUuid, jurisdictionFull);
-            FilingMethodDTO method = pickFilingMethod(methods, formation.getFilingSpeed());
-            if (method == null || method.getId() == null) {
-                throw new IllegalStateException("No filing method found for " + jurisdictionFull);
-            }
-            formation.setFilingMethodId(method.getId().toString());
+        UUID filingProductUuid = UUID.fromString(formation.getFilingProductId().trim());
+        FilingMethodsResponseDTO methods = corporateToolsApiService.getFilingMethods(
+                companyUuid, filingProductUuid, jurisdictionFull);
+        FilingMethodDTO method = pickFilingMethod(methods, formation.getFilingSpeed());
+        if (method == null || method.getId() == null) {
+            throw new IllegalStateException("No filing method found for " + jurisdictionFull);
         }
+        formation.setFilingMethodId(method.getId().toString());
+
+        log.info("NW filing resolved for formation {}: product={} ({}) method={} ({})",
+                formation.getId(),
+                product.getId(),
+                product.getName(),
+                method.getId(),
+                method.getFilingDescription());
     }
 
-    private FilingProductDTO resolveFilingProduct(String jurisdictionFull) {
+    private FilingProductDTO resolveFilingProduct(String companyId, String jurisdictionFull) {
+        if (companyId != null && !companyId.isBlank()) {
+            try {
+                FilingProductsResponseDTO offerings = corporateToolsApiService.getFilingProductsOfferings(
+                        companyId, jurisdictionFull);
+                FilingProductDTO fromOfferings = pickFilingProduct(offerings);
+                if (fromOfferings != null && fromOfferings.getId() != null) {
+                    log.info("Resolved NW cart product from offerings for company {}: {} ({})",
+                            companyId, fromOfferings.getId(), fromOfferings.getName());
+                    return fromOfferings;
+                }
+            } catch (Exception e) {
+                log.warn("NW filing-products/offerings failed for company {}: {}", companyId, e.getMessage());
+            }
+        }
         for (String entityType : NorthwestEntityTypes.FILING_PRODUCT_CANDIDATES) {
             FilingProductsResponseDTO products = corporateToolsApiService.getFilingProducts(
                     websiteUrl, jurisdictionFull, entityType);
@@ -270,14 +322,14 @@ public class LlcFormationNorthwestIntegrationService {
         if (products == null || products.getResult() == null || products.getResult().isEmpty()) {
             return null;
         }
-        return products.getResult().get(0);
+        return filingProductSelector.pickFormationProduct(products.getResult()).orElse(null);
     }
 
     private FilingMethodDTO pickFilingMethod(FilingMethodsResponseDTO methods, String filingSpeed) {
         if (methods == null || methods.getResult() == null || methods.getResult().isEmpty()) {
             return null;
         }
-        List<FilingMethodDTO> list = methods.getResult();
+        List<FilingMethodDTO> list = filingProductSelector.filterFormationMethods(methods.getResult());
         String speed = filingSpeed == null ? "standard" : filingSpeed.trim().toLowerCase();
 
         if ("expedited".equals(speed)) {
@@ -296,33 +348,53 @@ public class LlcFormationNorthwestIntegrationService {
         return list.get(0);
     }
 
-    private void buildAndSaveShoppingCart(LlcFormation formation) {
+    /**
+     * Returns form_data JSON for POST /order-items/requiring-attention after checkout.
+     */
+    public JsonNode buildFormDataJson(LlcFormation formation) {
+        String jurisdictionFull = resolveJurisdictionFullName(formation);
+        var registeredAgent = registeredAgentRepository.findByFormationId(formation.getId()).orElse(null);
+        var members = memberRepository.findByFormationIdOrderByIdAsc(formation.getId());
+        return shoppingCartFormDataBuilder.build(formation, registeredAgent, members, jurisdictionFull);
+    }
+
+    private void buildAndSaveShoppingCart(LlcFormation formation, String jurisdictionFullName) {
         ObjectNode root = objectMapper.createObjectNode();
         root.put("company_id", formation.getCompanyId().trim());
 
+        ObjectNode addToCart = objectMapper.createObjectNode();
+        addToCart.put("company_id", formation.getCompanyId().trim());
+        if (formation.getFilingProductId() != null && !formation.getFilingProductId().isBlank()) {
+            addToCart.put("product_id", formation.getFilingProductId().trim());
+        }
+        addToCart.put("product_option_id", formation.getFilingMethodId().trim());
+        addToCart.put("quantity", 1);
+        root.set("add_to_cart", addToCart);
+
+        var registeredAgent = registeredAgentRepository.findByFormationId(formation.getId()).orElse(null);
+        var members = memberRepository.findByFormationIdOrderByIdAsc(formation.getId());
+
+        ObjectNode formData = shoppingCartFormDataBuilder.build(
+                formation, registeredAgent, members, jurisdictionFullName);
+        root.set("form_data", formData);
+
+        // Legacy diagnostic shape used by Postman collection step 08.
         ArrayNode items = objectMapper.createArrayNode();
         ObjectNode item = objectMapper.createObjectNode();
+        if (formation.getFilingProductId() != null && !formation.getFilingProductId().isBlank()) {
+            item.put("product_id", formation.getFilingProductId().trim());
+        }
+        item.put("quantity", 1);
+        item.put("product_option_id", formation.getFilingMethodId().trim());
         item.put("filing_method_id", formation.getFilingMethodId().trim());
-
-        ObjectNode formData = objectMapper.createObjectNode();
-        if (formation.getLlcName() != null) {
-            formData.put("company_name", formation.getLlcName().trim());
-        }
-        if (formation.getBusinessPurpose() != null && !formation.getBusinessPurpose().isBlank()) {
-            formData.put("business_purpose", formation.getBusinessPurpose().trim());
-        }
-        if (formation.getOwnerFirstName() != null) {
-            formData.put("member_first_name", formation.getOwnerFirstName().trim());
-        }
-        if (formation.getOwnerLastName() != null) {
-            formData.put("member_last_name", formation.getOwnerLastName().trim());
-        }
         item.set("form_data", formData);
         items.add(item);
         root.set("shopping_cart_items", items);
 
         try {
             formation.setNorthwestShoppingCartJson(objectMapper.writeValueAsString(root));
+            log.info("Shopping cart built for formation {} with {} form_data fields",
+                    formation.getId(), formData.size());
         } catch (Exception e) {
             throw new IllegalStateException("Failed to build shopping cart JSON", e);
         }

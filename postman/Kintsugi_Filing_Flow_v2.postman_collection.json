@@ -1,0 +1,352 @@
+{
+  "info": {
+    "name": "Kintsugi Sales Tax — Filing Flow v2",
+    "description": "Run in order: Auth → Login, then 00–14.\n\nLocal default baseUrl: http://localhost:8081/numbricsservice\n\nAfter Login, {{token}} is set.\nAfter step 3 save-selection / step 4 / step 5 review, {{filingId}} is set.\n\nUpdate Login username/password.\nUpdate {{categoryName}} and {{subcategoryName}} from step 1–2 responses if needed.\n\nStripe payment-intent (step 12) is optional — you can file directly for local DB testing.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081/numbricsservice" },
+    { "key": "token", "value": "" },
+    { "key": "filingId", "value": "" },
+    { "key": "stateCode", "value": "TX" },
+    { "key": "businessType", "value": "pet_store" },
+    { "key": "categoryName", "value": "Physical" },
+    { "key": "subcategoryName", "value": "Oral Hygiene" },
+    { "key": "taxableAmount", "value": "4800" },
+    { "key": "exemptAmount", "value": "28000" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json && json.token) {",
+                  "  pm.collectionVariables.set('token', json.token);",
+                  "  pm.test('Token saved', function () { pm.expect(json.token).to.be.a('string'); });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"your-username\",\n  \"password\": \"your-password\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "00 — Step 0A Business type setup",
+      "item": [
+        {
+          "name": "GET step0a/setup",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/kintsugi/filing-flow/step0a/setup"
+          }
+        },
+        {
+          "name": "POST step0a/business-type",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessType\": \"{{businessType}}\",\n  \"description\": \"\"\n}"
+            },
+            "url": "{{baseUrl}}/api/kintsugi/filing-flow/step0a/business-type"
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 — Step 0B Exemptions",
+      "item": [
+        {
+          "name": "GET step0b/exemptions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/kintsugi/filing-flow/step0b/exemptions?stateCode={{stateCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "kintsugi", "filing-flow", "step0b", "exemptions"],
+              "query": [{ "key": "stateCode", "value": "{{stateCode}}" }]
+            }
+          }
+        },
+        {
+          "name": "POST step0b/exemptions/confirm (save to DB)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/kintsugi/filing-flow/step0b/exemptions/confirm?stateCode={{stateCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "kintsugi", "filing-flow", "step0b", "exemptions", "confirm"],
+              "query": [{ "key": "stateCode", "value": "{{stateCode}}" }]
+            },
+            "description": "Saves exemption profile to user_exemption_profiles table."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 — Step 1 Categories (Kintsugi)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "if (json && json.categories && json.categories.length > 0) {",
+              "  pm.collectionVariables.set('categoryName', json.categories[0].name);",
+              "  pm.test('categoryName set: ' + json.categories[0].name, function () { pm.expect(json.categories[0].name).to.be.ok; });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/kintsugi/filing-flow/step1/categories"
+      }
+    },
+    {
+      "name": "03 — Step 2 Subcategories (Kintsugi)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "if (json && json.subcategories && json.subcategories.length > 0) {",
+              "  pm.collectionVariables.set('subcategoryName', json.subcategories[0].name);",
+              "  pm.test('subcategoryName set: ' + json.subcategories[0].name, function () { pm.expect(json.subcategories[0].name).to.be.ok; });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/kintsugi/filing-flow/step2/categories/{{categoryName}}/subcategories"
+      }
+    },
+    {
+      "name": "04 — Step 3 States",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/kintsugi/filing-flow/step3/states"
+      }
+    },
+    {
+      "name": "05 — Step 3 State filing context",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/kintsugi/filing-flow/step3/states/{{stateCode}}/filing-context"
+      }
+    },
+    {
+      "name": "06 — Step 3 Save selection (DB draft)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "var id = json && json.selection && json.selection.filingId;",
+              "if (id) {",
+              "  pm.collectionVariables.set('filingId', id);",
+              "  pm.test('filingId saved: ' + id, function () { pm.expect(id).to.be.a('string'); });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"filingId\": \"{{filingId}}\",\n  \"stateCode\": \"{{stateCode}}\",\n  \"category\": \"{{categoryName}}\",\n  \"subcategory\": \"{{subcategoryName}}\",\n  \"stateTaxAccountId\": \"32-1234567-8\",\n  \"registrationRequired\": false\n}"
+        },
+        "url": "{{baseUrl}}/api/kintsugi/filing-flow/step3/save-selection",
+        "description": "Creates/updates sales_tax_filings row (DRAFT)."
+      }
+    },
+    {
+      "name": "07 — Step 4 Estimate sales (save to DB)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "var est = json && json.estimate;",
+              "if (est && est.filingId) {",
+              "  pm.collectionVariables.set('filingId', est.filingId);",
+              "  pm.test('filingId saved: ' + est.filingId, function () { pm.expect(est.filingId).to.be.a('string'); });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"filingId\": \"{{filingId}}\",\n  \"stateCode\": \"{{stateCode}}\",\n  \"category\": \"{{categoryName}}\",\n  \"subcategory\": \"{{subcategoryName}}\",\n  \"taxableAmount\": {{taxableAmount}},\n  \"exemptAmount\": {{exemptAmount}}\n}"
+        },
+        "url": "{{baseUrl}}/api/kintsugi/filing-flow/step4/estimate-sales"
+      }
+    },
+    {
+      "name": "08 — Step 5 Review (DB draft)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "var id = json && json.review && json.review.filingId;",
+              "if (id) {",
+              "  pm.collectionVariables.set('filingId', id);",
+              "  pm.test('filingId saved: ' + id, function () { pm.expect(id).to.be.a('string'); });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"filingId\": \"{{filingId}}\",\n  \"stateCode\": \"{{stateCode}}\",\n  \"category\": \"{{categoryName}}\",\n  \"subcategory\": \"{{subcategoryName}}\",\n  \"taxableAmount\": {{taxableAmount}},\n  \"exemptAmount\": {{exemptAmount}},\n  \"stateTaxAccountId\": \"32-1234567-8\",\n  \"registrationRequired\": false\n}"
+        },
+        "url": "{{baseUrl}}/api/kintsugi/filing-flow/step5/review"
+      }
+    },
+    {
+      "name": "Optional — Stripe",
+      "item": [
+        {
+          "name": "09 — Step 5 Payment intent",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filingId\": \"{{filingId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/kintsugi/filing-flow/step5/payment-intent",
+            "description": "Optional. Requires Stripe key in application.properties. Skip for local DB-only test."
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 — Step 5 File (complete + save)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "pm.test('Flow saved', function () {",
+              "  pm.expect(json.filed && json.filed.saved).to.eql(true);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"filingId\": \"{{filingId}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/kintsugi/filing-flow/step5/file",
+        "description": "Marks filing FILED, flow_completed=true, saves full record to sales_tax_filings."
+      }
+    },
+    {
+      "name": "11 — Step 6 Filed result",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/kintsugi/filing-flow/step6/filed/{{filingId}}"
+      }
+    },
+    {
+      "name": "12 — GET filing from DB",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/kintsugi/filing-flow/filings/{{filingId}}",
+        "description": "Verify full saved record in sales_tax_filings."
+      }
+    },
+    {
+      "name": "13 — Filing schedule",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/kintsugi/filing-flow/schedule"
+      }
+    },
+    {
+      "name": "14 — Dashboard summary",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/kintsugi/filing-flow/summary"
+      }
+    }
+  ]
+}

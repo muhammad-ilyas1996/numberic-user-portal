@@ -645,32 +645,29 @@ public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
         try {
             String path = "/payment-methods";
             String token = authService.generateTokenForGet(path, "");
-            
+
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + token);
             headers.setContentType(MediaType.APPLICATION_JSON);
-            
+
             HttpEntity<String> entity = new HttpEntity<>(headers);
             String url = baseUrl + path;
-            
-            System.out.println("=== Get Payment Methods ===");
-            System.out.println("URL: " + url);
-            
+
             ResponseEntity<String> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,
                 entity,
                 String.class
             );
-            
-            System.out.println("Response Status: " + response.getStatusCode());
-            System.out.println("Response Body: " + response.getBody());
-            
+
             return objectMapper.readValue(response.getBody(), PaymentMethodsResponseDTO.class);
-            
+
+        } catch (HttpStatusCodeException e) {
+            PaymentMethodsResponseDTO empty = new PaymentMethodsResponseDTO();
+            empty.setSuccess(false);
+            empty.setResult(List.of());
+            return empty;
         } catch (Exception e) {
-            System.err.println("Error getting payment methods: " + e.getMessage());
-            e.printStackTrace();
             throw new RuntimeException("Failed to get payment methods: " + e.getMessage(), e);
         }
     }
@@ -1125,21 +1122,18 @@ public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
                 throw new IllegalArgumentException("companyIds is required");
             }
             String path = "/shopping-cart";
-            StringBuilder queryBuilder = new StringBuilder();
-            for (int i = 0; i < companyIds.size(); i++) {
-                if (i > 0) {
-                    queryBuilder.append("&");
-                }
-                queryBuilder.append("company_ids[]=").append(companyIds.get(i).toString());
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl + path);
+            for (UUID companyId : companyIds) {
+                builder.queryParam("company_ids[]", companyId.toString());
             }
-            String queryString = queryBuilder.toString();
-            String token = authService.generateTokenForGet(path, queryString);
+            URI uri = builder.encode(StandardCharsets.UTF_8).build().toUri();
+            String queryForJwt = rawQueryForJwt(uri);
+            String token = authService.generateTokenForGet(path, queryForJwt);
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + token);
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<String> entity = new HttpEntity<>(headers);
-            String url = baseUrl + path + "?" + queryString;
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+            ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.GET, entity, String.class);
             return readJsonResponseBody(response.getBody());
         } catch (HttpStatusCodeException e) {
             return parseCorporateToolsErrorBody(e);
@@ -1229,11 +1223,16 @@ public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
         }
     }
 
-    /** Corporate Tools often returns JSON error bodies with HTTP 4xx — expose them instead of only throwing. */
     private JsonNode parseCorporateToolsErrorBody(HttpStatusCodeException e) {
         String body = e.getResponseBodyAsString(StandardCharsets.UTF_8);
         try {
-            return readJsonResponseBody(body);
+            JsonNode node = readJsonResponseBody(body);
+            ObjectNode enriched = node.isObject() ? (ObjectNode) node : objectMapper.createObjectNode();
+            enriched.put("httpStatus", e.getStatusCode().value());
+            if (!enriched.has("error") && !enriched.has("message")) {
+                enriched.put("error", e.getStatusCode().toString());
+            }
+            return enriched;
         } catch (Exception parseErr) {
             ObjectNode n = objectMapper.createObjectNode();
             n.put("httpStatus", e.getStatusCode().value());
