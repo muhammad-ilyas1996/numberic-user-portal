@@ -34,3 +34,36 @@ For the sandbox, **the recipient must join the sandbox once** before they can re
   confirms the API accepted the send; delivery depends on Twilio and opt-in.
 
 **Production:** For real production, you need a Twilio WhatsApp Business profile (approved by Twilio), not the sandbox.
+
+---
+
+## 3. Taalr Automation (Receipt + Invoice)
+
+Import `Numberics_Invoice_APIs.postman_collection.json` → folder **Taalr Automation (Receipt + Invoice)**.
+
+### App chat (easiest)
+
+1. **Auth → Login** (sets `{{token}}`)
+2. Set collection variables: `testCustomerName`, `testCustomerEmail`, `testInvoiceAmount`
+3. Run **`00 Reset Taalr session`**
+4. Run **`01 Invoice one-shot`** → reply should show invoice preview
+5. Run **`04 Confirm YES — send invoice`**
+
+Receipt OCR without WhatsApp:
+
+1. **`11 Receipt upload`** — pick a JPEG/PNG in form-data → sets `{{receiptId}}`
+2. **`13 Receipt save OCR`** — persists to DB
+3. **`14 List my receipts`** — verify
+
+### WhatsApp simulate
+
+1. Set `whatsappFrom` = `whatsapp:+YOUR_PHONE` (must match `users.phone` in DB)
+2. **`20 WhatsApp webhook — invoice text`**
+3. Check WhatsApp for preview reply
+4. **`21 WhatsApp webhook — confirm YES`**
+
+### Tips
+
+- Response `"model": "taalr-action"` = automation handled (not general Claude chat)
+- `taalr.actions.enabled=false` on server → these requests fall through to normal chat
+- Invoice `NO` leaves a DRAFT in DB (expected)

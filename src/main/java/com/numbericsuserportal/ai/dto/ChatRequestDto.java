@@ -25,4 +25,13 @@ public class ChatRequestDto {
      * Default {@code true}. Pair with {@code resetSession} for a clean onboarding re-run; DB profile row is unchanged.
      */
     private Boolean includeProfileInPrompt;
+
+    /** Optional base64-encoded receipt image (JPEG/PNG) for OCR automation. */
+    private String mediaBase64;
+
+    /** MIME type for {@link #mediaBase64}, e.g. image/jpeg */
+    private String mediaContentType;
+
+    /** Optional filename for receipt upload */
+    private String mediaFileName;
 }

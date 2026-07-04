@@ -52,20 +52,41 @@ public class AnthropicChatService {
     @Autowired
     private TaalrChatHistoryService taalrChatHistoryService;
 
+    @Autowired
+    private TaalrActionOrchestratorService taalrActionOrchestrator;
+
+    @Autowired
+    private TaalrActionSessionService taalrActionSessionService;
+
     public ChatResponseDto chat(User user, ChatRequestDto request) {
-        if (anthropicProperties.getKey() == null || anthropicProperties.getKey().isBlank()) {
-            return new ChatResponseDto(false, null,
-                    "Anthropic API is not configured. Set environment variable ANTHROPIC_API_KEY.", null, null);
-        }
         if (request == null || request.getMessage() == null || request.getMessage().isBlank()) {
-            return new ChatResponseDto(false, null, "Message is required.", null, null);
+            boolean hasMedia = request != null && request.getMediaBase64() != null && !request.getMediaBase64().isBlank();
+            if (!hasMedia) {
+                return new ChatResponseDto(false, null, "Message is required.", null, null);
+            }
         }
 
         chatRateLimiter.checkAllowed(user.getUserId());
 
-        if (Boolean.TRUE.equals(request.getResetSession())) {
+        if (request != null && Boolean.TRUE.equals(request.getResetSession())) {
             taalrAgentSessionService.clearSessionForUser(user.getUserId());
             taalrChatHistoryService.clearHistoryForUser(user.getUserId());
+            taalrActionSessionService.clearSession(
+                    taalrActionOrchestrator.buildAppChatRequest(user, "", null, null, null));
+        }
+
+        String userMessage = request.getMessage() != null ? request.getMessage().trim() : "";
+        var actionRequest = taalrActionOrchestrator.buildAppChatRequest(
+                user, userMessage, request.getMediaBase64(), request.getMediaContentType(), request.getMediaFileName());
+        var actionResult = taalrActionOrchestrator.handle(actionRequest);
+        if (actionResult.isHandled()) {
+            recordActionExchange(user, userMessage, actionResult.getReply());
+            return new ChatResponseDto(true, actionResult.getReply(), null, "taalr-action", null);
+        }
+
+        if (anthropicProperties.getKey() == null || anthropicProperties.getKey().isBlank()) {
+            return new ChatResponseDto(false, null,
+                    "Anthropic API is not configured. Set environment variable ANTHROPIC_API_KEY.", null, null);
         }
 
         OnboardingResponseDto profile = onboardingService.getOnboarding(user);
@@ -74,9 +95,18 @@ public class AnthropicChatService {
                 || Boolean.TRUE.equals(request.getIncludeProfileInPrompt());
 
         if (anthropicProperties.isManagedAgentsReady()) {
-            return chatViaManagedAgents(user, request.getMessage().trim(), profile, includeProfile);
+            return chatViaManagedAgents(user, userMessage, profile, includeProfile);
         }
-        return chatViaMessagesApi(user, profile, request.getMessage().trim(), includeProfile);
+        return chatViaMessagesApi(user, profile, userMessage, includeProfile);
+    }
+
+    private void recordActionExchange(User user, String userMessage, String assistantReply) {
+        if (userMessage != null && !userMessage.isBlank()) {
+            taalrChatHistoryService.appendUserMessage(user, userMessage);
+        }
+        if (assistantReply != null && !assistantReply.isBlank()) {
+            taalrChatHistoryService.appendAssistantMessage(user, assistantReply);
+        }
     }
 
     /**

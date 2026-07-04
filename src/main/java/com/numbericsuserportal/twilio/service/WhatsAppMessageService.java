@@ -6,6 +6,9 @@ import com.numbericsuserportal.twilio.entity.OcrExtractionResult;
 import com.numbericsuserportal.twilio.entity.TaxCase;
 import com.numbericsuserportal.twilio.entity.TaxDocument;
 import com.numbericsuserportal.twilio.entity.WhatsAppMessage;
+import com.numbericsuserportal.ai.action.dto.TaalrActionRequest;
+import com.numbericsuserportal.ai.action.dto.TaalrActionResult;
+import com.numbericsuserportal.ai.service.TaalrActionOrchestratorService;
 import com.numbericsuserportal.twilio.service.DocumentProcessingService;
 import com.numbericsuserportal.twilio.repository.OcrExtractionResultRepository;
 import com.numbericsuserportal.twilio.repository.TaxDocumentRepository;
@@ -48,6 +51,9 @@ public class WhatsAppMessageService {
     
     @Autowired
     private OcrExtractionResultRepository ocrExtractionResultRepository;
+
+    @Autowired
+    private TaalrActionOrchestratorService taalrActionOrchestrator;
 
     /**
      * Process and save incoming WhatsApp message
@@ -106,23 +112,52 @@ public class WhatsAppMessageService {
             System.out.println("Message saved without user_id (user not found for phone: " + normalizedFromNumber + ")");
         }
 
-        // Step 4: Process media if present
+        // Step 4: Process media — tax documents take priority when an active TaxCase exists
+        boolean taalrHandledMedia = false;
         if (numMedia != null && !numMedia.trim().isEmpty()) {
             try {
                 int mediaCount = Integer.parseInt(numMedia.trim());
                 if (mediaCount > 0 && mediaUrl0 != null && !mediaUrl0.trim().isEmpty()) {
-                    processMediaDocument(normalizedFromNumber, mediaUrl0, mediaContentType0, userId);
+                    TaxCase activeTaxCase = taxCaseService.findActiveTaxCase(normalizedFromNumber);
+                    if (activeTaxCase != null) {
+                        processMediaDocument(normalizedFromNumber, mediaUrl0, mediaContentType0, userId);
+                    } else {
+                        TaalrActionRequest taalrReq = taalrActionOrchestrator.buildWhatsAppRequest(
+                                normalizedFromNumber, userId, messageBody, mediaUrl0, mediaContentType0);
+                        TaalrActionResult taalrResult = taalrActionOrchestrator.handle(taalrReq);
+                        if (taalrResult.isHandled()) {
+                            sendKeywordBasedReply(normalizedFromNumber, taalrResult.getReply(), userId);
+                            taalrHandledMedia = true;
+                        }
+                    }
                 }
             } catch (NumberFormatException e) {
                 System.err.println("Invalid NumMedia value: " + numMedia);
             } catch (Exception e) {
                 System.err.println("Error processing media: " + e.getMessage());
                 e.printStackTrace();
-                // Don't fail the webhook if media processing fails
             }
         }
 
-        // Step 5: Decide whether to send automatic reply and send it
+        if (taalrHandledMedia) {
+            return savedMessage;
+        }
+
+        // Step 5: Taalr text automation (receipt confirm, invoice flow)
+        try {
+            TaalrActionRequest taalrTextReq = taalrActionOrchestrator.buildWhatsAppRequest(
+                    normalizedFromNumber, userId, messageBody, null, null);
+            TaalrActionResult taalrTextResult = taalrActionOrchestrator.handle(taalrTextReq);
+            if (taalrTextResult.isHandled()) {
+                sendKeywordBasedReply(normalizedFromNumber, taalrTextResult.getReply(), userId);
+                return savedMessage;
+            }
+        } catch (Exception e) {
+            System.err.println("Taalr WhatsApp automation error: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        // Step 6: Legacy automatic reply (tax case + keyword fallback)
         // This method handles TaxCase logic (higher priority) and keyword logic (fallback)
         // Note: Media processing may have updated TaxCase status, so reply logic runs after
         processAutomaticReply(normalizedFromNumber, messageBody, userId);
