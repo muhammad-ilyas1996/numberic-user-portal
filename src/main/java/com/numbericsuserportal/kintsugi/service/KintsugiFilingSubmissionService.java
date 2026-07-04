@@ -202,8 +202,9 @@ public class KintsugiFilingSubmissionService {
         estimateRequest.setCategory(request.getCategory());
         estimateRequest.setSubcategory(request.getSubcategory());
         estimateRequest.setStateCode(code);
-        estimateRequest.setCity(request.getCity());
-        estimateRequest.setPostalCode(request.getPostalCode());
+        String[] cityZip = resolveAddressForState(code);
+        estimateRequest.setCity(request.getCity() != null ? request.getCity() : cityZip[0]);
+        estimateRequest.setPostalCode(request.getPostalCode() != null ? request.getPostalCode() : cityZip[1]);
         estimateRequest.setAmount(taxable > 0 ? taxable : 0.01);
         estimateRequest.setQuantity(1.0);
         estimateRequest.setSimulateActiveRegistration(true);
@@ -480,6 +481,12 @@ public class KintsugiFilingSubmissionService {
                 .count());
         summary.put("nextFiling", nextDue.map(this::toScheduleRow).orElse(null));
         summary.put("businessTypeSetupRequired", user.getBusinessType() == null);
+        
+        long pendingCount = filings.stream()
+                .filter(f -> f.getFilingStatus() != FilingStatus.FILED && f.getFilingStatus() != FilingStatus.CONFIRMED)
+                .count();
+        summary.put("pendingCount", pendingCount);
+        
         return summary;
     }
 
@@ -671,6 +678,64 @@ public class KintsugiFilingSubmissionService {
         }
         double parsed = toDouble(rate);
         return parsed > 0 ? parsed : 0.0825;
+    }
+
+    /** Returns [city, postalCode] that is geographically valid for the given US state code. */
+    private String[] resolveAddressForState(String stateCode) {
+        return switch (stateCode.toUpperCase()) {
+            case "AL" -> new String[]{"Birmingham", "35203"};
+            case "AK" -> new String[]{"Anchorage", "99501"};
+            case "AZ" -> new String[]{"Phoenix", "85001"};
+            case "AR" -> new String[]{"Little Rock", "72201"};
+            case "CA" -> new String[]{"Los Angeles", "90001"};
+            case "CO" -> new String[]{"Denver", "80201"};
+            case "CT" -> new String[]{"Hartford", "06101"};
+            case "DE" -> new String[]{"Wilmington", "19801"};
+            case "FL" -> new String[]{"Miami", "33101"};
+            case "GA" -> new String[]{"Atlanta", "30301"};
+            case "HI" -> new String[]{"Honolulu", "96801"};
+            case "ID" -> new String[]{"Boise", "83701"};
+            case "IL" -> new String[]{"Chicago", "60601"};
+            case "IN" -> new String[]{"Indianapolis", "46201"};
+            case "IA" -> new String[]{"Des Moines", "50301"};
+            case "KS" -> new String[]{"Wichita", "67201"};
+            case "KY" -> new String[]{"Louisville", "40201"};
+            case "LA" -> new String[]{"New Orleans", "70112"};
+            case "ME" -> new String[]{"Portland", "04101"};
+            case "MD" -> new String[]{"Baltimore", "21201"};
+            case "MA" -> new String[]{"Boston", "02101"};
+            case "MI" -> new String[]{"Detroit", "48201"};
+            case "MN" -> new String[]{"Minneapolis", "55401"};
+            case "MS" -> new String[]{"Jackson", "39201"};
+            case "MO" -> new String[]{"Kansas City", "64101"};
+            case "MT" -> new String[]{"Billings", "59101"};
+            case "NE" -> new String[]{"Omaha", "68101"};
+            case "NV" -> new String[]{"Las Vegas", "89101"};
+            case "NH" -> new String[]{"Manchester", "03101"};
+            case "NJ" -> new String[]{"Newark", "07101"};
+            case "NM" -> new String[]{"Albuquerque", "87101"};
+            case "NY" -> new String[]{"New York", "10001"};
+            case "NC" -> new String[]{"Charlotte", "28201"};
+            case "ND" -> new String[]{"Fargo", "58102"};
+            case "OH" -> new String[]{"Columbus", "43085"};
+            case "OK" -> new String[]{"Oklahoma City", "73101"};
+            case "OR" -> new String[]{"Portland", "97201"};
+            case "PA" -> new String[]{"Philadelphia", "19102"};
+            case "RI" -> new String[]{"Providence", "02901"};
+            case "SC" -> new String[]{"Columbia", "29201"};
+            case "SD" -> new String[]{"Sioux Falls", "57101"};
+            case "TN" -> new String[]{"Nashville", "37201"};
+            case "TX" -> new String[]{"Austin", "73301"};
+            case "UT" -> new String[]{"Salt Lake City", "84101"};
+            case "VT" -> new String[]{"Burlington", "05401"};
+            case "VA" -> new String[]{"Richmond", "23218"};
+            case "WA" -> new String[]{"Seattle", "98101"};
+            case "WV" -> new String[]{"Charleston", "25301"};
+            case "WI" -> new String[]{"Milwaukee", "53201"};
+            case "WY" -> new String[]{"Cheyenne", "82001"};
+            case "DC" -> new String[]{"Washington", "20001"};
+            default  -> new String[]{"New York", "10001"};
+        };
     }
 
     private void validateSalesInput(EnterSalesEstimateRequestDTO request) {

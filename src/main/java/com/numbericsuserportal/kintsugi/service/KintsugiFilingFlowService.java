@@ -104,8 +104,7 @@ public class KintsugiFilingFlowService {
         Map<String, Object> item = new HashMap<>();
         item.put("external_id", "item-" + UUID.randomUUID());
         item.put("date", Instant.now().toString());
-        item.put("external_product_id", "prod-" + UUID.randomUUID());
-        item.put("product_category", normalizeCategory(request.getCategory()));
+        item.put("product_category", request.getCategory().trim());
         item.put("product_subcategory", request.getSubcategory().trim());
         item.put("quantity", quantity);
         item.put("amount", amount);
@@ -132,24 +131,5 @@ public class KintsugiFilingFlowService {
         }
     }
 
-    /**
-     * Kintsugi expects enum-style category values (e.g. PHYSICAL) while the categories API
-     * returns display names (e.g. Physical). Normalize common values.
-     */
-    private String normalizeCategory(String category) {
-        String trimmed = category.trim();
-        if (trimmed.equalsIgnoreCase("physical")) {
-            return "PHYSICAL";
-        }
-        if (trimmed.equalsIgnoreCase("digital")) {
-            return "DIGITAL";
-        }
-        if (trimmed.equalsIgnoreCase("service")) {
-            return "SERVICE";
-        }
-        if (trimmed.equalsIgnoreCase("miscellaneous")) {
-            return "MISCELLANEOUS";
-        }
-        return trimmed.toUpperCase().replace(' ', '_');
-    }
+
 }
