@@ -34,4 +34,10 @@ public class ChatRequestDto {
 
     /** Optional filename for receipt upload */
     private String mediaFileName;
+
+    /**
+     * {@code AUTO} (default): automation for create/send/list/receipt, then Claude for guidance.
+     * {@code GUIDE}: Claude guidance only; say "continue invoice" to resume pending automation.
+     */
+    private String mode;
 }

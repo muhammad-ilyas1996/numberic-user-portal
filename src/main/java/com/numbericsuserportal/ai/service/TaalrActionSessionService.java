@@ -104,6 +104,15 @@ public class TaalrActionSessionService {
     }
 
     @Transactional
+    public void touchSession(TaalrActionSessionEntity session) {
+        if (session == null) {
+            return;
+        }
+        session.setExpiresAt(LocalDateTime.now().plusMinutes(properties.getSessionTtlMinutes()));
+        repository.save(session);
+    }
+
+    @Transactional
     public void clearSession(TaalrActionRequest request) {
         findActiveSession(request).ifPresent(session -> {
             session.setIsActive(false);

@@ -12,7 +12,8 @@ public class TaalrActionProperties {
     private boolean enabled = true;
 
     /** Pending action session TTL in minutes (YES confirm, invoice draft, etc.). */
-    private int sessionTtlMinutes = 30;
+    /** Pending automation state TTL (invoice draft, receipt confirm, etc.). */
+    private int sessionTtlMinutes = 120;
 
     /** Model for lightweight intent parsing (falls back to anthropic.api.model if blank). */
     private String intentModel = "";

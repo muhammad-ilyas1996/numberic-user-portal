@@ -3,9 +3,11 @@ package com.numbericsuserportal.ai.controller;
 import com.numbericsuserportal.ai.dto.ChatRequestDto;
 import com.numbericsuserportal.ai.dto.ChatResponseDto;
 import com.numbericsuserportal.ai.service.AnthropicChatService;
+import com.numbericsuserportal.usermanagement.domain.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,9 +22,17 @@ public class PublicChatController {
     @Autowired
     private AnthropicChatService anthropicChatService;
 
+    /**
+     * Website chat (no JWT) or dashboard chat when frontend still calls this URL.
+     * If Authorization Bearer is sent, runs full in-app flow (invoice/receipt automation).
+     */
     @PostMapping
-    public ResponseEntity<ChatResponseDto> chat(@RequestBody ChatRequestDto request) {
-        ChatResponseDto response = anthropicChatService.chatPublic(request);
+    public ResponseEntity<ChatResponseDto> chat(
+            @AuthenticationPrincipal User currentUser,
+            @RequestBody ChatRequestDto request) {
+        ChatResponseDto response = currentUser != null
+                ? anthropicChatService.chat(currentUser, request)
+                : anthropicChatService.chatPublic(request);
         if (!response.isSuccess()) {
             String err = response.getError() != null ? response.getError() : "";
             if (err.contains("not configured") || err.contains("Anthropic API")) {

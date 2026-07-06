@@ -1,6 +1,7 @@
 package com.numbericsuserportal.ai.service;
 
 import com.numbericsuserportal.ai.action.TaalrActionChannel;
+import com.numbericsuserportal.ai.action.TaalrChatMode;
 import com.numbericsuserportal.ai.action.TaalrIntent;
 import com.numbericsuserportal.ai.action.TaalrPendingAction;
 import com.numbericsuserportal.ai.action.dto.TaalrActionRequest;
@@ -16,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.Locale;
 
 /**
  * Routes app chat and WhatsApp messages to receipt OCR and invoice automation before generic AI replies.
@@ -43,6 +45,9 @@ public class TaalrActionOrchestratorService {
     private TaalrInvoiceQueryHandler invoiceQueryHandler;
 
     @Autowired
+    private TaalrPendingContextService pendingContextService;
+
+    @Autowired
     private UserRepository userRepository;
 
     public TaalrActionResult handle(TaalrActionRequest request) {
@@ -68,12 +73,15 @@ public class TaalrActionOrchestratorService {
 
     private TaalrActionResult handleText(TaalrActionRequest request) {
         Optional<TaalrActionSessionEntity> sessionOpt = sessionService.findActiveSession(request);
+        sessionOpt.ifPresent(sessionService::touchSession);
+
         boolean awaitingConfirm = sessionOpt.map(s -> s.getPendingAction() == TaalrPendingAction.RECEIPT_SAVE_CONFIRM
                 || s.getPendingAction() == TaalrPendingAction.INVOICE_SEND_CONFIRM
                 || s.getPendingAction() == TaalrPendingAction.INVOICE_RESEND_CONFIRM).orElse(false);
 
         String message = request.getMessage() != null ? request.getMessage().trim() : "";
         TaalrIntentParseResult parsed = intentParser.parse(message, awaitingConfirm);
+        boolean guideMode = resolveMode(request) == TaalrChatMode.GUIDE;
 
         if (sessionOpt.isPresent()) {
             TaalrActionResult pending = handlePendingSession(request, sessionOpt.get(), parsed);
@@ -83,21 +91,43 @@ public class TaalrActionOrchestratorService {
         }
 
         User user = resolveUser(request);
-        if (user == null) {
-            if (parsed.getIntent() == TaalrIntent.INVOICE || parsed.getIntent() == TaalrIntent.RECEIPT
-                    || parsed.getIntent() == TaalrIntent.INVOICE_LIST
-                    || parsed.getIntent() == TaalrIntent.INVOICE_RESEND) {
-                return TaalrActionResult.handled(
-                        "Please log in to Numbrics (or link your WhatsApp number to your account) to use invoices and receipts.");
+
+        if (sessionOpt.isPresent() && pendingContextService.isResumeMessage(message)) {
+            TaalrActionResult resumed = resumePending(request, user, sessionOpt.get(), parsed, message);
+            if (resumed.isHandled()) {
+                return resumed;
             }
-            return TaalrActionResult.notHandled();
         }
 
         if (sessionOpt.isPresent() && sessionOpt.get().getPendingAction() == TaalrPendingAction.INVOICE_DRAFT) {
             if (parsed.getIntent() == TaalrIntent.CANCEL) {
                 return invoiceHandler.cancel(request);
             }
-            return invoiceHandler.continueDraft(request, user, sessionOpt.get(), parsed, message);
+            if (user != null) {
+                return invoiceHandler.continueDraft(request, user, sessionOpt.get(), parsed, message);
+            }
+        }
+
+        if (user == null) {
+            if (!guideMode && isAutomationIntent(parsed.getIntent())) {
+                return TaalrActionResult.handled(
+                        "Please log in to Numbrics (or link your WhatsApp number to your account) to use invoices and receipts.");
+            }
+            return TaalrActionResult.notHandled();
+        }
+
+        if (sessionOpt.isEmpty() && TaalrCapabilitiesService.shouldShowWelcome(message)) {
+            return TaalrActionResult.handled(TaalrCapabilitiesService.buildWelcomeMessage(request.getChannel()));
+        }
+
+        if (parsed.getIntent() == TaalrIntent.CONFIRM_NO || parsed.getIntent() == TaalrIntent.CANCEL) {
+            if (sessionOpt.isPresent()) {
+                return handleCancel(request, sessionOpt.get());
+            }
+        }
+
+        if (guideMode) {
+            return TaalrActionResult.notHandled();
         }
 
         if (parsed.getIntent() == TaalrIntent.RECEIPT) {
@@ -113,13 +143,38 @@ public class TaalrActionOrchestratorService {
         if (parsed.getIntent() == TaalrIntent.INVOICE) {
             return invoiceHandler.handleNewIntent(request, user, parsed, sessionOpt.orElse(null));
         }
-        if (parsed.getIntent() == TaalrIntent.CONFIRM_NO || parsed.getIntent() == TaalrIntent.CANCEL) {
-            if (sessionOpt.isPresent()) {
-                return handleCancel(request, sessionOpt.get());
-            }
-        }
 
         return TaalrActionResult.notHandled();
+    }
+
+    private TaalrActionResult resumePending(TaalrActionRequest request, User user,
+            TaalrActionSessionEntity session, TaalrIntentParseResult parsed, String message) {
+        if (user == null) {
+            return TaalrActionResult.handled("Please log in to resume your pending task.");
+        }
+        TaalrPendingAction action = session.getPendingAction();
+        if (action == TaalrPendingAction.INVOICE_DRAFT) {
+            return invoiceHandler.continueDraft(request, user, session, parsed, message);
+        }
+        if (action == TaalrPendingAction.INVOICE_SEND_CONFIRM) {
+            return TaalrActionResult.handled("Please reply YES to send the invoice, or NO to cancel.");
+        }
+        if (action == TaalrPendingAction.INVOICE_RESEND_CONFIRM) {
+            return TaalrActionResult.handled("Please reply YES to resend the reminder, or NO to cancel.");
+        }
+        if (action == TaalrPendingAction.RECEIPT_SAVE_CONFIRM) {
+            return TaalrActionResult.handled("Please reply YES to save the receipt, or NO to discard.");
+        }
+        return TaalrActionResult.notHandled();
+    }
+
+    private static boolean isAutomationIntent(TaalrIntent intent) {
+        return intent == TaalrIntent.INVOICE || intent == TaalrIntent.RECEIPT
+                || intent == TaalrIntent.INVOICE_LIST || intent == TaalrIntent.INVOICE_RESEND;
+    }
+
+    private static TaalrChatMode resolveMode(TaalrActionRequest request) {
+        return request.getMode() != null ? request.getMode() : TaalrChatMode.AUTO;
     }
 
     private TaalrActionResult handlePendingSession(TaalrActionRequest request, TaalrActionSessionEntity session,
@@ -204,8 +259,9 @@ public class TaalrActionOrchestratorService {
     }
 
     public TaalrActionRequest buildAppChatRequest(User user, String message, String mediaBase64,
-            String mediaContentType, String mediaFileName) {
+            String mediaContentType, String mediaFileName, TaalrChatMode mode) {
         return TaalrActionRequest.builder()
+                .mode(mode != null ? mode : TaalrChatMode.AUTO)
                 .channel(TaalrActionChannel.APP_CHAT)
                 .userId(user.getUserId())
                 .message(message)
@@ -213,6 +269,22 @@ public class TaalrActionOrchestratorService {
                 .mediaContentType(mediaContentType)
                 .mediaFileName(mediaFileName)
                 .build();
+    }
+
+    public static TaalrChatMode parseChatMode(String mode) {
+        if (mode == null || mode.isBlank()) {
+            return TaalrChatMode.AUTO;
+        }
+        try {
+            return TaalrChatMode.valueOf(mode.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return TaalrChatMode.AUTO;
+        }
+    }
+
+    public TaalrActionRequest buildAppChatRequest(User user, String message, String mediaBase64,
+            String mediaContentType, String mediaFileName) {
+        return buildAppChatRequest(user, message, mediaBase64, mediaContentType, mediaFileName, TaalrChatMode.AUTO);
     }
 
     public TaalrActionRequest buildWhatsAppRequest(String phone, Long userId, String message,

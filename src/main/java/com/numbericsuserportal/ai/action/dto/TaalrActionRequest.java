@@ -1,6 +1,7 @@
 package com.numbericsuserportal.ai.action.dto;
 
 import com.numbericsuserportal.ai.action.TaalrActionChannel;
+import com.numbericsuserportal.ai.action.TaalrChatMode;
 import lombok.Builder;
 import lombok.Data;
 
@@ -8,6 +9,7 @@ import lombok.Data;
 @Builder
 public class TaalrActionRequest {
 
+    private TaalrChatMode mode;
     private TaalrActionChannel channel;
     private Long userId;
     private String phoneNumber;

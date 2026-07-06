@@ -165,7 +165,9 @@ public class TaalrIntentParserService {
         }
         if (lower.contains("invoice") || lower.contains("bill client") || lower.contains("send bill")
                 || lower.contains("create an invoice") || lower.contains("creat an invoice")
-                || lower.contains("new invoice") || lower.contains("make an invoice")) {
+                || lower.contains("new invoice") || lower.contains("make an invoice")
+                || lower.contains("invoice bna") || lower.contains("invoice ban")
+                || lower.contains("automation")) {
             TaalrIntentParseResult r = new TaalrIntentParseResult();
             r.setIntent(TaalrIntent.INVOICE);
             r.setInvoice(extractInvoiceHeuristic(message));
