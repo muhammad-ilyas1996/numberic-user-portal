@@ -59,7 +59,8 @@ public class TaalrIntentParserService {
         - INVOICE_RESEND: user wants to resend/remind on an EXISTING invoice (e.g. "resend INV-001", "send reminder", "follow up on invoice").
         - RECEIPT: user mentions saving/uploading a receipt without an image in this message.
         - CONFIRM_YES / CONFIRM_NO / CANCEL: explicit confirmation or rejection.
-        - CHAT: general questions, taxes, greetings, unrelated.
+        - CHAT: general questions, taxes, greetings, unrelated — NOT when user wants to create/list/resend an invoice.
+        - If user asks "can I create invoice in chat" or wants to create one, use INVOICE not CHAT.
         - Extract amounts as numbers without currency symbols. Default channel WHATSAPP if phone mentioned, EMAIL if email mentioned.
         - If INVOICE intent but customer name or amount missing, set missingField and a short question.
         """;
@@ -87,15 +88,25 @@ public class TaalrIntentParserService {
             return ruleBased;
         }
 
+        // Keywords before Claude — production was misclassifying "create invoice" as CHAT.
+        TaalrIntentParseResult keyword = parseWithKeywords(trimmed);
+        if (keyword.getIntent() != TaalrIntent.CHAT) {
+            return keyword;
+        }
+
         if (anthropicProperties.getKey() == null || anthropicProperties.getKey().isBlank()) {
-            return parseWithKeywords(trimmed);
+            return keyword;
         }
 
         try {
-            return parseWithClaude(trimmed, awaitingConfirmation);
+            TaalrIntentParseResult claude = parseWithClaude(trimmed, awaitingConfirmation);
+            if (claude.getIntent() != TaalrIntent.CHAT) {
+                return claude;
+            }
+            return keyword;
         } catch (Exception e) {
             log.warn("Claude intent parse failed, using keyword fallback: {}", e.getMessage());
-            return parseWithKeywords(trimmed);
+            return keyword;
         }
     }
 
@@ -152,7 +163,9 @@ public class TaalrIntentParserService {
             }
             return r;
         }
-        if (lower.contains("invoice") || lower.contains("bill client") || lower.contains("send bill")) {
+        if (lower.contains("invoice") || lower.contains("bill client") || lower.contains("send bill")
+                || lower.contains("create an invoice") || lower.contains("creat an invoice")
+                || lower.contains("new invoice") || lower.contains("make an invoice")) {
             TaalrIntentParseResult r = new TaalrIntentParseResult();
             r.setIntent(TaalrIntent.INVOICE);
             r.setInvoice(extractInvoiceHeuristic(message));
