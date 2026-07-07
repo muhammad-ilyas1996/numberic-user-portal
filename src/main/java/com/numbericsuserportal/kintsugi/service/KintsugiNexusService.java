@@ -35,11 +35,11 @@ public class KintsugiNexusService {
                 "without_pagination", "true",
                 "country_code__in", "US"
         );
-        Map<String, Object> page = apiClient.get(
+        Object response = apiClient.get(
                 "/v1/nexus",
-                new ParameterizedTypeReference<Map<String, Object>>() {},
+                Object.class,
                 params);
-        List<Map<String, Object>> items = extractItems(page);
+        List<Map<String, Object>> items = extractItems(response);
         if (items.isEmpty()) {
             return Map.of(
                     "state_code", code,
@@ -95,11 +95,11 @@ public class KintsugiNexusService {
     }
 
     private Map<String, Map<String, Object>> fetchNexusByState() {
-        Map<String, Object> page = apiClient.get(
+        Object response = apiClient.get(
                 "/v1/nexus",
-                new ParameterizedTypeReference<Map<String, Object>>() {},
+                Object.class,
                 Map.of("without_pagination", "true", "country_code__in", "US"));
-        return extractItems(page).stream()
+        return extractItems(response).stream()
                 .filter(item -> item.get("state_code") != null)
                 .collect(Collectors.toMap(
                         item -> String.valueOf(item.get("state_code")).toUpperCase(),
@@ -109,16 +109,20 @@ public class KintsugiNexusService {
     }
 
     @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> extractItems(Map<String, Object> page) {
-        if (page == null || page.get("items") == null) {
-            return List.of();
-        }
-        Object items = page.get("items");
-        if (items instanceof List<?> list) {
+    private List<Map<String, Object>> extractItems(Object response) {
+        if (response instanceof List<?> list) {
             return list.stream()
                     .filter(Map.class::isInstance)
                     .map(i -> (Map<String, Object>) i)
                     .toList();
+        } else if (response instanceof Map<?, ?> map) {
+            Object items = map.get("items");
+            if (items instanceof List<?> list) {
+                return list.stream()
+                        .filter(Map.class::isInstance)
+                        .map(i -> (Map<String, Object>) i)
+                        .toList();
+            }
         }
         return List.of();
     }
