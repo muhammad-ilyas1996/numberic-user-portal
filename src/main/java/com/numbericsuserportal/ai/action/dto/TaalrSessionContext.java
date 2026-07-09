@@ -9,5 +9,6 @@ public class TaalrSessionContext {
     private TaalrPendingAction pendingAction;
     private TaalrReceiptDraft receiptDraft = new TaalrReceiptDraft();
     private TaalrInvoiceDraft invoiceDraft = new TaalrInvoiceDraft();
+    private TaalrLlcDraft llcDraft = new TaalrLlcDraft();
     private Long createdInvoiceId;
 }

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.numbericsuserportal.ai.action.TaalrIntent;
 import com.numbericsuserportal.ai.action.dto.TaalrIntentParseResult;
 import com.numbericsuserportal.ai.action.dto.TaalrInvoiceDraft;
+import com.numbericsuserportal.ai.action.dto.TaalrLlcDraft;
 import com.numbericsuserportal.ai.config.AnthropicProperties;
 import com.numbericsuserportal.ai.config.TaalrActionProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +38,7 @@ public class TaalrIntentParserService {
         You are Taalr intent parser for Numbrics. Classify the user message for automation.
         Reply with ONLY valid JSON (no markdown fences). Schema:
         {
-          "intent": "CHAT" | "RECEIPT" | "INVOICE" | "INVOICE_LIST" | "INVOICE_RESEND" | "CONFIRM_YES" | "CONFIRM_NO" | "CANCEL",
+          "intent": "CHAT" | "RECEIPT" | "INVOICE" | "INVOICE_LIST" | "INVOICE_RESEND" | "LLC_FORMATION" | "LLC_STATUS" | "CONFIRM_YES" | "CONFIRM_NO" | "CANCEL",
           "invoice": {
             "customerName": string or null,
             "customerEmail": string or null,
@@ -49,6 +50,14 @@ public class TaalrIntentParserService {
             "invoiceNum": string or null,
             "recipientPhoneOrEmail": string or null
           },
+          "llc": {
+            "jurisdiction": string or null,
+            "llcName": string or null,
+            "ownerFirstName": string or null,
+            "ownerLastName": string or null,
+            "filingSpeed": "standard" | "expedited" | "sameday" or null,
+            "addonEin": boolean or null
+          },
           "missingField": string or null,
           "question": string or null,
           "statusFilter": "ALL" | "UNPAID" | "PAID" | "DRAFT" or null
@@ -58,6 +67,8 @@ public class TaalrIntentParserService {
         - INVOICE_LIST: user wants to see invoices or status (e.g. "my invoices", "unpaid invoices", "status of INV-001").
         - INVOICE_RESEND: user wants to resend/remind on an EXISTING invoice (e.g. "resend INV-001", "send reminder", "follow up on invoice").
         - RECEIPT: user mentions saving/uploading a receipt without an image in this message.
+        - LLC_FORMATION: user wants to start/continue LLC formation, set state/name/owner details, or says LLC automation.
+        - LLC_STATUS: user asks status of LLC formation/order.
         - CONFIRM_YES / CONFIRM_NO / CANCEL: explicit confirmation or rejection.
         - CHAT: general questions, taxes, greetings, unrelated — NOT when user wants to create/list/resend an invoice.
         - If user asks "can I create invoice in chat" or wants to create one, use INVOICE not CHAT.
@@ -173,6 +184,22 @@ public class TaalrIntentParserService {
             r.setInvoice(extractInvoiceHeuristic(message));
             return r;
         }
+        if (lower.contains("llc") || lower.contains("formation") || lower.contains("register company")
+                || lower.contains("company formation") || lower.contains("incorporat")) {
+            TaalrIntentParseResult r = new TaalrIntentParseResult();
+            if (lower.contains("status") || lower.contains("update")) {
+                r.setIntent(TaalrIntent.LLC_STATUS);
+            } else {
+                r.setIntent(TaalrIntent.LLC_FORMATION);
+            }
+            r.setLlc(extractLlcHeuristic(message));
+            return r;
+        }
+        if (lower.contains("llc status") || lower.contains("formation status") || lower.contains("company status")) {
+            TaalrIntentParseResult r = new TaalrIntentParseResult();
+            r.setIntent(TaalrIntent.LLC_STATUS);
+            return r;
+        }
         return defaultChat();
     }
 
@@ -199,6 +226,38 @@ public class TaalrIntentParserService {
             draft.setCustomerEmail(emailMatcher.group());
             draft.setRecipientPhoneOrEmail(emailMatcher.group());
             draft.setChannel("EMAIL");
+        }
+        return draft;
+    }
+
+    private TaalrLlcDraft extractLlcHeuristic(String message) {
+        TaalrLlcDraft draft = new TaalrLlcDraft();
+        String lower = message.toLowerCase();
+        Matcher stateCode = Pattern.compile("\\b([A-Z]{2})\\b").matcher(message);
+        if (stateCode.find()) {
+            String code = stateCode.group(1).toUpperCase();
+            if (!"LL".equals(code) && !"IN".equals(code)) {
+                draft.setJurisdiction(code);
+            }
+        }
+        Matcher forName = Pattern.compile("(?i)(?:named|name|llc name)\\s+([A-Za-z0-9&'\\- ]{3,60})").matcher(message);
+        if (forName.find()) {
+            draft.setLlcName(forName.group(1).trim());
+        }
+        Matcher owner = Pattern.compile("(?i)(?:owner|member)\\s+([A-Za-z]+)\\s+([A-Za-z]+)").matcher(message);
+        if (owner.find()) {
+            draft.setOwnerFirstName(owner.group(1).trim());
+            draft.setOwnerLastName(owner.group(2).trim());
+        }
+        if (lower.contains("expedited")) {
+            draft.setFilingSpeed("expedited");
+        } else if (lower.contains("same day") || lower.contains("sameday")) {
+            draft.setFilingSpeed("sameday");
+        } else if (lower.contains("standard")) {
+            draft.setFilingSpeed("standard");
+        }
+        if (lower.contains("ein")) {
+            draft.setAddonEin(Boolean.TRUE);
         }
         return draft;
     }
@@ -282,6 +341,29 @@ public class TaalrIntentParserService {
                 draft.setRecipientPhoneOrEmail(inv.path("recipientPhoneOrEmail").asText(null));
             }
             result.setInvoice(draft);
+        }
+        JsonNode llc = node.path("llc");
+        if (!llc.isMissingNode() && !llc.isNull()) {
+            TaalrLlcDraft draft = new TaalrLlcDraft();
+            if (llc.hasNonNull("jurisdiction")) {
+                draft.setJurisdiction(llc.path("jurisdiction").asText(null));
+            }
+            if (llc.hasNonNull("llcName")) {
+                draft.setLlcName(llc.path("llcName").asText(null));
+            }
+            if (llc.hasNonNull("ownerFirstName")) {
+                draft.setOwnerFirstName(llc.path("ownerFirstName").asText(null));
+            }
+            if (llc.hasNonNull("ownerLastName")) {
+                draft.setOwnerLastName(llc.path("ownerLastName").asText(null));
+            }
+            if (llc.hasNonNull("filingSpeed")) {
+                draft.setFilingSpeed(llc.path("filingSpeed").asText(null));
+            }
+            if (llc.has("addonEin") && !llc.path("addonEin").isNull()) {
+                draft.setAddonEin(llc.path("addonEin").asBoolean());
+            }
+            result.setLlc(draft);
         }
         if (node.hasNonNull("missingField")) {
             result.setMissingField(node.path("missingField").asText(null));

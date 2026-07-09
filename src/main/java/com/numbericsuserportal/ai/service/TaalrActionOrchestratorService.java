@@ -45,6 +45,9 @@ public class TaalrActionOrchestratorService {
     private TaalrInvoiceQueryHandler invoiceQueryHandler;
 
     @Autowired
+    private TaalrLlcFormationActionHandler llcFormationHandler;
+
+    @Autowired
     private TaalrPendingContextService pendingContextService;
 
     @Autowired
@@ -107,6 +110,14 @@ public class TaalrActionOrchestratorService {
                 return invoiceHandler.continueDraft(request, user, sessionOpt.get(), parsed, message);
             }
         }
+        if (sessionOpt.isPresent() && sessionOpt.get().getPendingAction() == TaalrPendingAction.LLC_DRAFT) {
+            if (parsed.getIntent() == TaalrIntent.CANCEL) {
+                return llcFormationHandler.cancel(request);
+            }
+            if (user != null) {
+                return llcFormationHandler.handleStartOrContinue(request, user, parsed, sessionOpt.get(), message);
+            }
+        }
 
         if (user == null) {
             if (!guideMode && isAutomationIntent(parsed.getIntent())) {
@@ -143,6 +154,12 @@ public class TaalrActionOrchestratorService {
         if (parsed.getIntent() == TaalrIntent.INVOICE) {
             return invoiceHandler.handleNewIntent(request, user, parsed, sessionOpt.orElse(null));
         }
+        if (parsed.getIntent() == TaalrIntent.LLC_FORMATION) {
+            return llcFormationHandler.handleStartOrContinue(request, user, parsed, sessionOpt.orElse(null), message);
+        }
+        if (parsed.getIntent() == TaalrIntent.LLC_STATUS) {
+            return llcFormationHandler.handleStatus(user);
+        }
 
         return TaalrActionResult.notHandled();
     }
@@ -165,12 +182,16 @@ public class TaalrActionOrchestratorService {
         if (action == TaalrPendingAction.RECEIPT_SAVE_CONFIRM) {
             return TaalrActionResult.handled("Please reply YES to save the receipt, or NO to discard.");
         }
+        if (action == TaalrPendingAction.LLC_DRAFT) {
+            return llcFormationHandler.handleStartOrContinue(request, user, parsed, session, message);
+        }
         return TaalrActionResult.notHandled();
     }
 
     private static boolean isAutomationIntent(TaalrIntent intent) {
         return intent == TaalrIntent.INVOICE || intent == TaalrIntent.RECEIPT
-                || intent == TaalrIntent.INVOICE_LIST || intent == TaalrIntent.INVOICE_RESEND;
+                || intent == TaalrIntent.INVOICE_LIST || intent == TaalrIntent.INVOICE_RESEND
+                || intent == TaalrIntent.LLC_FORMATION || intent == TaalrIntent.LLC_STATUS;
     }
 
     private static TaalrChatMode resolveMode(TaalrActionRequest request) {
@@ -229,6 +250,9 @@ public class TaalrActionOrchestratorService {
         if (action == TaalrPendingAction.INVOICE_DRAFT) {
             return TaalrActionResult.notHandled();
         }
+        if (action == TaalrPendingAction.LLC_DRAFT) {
+            return TaalrActionResult.notHandled();
+        }
 
         return TaalrActionResult.notHandled();
     }
@@ -239,6 +263,9 @@ public class TaalrActionOrchestratorService {
         }
         if (session.getPendingAction() == TaalrPendingAction.INVOICE_RESEND_CONFIRM) {
             return invoiceQueryHandler.cancel(request);
+        }
+        if (session.getPendingAction() == TaalrPendingAction.LLC_DRAFT) {
+            return llcFormationHandler.cancel(request);
         }
         return invoiceHandler.cancel(request);
     }

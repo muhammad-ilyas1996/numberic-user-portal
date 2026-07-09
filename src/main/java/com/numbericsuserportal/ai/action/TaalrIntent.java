@@ -6,6 +6,8 @@ public enum TaalrIntent {
     INVOICE,
     INVOICE_LIST,
     INVOICE_RESEND,
+    LLC_FORMATION,
+    LLC_STATUS,
     CONFIRM_YES,
     CONFIRM_NO,
     CANCEL

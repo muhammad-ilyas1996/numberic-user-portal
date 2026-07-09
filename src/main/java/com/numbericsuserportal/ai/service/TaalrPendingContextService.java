@@ -4,6 +4,7 @@ import com.numbericsuserportal.ai.action.TaalrActionChannel;
 import com.numbericsuserportal.ai.action.TaalrPendingAction;
 import com.numbericsuserportal.ai.action.dto.TaalrActionRequest;
 import com.numbericsuserportal.ai.action.dto.TaalrInvoiceDraft;
+import com.numbericsuserportal.ai.action.dto.TaalrLlcDraft;
 import com.numbericsuserportal.ai.action.dto.TaalrReceiptDraft;
 import com.numbericsuserportal.ai.action.dto.TaalrSessionContext;
 import com.numbericsuserportal.ai.entity.TaalrActionSessionEntity;
@@ -23,7 +24,7 @@ import java.util.regex.Pattern;
 public class TaalrPendingContextService {
 
     private static final Pattern RESUME_PATTERN = Pattern.compile(
-            ".*(continue|resume|finish|complete)\\s+(my\\s+)?(invoice|receipt|draft|reminder).*",
+            ".*(continue|resume|finish|complete)\\s+(my\\s+)?(invoice|receipt|draft|reminder|llc|formation).*",
             Pattern.CASE_INSENSITIVE);
 
     @Autowired
@@ -60,14 +61,22 @@ public class TaalrPendingContextService {
         sb.append("--- PENDING NUMBRICS ACTION (stored server-side, not yet completed) ---\n");
         sb.append(describePending(session.getPendingAction(), ctx));
         sb.append("\nIf the user asks for guidance, answer normally but you may briefly mention they can ");
-        sb.append("say \"continue invoice\" to resume automation or \"cancel\" to discard.");
+        sb.append("say \"").append(resumePhrase(session.getPendingAction()))
+                .append("\" to resume automation or \"cancel\" to discard.");
         return sb.toString();
     }
 
     private String reminderFooter(TaalrActionSessionEntity session) {
         TaalrSessionContext ctx = sessionService.loadContext(session);
         return "Reminder: " + describePending(session.getPendingAction(), ctx)
-                + " Reply \"continue invoice\" to resume, or \"cancel\" to discard.";
+                + " Reply \"" + resumePhrase(session.getPendingAction()) + "\" to resume, or \"cancel\" to discard.";
+    }
+
+    private static String resumePhrase(TaalrPendingAction action) {
+        if (action == TaalrPendingAction.LLC_DRAFT) {
+            return "continue llc";
+        }
+        return "continue invoice";
     }
 
     private String describePending(TaalrPendingAction action, TaalrSessionContext ctx) {
@@ -79,6 +88,7 @@ public class TaalrPendingContextService {
             case INVOICE_SEND_CONFIRM -> describeInvoiceSendConfirm(ctx);
             case INVOICE_RESEND_CONFIRM -> describeInvoiceResendConfirm(ctx);
             case RECEIPT_SAVE_CONFIRM -> describeReceiptConfirm(ctx);
+            case LLC_DRAFT -> describeLlcDraft(ctx);
         };
     }
 
@@ -123,5 +133,21 @@ public class TaalrPendingContextService {
             return "Receipt from " + d.getMerchantName() + " was scanned — waiting for YES to save.";
         }
         return "A receipt was scanned — waiting for YES to save.";
+    }
+
+    private static String describeLlcDraft(TaalrSessionContext ctx) {
+        TaalrLlcDraft d = ctx.getLlcDraft();
+        if (d == null) {
+            return "You were setting up LLC formation details.";
+        }
+        StringBuilder sb = new StringBuilder("You were preparing LLC formation");
+        if (d.getLlcName() != null && !d.getLlcName().isBlank()) {
+            sb.append(" for ").append(d.getLlcName().trim());
+        }
+        if (d.getJurisdiction() != null && !d.getJurisdiction().isBlank()) {
+            sb.append(" in ").append(d.getJurisdiction().trim().toUpperCase(Locale.ROOT));
+        }
+        sb.append(" — draft is incomplete.");
+        return sb.toString();
     }
 }
