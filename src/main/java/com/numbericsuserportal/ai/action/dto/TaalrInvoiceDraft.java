@@ -23,6 +23,8 @@ public class TaalrInvoiceDraft {
     private String pendingLineName;
     private Double pendingLineQty;
     private Boolean askingAddAnotherLine;
+    /** True while collecting the next line item after user said YES to add another. */
+    private Boolean collectingNextLine;
     /** WHATSAPP or EMAIL */
     private String channel;
     private String recipientPhoneOrEmail;

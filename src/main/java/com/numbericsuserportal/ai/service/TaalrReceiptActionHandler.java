@@ -115,6 +115,11 @@ public class TaalrReceiptActionHandler {
                 sessionService.updateSession(session, TaalrPendingAction.RECEIPT_SAVE_CONFIRM, ctx);
                 return TaalrActionResult.handled(questionForReceipt(missing));
             }
+            if (draft.getConfidenceScore() != null && draft.getConfidenceScore() < LOW_CONFIDENCE
+                    && !draft.isEditing()) {
+                return TaalrActionResult.handled(
+                        "OCR confidence is low. Please reply EDIT and correct merchant/date/amount before saving.");
+            }
             return confirmSave(request, user, session);
         }
         if (parsed.getIntent() == TaalrIntent.CONFIRM_NO || parsed.getIntent() == TaalrIntent.CANCEL) {
@@ -152,13 +157,15 @@ public class TaalrReceiptActionHandler {
         }
 
         if (!notBlank(draft.getCategory())) {
-            if (isLikelyCategory(message)) {
+            if (isAllowedCategory(message)) {
                 draft.setCategory(normalizeCategory(message));
                 sessionService.updateSession(session, TaalrPendingAction.RECEIPT_SAVE_CONFIRM, ctx);
                 return TaalrActionResult.handled("Category set to " + draft.getCategory()
                         + ".\nReply YES to save, EDIT to change fields, or NO to discard.");
             }
-            return TaalrActionResult.handled(questionForReceipt("category"));
+            return TaalrActionResult.handled(
+                    "Please choose a category: Travel / Office / Meals / General\n"
+                            + "(Or reply EDIT / YES / NO)");
         }
 
         return TaalrActionResult.handled(
@@ -363,8 +370,8 @@ public class TaalrReceiptActionHandler {
                 yield null;
             }
             case "category" -> {
-                if (!isLikelyCategory(value)) {
-                    yield "Please enter a category (e.g. Travel, Office, Meals, General).";
+                if (!isAllowedCategory(value)) {
+                    yield "Please enter a category: Travel, Office, Meals, or General.";
                 }
                 draft.setCategory(normalizeCategory(value));
                 yield null;
@@ -449,22 +456,23 @@ public class TaalrReceiptActionHandler {
         }
     }
 
-    private static boolean isLikelyCategory(String value) {
+    private static boolean isAllowedCategory(String value) {
         if (value == null || value.isBlank() || TaalrInputValidation.isConfusion(value)) {
             return false;
         }
-        String t = value.trim();
-        return t.length() >= 2 && t.length() <= 40 && !TaalrInputValidation.isValidEmail(t)
-                && !TaalrInputValidation.isValidPhone(t);
+        String t = value.trim().toLowerCase(Locale.ROOT);
+        return t.equals("travel") || t.equals("office") || t.equals("meals") || t.equals("food")
+                || t.equals("general") || t.equals("1") || t.equals("2") || t.equals("3") || t.equals("4");
     }
 
     private static String normalizeCategory(String value) {
-        String t = value.trim();
-        if (t.equalsIgnoreCase("general")) return "General";
-        if (t.equalsIgnoreCase("travel")) return "Travel";
-        if (t.equalsIgnoreCase("office")) return "Office";
-        if (t.equalsIgnoreCase("meals") || t.equalsIgnoreCase("food")) return "Meals";
-        return Character.toUpperCase(t.charAt(0)) + t.substring(1);
+        String t = value.trim().toLowerCase(Locale.ROOT);
+        return switch (t) {
+            case "1", "travel" -> "Travel";
+            case "2", "office" -> "Office";
+            case "3", "meals", "food" -> "Meals";
+            default -> "General";
+        };
     }
 
     private static String questionForReceipt(String field) {
@@ -473,7 +481,7 @@ public class TaalrReceiptActionHandler {
             case "date" -> "What is the receipt date? (YYYY-MM-DD)";
             case "amount" -> "What is the total amount?";
             case "tax" -> "What is the tax amount? (or reply skip)";
-            case "category" -> "What category should I use? (Travel / Office / Meals / General)";
+            case "category" -> "What category? Reply Travel / Office / Meals / General";
             default -> "Please provide the missing receipt detail.";
         };
     }

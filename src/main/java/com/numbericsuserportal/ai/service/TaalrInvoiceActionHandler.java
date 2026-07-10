@@ -315,7 +315,15 @@ public class TaalrInvoiceActionHandler {
         if (!notBlank(draft.getCustomerName())) {
             return "customerName";
         }
-        if (draft.getLineItems().isEmpty()) {
+        if (draft.getLineItems().isEmpty() || Boolean.TRUE.equals(draft.getCollectingNextLine())
+                || draft.getPendingLineName() != null || draft.getPendingLineQty() != null) {
+            if (Boolean.TRUE.equals(draft.getAskingAddAnotherLine())
+                    && !Boolean.TRUE.equals(draft.getCollectingNextLine())
+                    && draft.getPendingLineName() == null
+                    && draft.getPendingLineQty() == null
+                    && !draft.getLineItems().isEmpty()) {
+                return "addAnotherLine";
+            }
             if (!notBlank(draft.getPendingLineName())) {
                 return "lineName";
             }
@@ -326,15 +334,6 @@ public class TaalrInvoiceActionHandler {
         }
         if (Boolean.TRUE.equals(draft.getAskingAddAnotherLine())) {
             return "addAnotherLine";
-        }
-        if (draft.getPendingLineName() != null || draft.getPendingLineQty() != null) {
-            if (!notBlank(draft.getPendingLineName())) {
-                return "lineName";
-            }
-            if (draft.getPendingLineQty() == null) {
-                return "lineQty";
-            }
-            return "lineAmount";
         }
         recalculateTotal(draft);
         if (draft.getAmount() == null || draft.getAmount() <= 0) {
@@ -430,6 +429,7 @@ public class TaalrInvoiceActionHandler {
                 }
                 draft.setPendingLineName(answer.trim());
                 draft.setAskingAddAnotherLine(false);
+                draft.setCollectingNextLine(true);
                 yield null;
             }
             case "lineQty" -> {
@@ -438,6 +438,7 @@ public class TaalrInvoiceActionHandler {
                     yield "Please enter a valid quantity greater than 0.";
                 }
                 draft.setPendingLineQty(qty);
+                draft.setCollectingNextLine(true);
                 yield null;
             }
             case "lineAmount" -> {
@@ -452,6 +453,7 @@ public class TaalrInvoiceActionHandler {
                 draft.getLineItems().add(item);
                 draft.setPendingLineName(null);
                 draft.setPendingLineQty(null);
+                draft.setCollectingNextLine(false);
                 draft.setAskingAddAnotherLine(true);
                 draft.setDescription(draft.getLineItems().get(0).getName());
                 recalculateTotal(draft);
@@ -464,8 +466,11 @@ public class TaalrInvoiceActionHandler {
                 }
                 draft.setAskingAddAnotherLine(false);
                 if (Boolean.TRUE.equals(yn)) {
+                    draft.setCollectingNextLine(true);
                     draft.setPendingLineName(null);
                     draft.setPendingLineQty(null);
+                } else {
+                    draft.setCollectingNextLine(false);
                 }
                 yield null;
             }

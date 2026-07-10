@@ -25,10 +25,10 @@ import java.util.regex.Pattern;
 public class TaalrIntentParserService {
 
     private static final Pattern YES_PATTERN = Pattern.compile(
-            "^(yes|y|yeah|yep|confirm|ok|okay|save|send|proceed|go ahead|sure)\\b.*",
+            "^(yes|y|yeah|yep|confirm|proceed|go ahead)\\b.*",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern NO_PATTERN = Pattern.compile(
-            "^(no|n|nope|discard|don't|dont)(\\s*[.!])?$",
+            "^(no|n|nope|discard|don't|dont|no thanks|cancel that)(\\s*[.!])?$",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern CANCEL_PATTERN = Pattern.compile(
             "^(cancel|nevermind|never mind|abort|stop)(\\s+.*)?$",
@@ -159,7 +159,7 @@ public class TaalrIntentParserService {
             r.setIntent(TaalrIntent.RECEIPT_LIST);
             return r;
         }
-        if (lower.contains("receipt") || lower.contains("expense")) {
+        if (containsWord(lower, "receipt") || lower.contains("expense report") || lower.contains("scan expense")) {
             TaalrIntentParseResult r = new TaalrIntentParseResult();
             r.setIntent(TaalrIntent.RECEIPT);
             return r;
@@ -189,20 +189,21 @@ public class TaalrIntentParserService {
             }
             return r;
         }
-        if (lower.contains("invoice") || lower.contains("bill client") || lower.contains("send bill")
+        if (containsWord(lower, "invoice") || lower.contains("bill client") || lower.contains("send bill")
                 || lower.contains("create an invoice") || lower.contains("creat an invoice")
                 || lower.contains("new invoice") || lower.contains("make an invoice")
-                || lower.contains("invoice bna") || lower.contains("invoice ban")
-                || lower.contains("automation")) {
+                || lower.contains("invoice bna") || lower.contains("invoice ban")) {
             TaalrIntentParseResult r = new TaalrIntentParseResult();
             r.setIntent(TaalrIntent.INVOICE);
             r.setInvoice(extractInvoiceHeuristic(message));
             return r;
         }
-        if (lower.contains("llc") || lower.contains("formation") || lower.contains("register company")
-                || lower.contains("company formation") || lower.contains("incorporat")) {
+        if (containsWord(lower, "llc")
+                || lower.contains("register company") || lower.contains("company formation")
+                || lower.contains("llc formation") || lower.contains("form an llc") || lower.contains("start llc")
+                || lower.contains("incorporat") || (containsWord(lower, "formation") && lower.contains("compan"))) {
             TaalrIntentParseResult r = new TaalrIntentParseResult();
-            if (lower.contains("status") || lower.contains("update")) {
+            if (lower.contains("status") || lower.contains("llc update")) {
                 r.setIntent(TaalrIntent.LLC_STATUS);
             } else {
                 r.setIntent(TaalrIntent.LLC_FORMATION);
@@ -216,6 +217,12 @@ public class TaalrIntentParserService {
             return r;
         }
         return defaultChat();
+    }
+
+    private static boolean containsWord(String lowerMessage, String word) {
+        return Pattern.compile("\\b" + Pattern.quote(word) + "\\b", Pattern.CASE_INSENSITIVE)
+                .matcher(lowerMessage)
+                .find();
     }
 
     private static void extractInvoiceNumToDraft(String message, TaalrInvoiceDraft draft) {

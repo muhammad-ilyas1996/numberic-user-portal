@@ -12,4 +12,4 @@ CREATE TABLE IF NOT EXISTS taalr_chat_messages (
     MODIFIED_ON  DATETIME     NULL,
     IS_ACTIVE    TINYINT(1)   NULL,
     INDEX idx_taalr_chat_user (user_id)
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

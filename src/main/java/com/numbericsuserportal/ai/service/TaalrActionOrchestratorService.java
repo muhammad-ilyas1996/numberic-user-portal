@@ -72,7 +72,36 @@ public class TaalrActionOrchestratorService {
             return TaalrActionResult.handled(
                     "To scan receipts, please register on Numbrics and link this phone number to your account.");
         }
+        Optional<TaalrActionSessionEntity> sessionOpt = sessionService.findActiveSession(request);
+        if (sessionOpt.isPresent()) {
+            TaalrPendingAction pending = sessionOpt.get().getPendingAction();
+            if (pending == TaalrPendingAction.INVOICE_DRAFT
+                    || pending == TaalrPendingAction.INVOICE_SEND_CONFIRM
+                    || pending == TaalrPendingAction.INVOICE_RESEND_CONFIRM
+                    || pending == TaalrPendingAction.LLC_DRAFT
+                    || pending == TaalrPendingAction.LLC_PREPARE_CONFIRM) {
+                return TaalrActionResult.handled(
+                        "You have an unfinished " + describePendingLabel(pending)
+                                + " in progress. Reply \"cancel\" to discard it first, then send the receipt photo.\n"
+                                + "Or continue that flow without uploading an image.");
+            }
+        }
+        if (resolveMode(request) == TaalrChatMode.GUIDE) {
+            return TaalrActionResult.handled(
+                    "You're in guidance mode. Switch to automation (mode AUTO) or say \"scan receipt\" without GUIDE mode to upload.");
+        }
         return receiptHandler.processMediaUpload(request, user);
+    }
+
+    private static String describePendingLabel(TaalrPendingAction pending) {
+        if (pending == null) {
+            return "task";
+        }
+        return switch (pending) {
+            case INVOICE_DRAFT, INVOICE_SEND_CONFIRM, INVOICE_RESEND_CONFIRM -> "invoice";
+            case LLC_DRAFT, LLC_PREPARE_CONFIRM -> "LLC formation";
+            case RECEIPT_SAVE_CONFIRM -> "receipt";
+        };
     }
 
     private TaalrActionResult handleText(TaalrActionRequest request) {
@@ -88,6 +117,14 @@ public class TaalrActionOrchestratorService {
         TaalrIntentParseResult parsed = intentParser.parse(message, awaitingConfirm);
         boolean guideMode = resolveMode(request) == TaalrChatMode.GUIDE
                 || TaalrInputValidation.wantsGuidanceOnly(message);
+        boolean resumeRequested = pendingContextService.isResumeMessage(message);
+
+        // GUIDE: do not continue automation drafts unless user explicitly resumes or cancels.
+        if (guideMode && !resumeRequested
+                && parsed.getIntent() != TaalrIntent.CANCEL
+                && parsed.getIntent() != TaalrIntent.CONFIRM_NO) {
+            return TaalrActionResult.notHandled();
+        }
 
         if (sessionOpt.isPresent()) {
             TaalrActionResult pending = handlePendingSession(request, sessionOpt.get(), parsed, message);
@@ -98,7 +135,7 @@ public class TaalrActionOrchestratorService {
 
         User user = resolveUser(request);
 
-        if (sessionOpt.isPresent() && pendingContextService.isResumeMessage(message)) {
+        if (sessionOpt.isPresent() && resumeRequested) {
             TaalrActionResult resumed = resumePending(request, user, sessionOpt.get(), parsed, message);
             if (resumed.isHandled()) {
                 return resumed;

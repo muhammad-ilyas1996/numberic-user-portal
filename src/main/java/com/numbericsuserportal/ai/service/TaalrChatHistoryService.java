@@ -4,6 +4,7 @@ import com.numbericsuserportal.ai.config.AnthropicProperties;
 import com.numbericsuserportal.ai.entity.TaalrChatMessageEntity;
 import com.numbericsuserportal.ai.repo.TaalrChatMessageRepository;
 import com.numbericsuserportal.usermanagement.domain.User;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ import java.util.Map;
  * Persists multi-turn chat for Messages API fallback ({@code /v1/messages}). Managed Agents use Anthropic session instead.
  */
 @Service
+@Slf4j
 public class TaalrChatHistoryService {
 
     @Autowired
@@ -27,26 +29,35 @@ public class TaalrChatHistoryService {
 
     @Transactional
     public Long appendUserMessage(User user, String content) {
-        TaalrChatMessageEntity row = new TaalrChatMessageEntity();
-        row.setUserId(user.getUserId());
-        row.setRole("user");
-        row.setContent(content);
-        String audit = user.getEmail() != null ? user.getEmail() : String.valueOf(user.getUserId());
-        row.setCreatedBy(audit);
-        row.setModifiedBy(audit);
-        return repository.save(row).getId();
+        try {
+            TaalrChatMessageEntity row = new TaalrChatMessageEntity();
+            row.setUserId(user.getUserId());
+            row.setRole("user");
+            row.setContent(sanitizeForMysql(content));
+            String audit = user.getEmail() != null ? user.getEmail() : String.valueOf(user.getUserId());
+            row.setCreatedBy(audit);
+            row.setModifiedBy(audit);
+            return repository.save(row).getId();
+        } catch (Exception e) {
+            log.warn("Failed to persist Taalr user chat message for user {}: {}", user.getUserId(), e.getMessage());
+            return null;
+        }
     }
 
     @Transactional
     public void appendAssistantMessage(User user, String content) {
-        TaalrChatMessageEntity row = new TaalrChatMessageEntity();
-        row.setUserId(user.getUserId());
-        row.setRole("assistant");
-        row.setContent(content);
-        String audit = user.getEmail() != null ? user.getEmail() : String.valueOf(user.getUserId());
-        row.setCreatedBy(audit);
-        row.setModifiedBy(audit);
-        repository.save(row);
+        try {
+            TaalrChatMessageEntity row = new TaalrChatMessageEntity();
+            row.setUserId(user.getUserId());
+            row.setRole("assistant");
+            row.setContent(sanitizeForMysql(content));
+            String audit = user.getEmail() != null ? user.getEmail() : String.valueOf(user.getUserId());
+            row.setCreatedBy(audit);
+            row.setModifiedBy(audit);
+            repository.save(row);
+        } catch (Exception e) {
+            log.warn("Failed to persist Taalr assistant chat message for user {}: {}", user.getUserId(), e.getMessage());
+        }
     }
 
     @Transactional
@@ -84,5 +95,24 @@ public class TaalrChatHistoryService {
             out.add(one);
         }
         return out;
+    }
+
+    /**
+     * MySQL utf8 (3-byte) columns reject 4-byte chars (emoji). Strip them so chat never hard-fails.
+     * Prefer altering the table to utf8mb4 (see scripts/alter_taalr_chat_messages_utf8mb4.sql).
+     */
+    static String sanitizeForMysql(String content) {
+        if (content == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder(content.length());
+        content.codePoints().forEach(cp -> {
+            if (cp <= 0xFFFF) {
+                sb.appendCodePoint(cp);
+            } else {
+                sb.append(' ');
+            }
+        });
+        return sb.toString().trim().isEmpty() && !content.isBlank() ? "[message contained unsupported characters]" : sb.toString();
     }
 }

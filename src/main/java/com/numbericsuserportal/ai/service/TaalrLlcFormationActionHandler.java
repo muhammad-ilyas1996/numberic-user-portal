@@ -150,21 +150,64 @@ public class TaalrLlcFormationActionHandler {
         if (TaalrInputValidation.isConfusion(rawMessage)) {
             return TaalrActionResult.handled("Reply YES to prepare filing now, or NO to cancel.");
         }
+        // Allow renaming during prepare-confirm (e.g. after name-check ERROR / unavailable).
+        if (rawMessage != null && !rawMessage.isBlank()
+                && looksLikeLlcName(rawMessage)
+                && parsed != null
+                && parsed.getIntent() != TaalrIntent.CONFIRM_YES
+                && parsed.getIntent() != TaalrIntent.CONFIRM_NO) {
+            ctx.getLlcDraft().setLlcName(rawMessage.trim());
+            ctx.getLlcDraft().setAwaitingPrepareConfirm(true);
+            sessionService.updateSession(session, TaalrPendingAction.LLC_PREPARE_CONFIRM, ctx);
+            return TaalrActionResult.handled("Updated LLC name to \"" + rawMessage.trim()
+                    + "\".\nReply YES to run name check + prepare, or NO to cancel.");
+        }
         return TaalrActionResult.handled("Please reply YES to prepare, or NO to cancel.");
+    }
+
+    private static boolean looksLikeLlcName(String value) {
+        String t = value.trim();
+        if (t.length() < 3 || t.length() > 120) {
+            return false;
+        }
+        String lower = t.toLowerCase(Locale.ROOT);
+        if (lower.equals("yes") || lower.equals("no") || lower.equals("y") || lower.equals("n")
+                || lower.equals("cancel")) {
+            return false;
+        }
+        return !TaalrInputValidation.isValidEmail(t) && !TaalrInputValidation.isValidPhone(t);
     }
 
     private TaalrActionResult runPrepare(TaalrActionRequest request, User user, TaalrSessionContext ctx) {
         try {
             LlcFormation formation = ensureDraftPersisted(user, ctx.getLlcDraft());
             NameCheckResponseDTO nameCheck = runNameCheck(formation);
-            if (nameCheck != null && nameCheck.getResult() != null
-                    && Boolean.FALSE.equals(nameCheck.getResult().getAvailable())) {
-                sessionService.clearSession(request);
+
+            if (nameCheck == null
+                    || (formation.getNameCheckStatus() != null
+                    && "ERROR".equalsIgnoreCase(formation.getNameCheckStatus()))) {
+                ctx.getLlcDraft().setAwaitingPrepareConfirm(true);
+                sessionService.saveSession(request, TaalrPendingAction.LLC_PREPARE_CONFIRM, ctx);
+                return TaalrActionResult.handled(
+                        "Name check could not be completed right now. Reply YES to retry prepare, "
+                                + "or send a new LLC name to change it, or cancel.");
+            }
+
+            if (nameCheck.getResult() != null && Boolean.FALSE.equals(nameCheck.getResult().getAvailable())) {
+                ctx.getLlcDraft().setLlcName(null);
+                ctx.getLlcDraft().setAwaitingPrepareConfirm(false);
+                sessionService.saveSession(request, TaalrPendingAction.LLC_DRAFT, ctx);
+                String suggestions = "";
+                if (nameCheck.getResult().getSuggestions() != null && !nameCheck.getResult().getSuggestions().isEmpty()) {
+                    suggestions = "\nSuggestions: " + String.join(", ", nameCheck.getResult().getSuggestions());
+                }
                 return TaalrActionResult.handled(
                         "Name check says \"" + formation.getLlcName() + "\" may be unavailable in "
-                                + formation.getJurisdiction()
-                                + ". Please start again with a different LLC name, or ask me to guide you.");
+                                + formation.getJurisdiction() + "."
+                                + suggestions
+                                + "\nPlease send a different LLC legal name to continue (session kept).");
             }
+
             NorthwestPrepareResponseDTO prepared = northwestIntegrationService.prepare(formation, user);
             sessionService.clearSession(request);
             return TaalrActionResult.handled(buildSuccessReply(formation, prepared, nameCheck));
