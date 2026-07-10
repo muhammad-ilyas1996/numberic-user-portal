@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 public final class TaalrCapabilitiesService {
 
     private static final Pattern GREETING = Pattern.compile(
-            "^(hi|hello|hey|hiya|howdy|yes|ok|okay|start|menu|help)"
+            "^(hi|hello|hey|hiya|howdy|start|menu|help)"
                     + "(\\s+there)?[!?.\\s]*$",
             Pattern.CASE_INSENSITIVE);
 

@@ -16,6 +16,7 @@ import com.numbericsuserportal.recieptupload.dto.ReceiptSaveRequestDTO;
 import com.numbericsuserportal.recieptupload.dto.ReceiptSaveResponseDTO;
 import com.numbericsuserportal.recieptupload.dto.ReceiptSearch;
 import com.numbericsuserportal.recieptupload.dto.ReceiptUploadResponseDTO;
+import com.numbericsuserportal.recieptupload.respository.ReceiptRepository;
 import com.numbericsuserportal.recieptupload.service.ReceiptService;
 import com.numbericsuserportal.twilio.service.FileHandlerService;
 import com.numbericsuserportal.usermanagement.domain.User;
@@ -41,6 +42,9 @@ public class TaalrReceiptActionHandler {
 
     @Autowired
     private ReceiptService receiptService;
+
+    @Autowired
+    private ReceiptRepository receiptRepository;
 
     @Autowired
     private FileHandlerService fileHandlerService;
@@ -204,18 +208,22 @@ public class TaalrReceiptActionHandler {
             }
 
             ReceiptSaveResponseDTO saved = receiptService.saveReceiptData(saveRequest, file);
-            sessionService.clearSession(request);
-
             if (Boolean.TRUE.equals(saved.getSuccess())) {
+                sessionService.clearSession(request);
                 return TaalrActionResult.handled("Receipt saved successfully under category \""
                         + draft.getCategory() + "\" (" + saveRequest.getEntryType()
                         + "). You can view it in Numbrics → Receipts.");
             }
+            sessionService.updateSession(session, TaalrPendingAction.RECEIPT_SAVE_CONFIRM, ctx);
             return TaalrActionResult.handled(
-                    saved.getMessage() != null ? saved.getMessage() : "Could not save receipt. Please try again from the dashboard.");
+                    (saved.getMessage() != null ? saved.getMessage() : "Could not save receipt.")
+                            + " Reply YES to retry, EDIT to change, or NO to discard.");
         } catch (Exception e) {
             log.error("Receipt save failed for user {}", user.getUserId(), e);
-            return TaalrActionResult.handled("Could not save receipt: " + (e.getMessage() != null ? e.getMessage() : "unknown error"));
+            sessionService.updateSession(session, TaalrPendingAction.RECEIPT_SAVE_CONFIRM, ctx);
+            return TaalrActionResult.handled("Could not save receipt: "
+                    + (e.getMessage() != null ? e.getMessage() : "unknown error")
+                    + ". Reply YES to retry, or NO to discard.");
         }
     }
 
@@ -238,11 +246,39 @@ public class TaalrReceiptActionHandler {
             return confirmSave(request, user, session);
         }
 
+        String lower = message.toLowerCase(Locale.ROOT);
+        if (lower.equals("edit") || lower.startsWith("edit ")) {
+            draft.setEditing(true);
+            draft.setEditField(null);
+            sessionService.updateSession(session, TaalrPendingAction.RECEIPT_SAVE_CONFIRM, ctx);
+            return TaalrActionResult.handled(
+                    "What do you want to edit?\nReply: merchant / date / amount / tax / category");
+        }
+        if (draft.isEditing() && draft.getEditField() == null) {
+            String field = mapEditField(lower);
+            if (field == null) {
+                return TaalrActionResult.handled("Please reply with one of: merchant, date, amount, tax, category");
+            }
+            draft.setEditField(field);
+            sessionService.updateSession(session, TaalrPendingAction.RECEIPT_SAVE_CONFIRM, ctx);
+            return TaalrActionResult.handled(questionForReceipt(field));
+        }
+        if (draft.isEditing() && draft.getEditField() != null) {
+            String err = applyEdit(draft, draft.getEditField(), message);
+            if (err != null) {
+                return TaalrActionResult.handled(err);
+            }
+            draft.setEditing(false);
+            draft.setEditField(null);
+            sessionService.updateSession(session, TaalrPendingAction.RECEIPT_SAVE_CONFIRM, ctx);
+            return TaalrActionResult.handled("Updated.\n\n" + formatReceiptPreview(draft, true));
+        }
+
         String missing = missingBeforeSave(draft);
         if (missing == null) {
             sessionService.updateSession(session, TaalrPendingAction.RECEIPT_SAVE_CONFIRM, ctx);
             return TaalrActionResult.handled(formatReceiptPreview(draft, true)
-                    + "\n\nReply YES to save, or NO to cancel.");
+                    + "\n\nReply YES to save, EDIT to change, or NO to cancel.");
         }
         String err = applyEdit(draft, missing, message);
         if (err != null) {
@@ -271,6 +307,23 @@ public class TaalrReceiptActionHandler {
     }
 
     public TaalrActionResult discard(TaalrActionRequest request) {
+        try {
+            sessionService.findActiveSession(request).ifPresent(session -> {
+                TaalrSessionContext ctx = sessionService.loadContext(session);
+                TaalrReceiptDraft draft = ctx.getReceiptDraft();
+                if (draft != null && draft.getReceiptId() != null
+                        && !"MANUAL".equalsIgnoreCase(draft.getEntryType())) {
+                    try {
+                        // OCR upload creates Receipt row before save; remove orphan on discard.
+                        receiptRepository.deleteById(draft.getReceiptId());
+                    } catch (Exception e) {
+                        log.warn("Could not delete discarded receipt {}: {}", draft.getReceiptId(), e.getMessage());
+                    }
+                }
+            });
+        } catch (Exception e) {
+            log.warn("Receipt discard cleanup failed: {}", e.getMessage());
+        }
         sessionService.clearSession(request);
         return TaalrActionResult.handled("Receipt discarded. Send another photo anytime to scan a new receipt.");
     }

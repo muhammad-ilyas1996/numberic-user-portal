@@ -119,10 +119,11 @@ public class TaalrActionOrchestratorService {
                 || TaalrInputValidation.wantsGuidanceOnly(message);
         boolean resumeRequested = pendingContextService.isResumeMessage(message);
 
-        // GUIDE: do not continue automation drafts unless user explicitly resumes or cancels.
+        // GUIDE: do not continue automation drafts unless user explicitly resumes, cancels, or confirms.
         if (guideMode && !resumeRequested
                 && parsed.getIntent() != TaalrIntent.CANCEL
-                && parsed.getIntent() != TaalrIntent.CONFIRM_NO) {
+                && parsed.getIntent() != TaalrIntent.CONFIRM_NO
+                && !(awaitingConfirm && parsed.getIntent() == TaalrIntent.CONFIRM_YES)) {
             return TaalrActionResult.notHandled();
         }
 
@@ -144,7 +145,12 @@ public class TaalrActionOrchestratorService {
 
         if (sessionOpt.isPresent() && sessionOpt.get().getPendingAction() == TaalrPendingAction.INVOICE_DRAFT) {
             if (parsed.getIntent() == TaalrIntent.CANCEL) {
-                return invoiceHandler.cancel(request);
+                return invoiceHandler.cancel(request, user);
+            }
+            if (isSwitchAwayIntent(parsed.getIntent(), TaalrIntent.INVOICE)) {
+                return TaalrActionResult.handled(
+                        "You have an invoice draft in progress. Reply \"cancel\" to discard it first, "
+                                + "or continue answering the invoice questions.");
             }
             if (user != null) {
                 return invoiceHandler.continueDraft(request, user, sessionOpt.get(), parsed, message);
@@ -154,6 +160,12 @@ public class TaalrActionOrchestratorService {
                 || sessionOpt.get().getPendingAction() == TaalrPendingAction.LLC_PREPARE_CONFIRM)) {
             if (parsed.getIntent() == TaalrIntent.CANCEL) {
                 return llcFormationHandler.cancel(request);
+            }
+            if (sessionOpt.get().getPendingAction() == TaalrPendingAction.LLC_DRAFT
+                    && isSwitchAwayIntent(parsed.getIntent(), TaalrIntent.LLC_FORMATION)) {
+                return TaalrActionResult.handled(
+                        "You have an LLC formation draft in progress. Reply \"cancel\" to discard it first, "
+                                + "or continue answering the LLC questions.");
             }
             if (user != null) {
                 return llcFormationHandler.handleStartOrContinue(request, user, parsed, sessionOpt.get(), message);
@@ -219,7 +231,8 @@ public class TaalrActionOrchestratorService {
         }
         TaalrPendingAction action = session.getPendingAction();
         if (action == TaalrPendingAction.INVOICE_DRAFT) {
-            return invoiceHandler.continueDraft(request, user, session, parsed, message);
+            // Do not treat "continue invoice" as a field answer.
+            return invoiceHandler.promptContinue(request, user, session);
         }
         if (action == TaalrPendingAction.INVOICE_SEND_CONFIRM) {
             return TaalrActionResult.handled("Please reply YES to send the invoice, or NO to cancel.");
@@ -228,10 +241,14 @@ public class TaalrActionOrchestratorService {
             return TaalrActionResult.handled("Please reply YES to resend the reminder, or NO to cancel.");
         }
         if (action == TaalrPendingAction.RECEIPT_SAVE_CONFIRM) {
-            return receiptHandler.continueConfirm(request, user, session, parsed, message);
+            return TaalrActionResult.handled(
+                    "You have a receipt pending. Reply YES to save, EDIT to change fields, or NO to discard.");
         }
-        if (action == TaalrPendingAction.LLC_DRAFT || action == TaalrPendingAction.LLC_PREPARE_CONFIRM) {
-            return llcFormationHandler.handleStartOrContinue(request, user, parsed, session, message);
+        if (action == TaalrPendingAction.LLC_DRAFT) {
+            return llcFormationHandler.promptContinue(request, user, session);
+        }
+        if (action == TaalrPendingAction.LLC_PREPARE_CONFIRM) {
+            return TaalrActionResult.handled("Please reply YES to prepare filing, or NO to cancel.");
         }
         return TaalrActionResult.notHandled();
     }
@@ -243,6 +260,16 @@ public class TaalrActionOrchestratorService {
                 || intent == TaalrIntent.LLC_FORMATION || intent == TaalrIntent.LLC_STATUS;
     }
 
+    /** True when user asks for a different automation while a draft of {@code current} is open. */
+    private static boolean isSwitchAwayIntent(TaalrIntent intent, TaalrIntent current) {
+        if (intent == null || intent == TaalrIntent.CHAT || intent == current
+                || intent == TaalrIntent.CONFIRM_YES || intent == TaalrIntent.CONFIRM_NO
+                || intent == TaalrIntent.CANCEL) {
+            return false;
+        }
+        return isAutomationIntent(intent);
+    }
+
     private static TaalrChatMode resolveMode(TaalrActionRequest request) {
         return request.getMode() != null ? request.getMode() : TaalrChatMode.AUTO;
     }
@@ -251,8 +278,8 @@ public class TaalrActionOrchestratorService {
             TaalrIntentParseResult parsed, String message) {
         User user = resolveUser(request);
         if (user == null) {
-            sessionService.clearSession(request);
-            return TaalrActionResult.handled("Session expired. Please log in and try again.");
+            return TaalrActionResult.handled(
+                    "Please log in (or link this WhatsApp number) to continue your pending task. Your draft is still saved.");
         }
 
         TaalrPendingAction action = session.getPendingAction();
@@ -265,7 +292,7 @@ public class TaalrActionOrchestratorService {
                 return invoiceHandler.confirmSend(request, user, session);
             }
             if (parsed.getIntent() == TaalrIntent.CONFIRM_NO || parsed.getIntent() == TaalrIntent.CANCEL) {
-                return invoiceHandler.cancel(request);
+                return invoiceHandler.cancel(request, user);
             }
             return TaalrActionResult.handled("Please reply YES to send the invoice, or NO to cancel.");
         }
@@ -274,11 +301,16 @@ public class TaalrActionOrchestratorService {
             TaalrSessionContext ctx = sessionService.loadContext(session);
             boolean needsRecipient = ctx.getInvoiceDraft() == null
                     || ctx.getInvoiceDraft().getRecipientPhoneOrEmail() == null
-                    || ctx.getInvoiceDraft().getRecipientPhoneOrEmail().isBlank();
+                    || ctx.getInvoiceDraft().getRecipientPhoneOrEmail().isBlank()
+                    || !TaalrInputValidation.isValidRecipient(ctx.getInvoiceDraft().getRecipientPhoneOrEmail());
 
             if (needsRecipient
-                    && parsed.getIntent() != TaalrIntent.CONFIRM_YES
-                    && parsed.getIntent() != TaalrIntent.CONFIRM_NO) {
+                    && parsed.getIntent() != TaalrIntent.CONFIRM_NO
+                    && parsed.getIntent() != TaalrIntent.CANCEL) {
+                if (parsed.getIntent() == TaalrIntent.CONFIRM_YES) {
+                    return TaalrActionResult.handled(
+                            "Please provide a valid email or phone number to resend the invoice to first.");
+                }
                 return invoiceQueryHandler.continueResendDraft(request, user, session, request.getMessage());
             }
             if (parsed.getIntent() == TaalrIntent.CONFIRM_YES) {
@@ -308,6 +340,7 @@ public class TaalrActionOrchestratorService {
     }
 
     private TaalrActionResult handleCancel(TaalrActionRequest request, TaalrActionSessionEntity session) {
+        User user = resolveUser(request);
         if (session.getPendingAction() == TaalrPendingAction.RECEIPT_SAVE_CONFIRM) {
             return receiptHandler.discard(request);
         }
@@ -318,7 +351,7 @@ public class TaalrActionOrchestratorService {
                 || session.getPendingAction() == TaalrPendingAction.LLC_PREPARE_CONFIRM) {
             return llcFormationHandler.cancel(request);
         }
-        return invoiceHandler.cancel(request);
+        return invoiceHandler.cancel(request, user);
     }
 
     private User resolveUser(TaalrActionRequest request) {

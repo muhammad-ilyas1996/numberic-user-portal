@@ -103,6 +103,26 @@ public class TaalrLlcFormationActionHandler {
                 + "\n\nReply YES to run name check + prepare filing, or NO to cancel.");
     }
 
+    /** Re-ask next LLC field without treating resume text as an answer. */
+    public TaalrActionResult promptContinue(TaalrActionRequest request, User user, TaalrActionSessionEntity session) {
+        TaalrSessionContext ctx = sessionService.loadContext(session);
+        if (ctx.getLlcDraft() == null) {
+            ctx.setLlcDraft(new TaalrLlcDraft());
+        }
+        if (ctx.getLlcDraft().isAwaitingPrepareConfirm()) {
+            return TaalrActionResult.handled("Please reply YES to prepare filing, or NO to cancel.");
+        }
+        String missing = missingField(ctx.getLlcDraft());
+        persistDraftSession(request, session, ctx);
+        if (missing != null) {
+            return TaalrActionResult.handled(questionFor(missing));
+        }
+        ctx.getLlcDraft().setAwaitingPrepareConfirm(true);
+        sessionService.updateSession(session, TaalrPendingAction.LLC_PREPARE_CONFIRM, ctx);
+        return TaalrActionResult.handled(formatPreparePreview(ctx.getLlcDraft())
+                + "\n\nReply YES to run name check + prepare filing, or NO to cancel.");
+    }
+
     public TaalrActionResult confirmPrepare(TaalrActionRequest request, User user, TaalrActionSessionEntity session) {
         TaalrSessionContext ctx = sessionService.loadContext(session);
         if (ctx.getLlcDraft() == null) {
@@ -150,12 +170,11 @@ public class TaalrLlcFormationActionHandler {
         if (TaalrInputValidation.isConfusion(rawMessage)) {
             return TaalrActionResult.handled("Reply YES to prepare filing now, or NO to cancel.");
         }
-        // Allow renaming during prepare-confirm (e.g. after name-check ERROR / unavailable).
+        // Allow renaming only when message looks like a business name (not yes/no/short confirm words).
         if (rawMessage != null && !rawMessage.isBlank()
-                && looksLikeLlcName(rawMessage)
-                && parsed != null
-                && parsed.getIntent() != TaalrIntent.CONFIRM_YES
-                && parsed.getIntent() != TaalrIntent.CONFIRM_NO) {
+                && TaalrInputValidation.isValidBusinessName(rawMessage)
+                && TaalrInputValidation.parseYesNo(rawMessage) == null
+                && looksLikeLlcName(rawMessage)) {
             ctx.getLlcDraft().setLlcName(rawMessage.trim());
             ctx.getLlcDraft().setAwaitingPrepareConfirm(true);
             sessionService.updateSession(session, TaalrPendingAction.LLC_PREPARE_CONFIRM, ctx);
@@ -167,12 +186,14 @@ public class TaalrLlcFormationActionHandler {
 
     private static boolean looksLikeLlcName(String value) {
         String t = value.trim();
-        if (t.length() < 3 || t.length() > 120) {
+        if (t.length() < 5 || t.length() > 120) {
             return false;
         }
         String lower = t.toLowerCase(Locale.ROOT);
         if (lower.equals("yes") || lower.equals("no") || lower.equals("y") || lower.equals("n")
-                || lower.equals("cancel")) {
+                || lower.equals("cancel") || lower.equals("sure") || lower.equals("ok")
+                || lower.equals("okay") || lower.equals("standard") || lower.equals("confirm")
+                || lower.equals("proceed") || lower.startsWith("go ahead")) {
             return false;
         }
         return !TaalrInputValidation.isValidEmail(t) && !TaalrInputValidation.isValidPhone(t);
@@ -409,6 +430,10 @@ public class TaalrLlcFormationActionHandler {
         }
         int total = draft.getMembers().stream().mapToInt(m -> m.getOwnershipPct() != null ? m.getOwnershipPct() : 0).sum();
         if ("multi".equalsIgnoreCase(draft.getOwnershipType()) && draft.getMembers().size() < 2) {
+            // Deadlock guard: first member already took 100% — force re-entry.
+            if (total >= 100) {
+                return "memberPctFix";
+            }
             return "memberName";
         }
         if (total < 100) {
@@ -506,8 +531,11 @@ public class TaalrLlcFormationActionHandler {
                     yield "Please enter ownership % between 1 and 100.";
                 }
                 int used = draft.getMembers().stream().mapToInt(m -> m.getOwnershipPct() != null ? m.getOwnershipPct() : 0).sum();
+                if ("multi".equalsIgnoreCase(draft.getOwnershipType()) && draft.getMembers().isEmpty() && pct >= 100) {
+                    yield "Multi-member LLC needs at least 2 members. First member must be under 100% (e.g. 50).";
+                }
                 if (used + pct > 100) {
-                    yield "Ownership would exceed 100%. Remaining available: " + (100 - used) + "%.";
+                    yield "Ownership would exceed 100%. Remaining available: " + Math.max(0, 100 - used) + "%.";
                 }
                 ensurePending(draft).setOwnershipPct(pct);
                 yield null;
@@ -545,24 +573,29 @@ public class TaalrLlcFormationActionHandler {
                 if (yn == null) {
                     yield "Add another member? Reply YES or NO.";
                 }
-                draft.setAskingAddAnotherMember(false);
                 if (Boolean.TRUE.equals(yn)) {
+                    draft.setAskingAddAnotherMember(false);
                     draft.setPendingMember(null);
                 } else {
                     int total = draft.getMembers().stream().mapToInt(m -> m.getOwnershipPct() != null ? m.getOwnershipPct() : 0).sum();
                     if (total != 100) {
-                        yield "Ownership must equal 100% before continuing. Current total: " + total + "%.";
+                        draft.setAskingAddAnotherMember(true);
+                        yield "Ownership must equal 100% before continuing. Current total: " + total
+                                + "%. Reply YES to add another member.";
                     }
                     if ("multi".equalsIgnoreCase(draft.getOwnershipType()) && draft.getMembers().size() < 2) {
-                        yield "Multi-member LLC needs at least 2 members.";
+                        draft.setAskingAddAnotherMember(true);
+                        yield "Multi-member LLC needs at least 2 members. Reply YES to add another member.";
                     }
+                    draft.setAskingAddAnotherMember(false);
                 }
                 yield null;
             }
             case "memberPctFix" -> {
                 draft.getMembers().clear();
                 draft.setPendingMember(null);
-                yield "Ownership exceeded 100%. Let's re-enter members from the start.";
+                draft.setAskingAddAnotherMember(false);
+                yield "Ownership exceeded 100% (or first member took 100% on multi). Let's re-enter members from the start.";
             }
             case "filingSpeed" -> {
                 String speed = TaalrInputValidation.parseFilingSpeed(answer);
@@ -690,7 +723,7 @@ public class TaalrLlcFormationActionHandler {
             case "memberPct" -> "Ownership percentage for this member? (e.g. 50). Single-member is auto 100%.";
             case "memberTitle" -> "Member title? (Member/Manager, or reply skip)";
             case "addAnotherMember" -> "Add another member? Reply YES or NO. (Ownership must total 100%)";
-            case "memberPctFix" -> "Ownership exceeded 100%. Reply anything to restart member entry.";
+            case "memberPctFix" -> "Ownership is invalid for multi-member. Reply anything to restart member entry.";
             case "filingSpeed" -> "Filing speed: standard, expedited, or same day?";
             case "addonEin" -> "Add EIN filing service? Reply YES or NO.";
             case "addonScorp" -> "Add S-Corp election service? Reply YES or NO.";
@@ -716,7 +749,7 @@ public class TaalrLlcFormationActionHandler {
             for (TaalrLlcMemberDraft m : d.getMembers()) {
                 sb.append("  ").append(i++).append(") ").append(m.getFirstName()).append(' ').append(m.getLastName())
                         .append(" | DOB ").append(m.getDob())
-                        .append(" | SSN ****").append(m.getSsnLast4())
+                        .append(" | SSN on file")
                         .append(" | ").append(m.getOwnershipPct()).append('%')
                         .append(" | ").append(m.getTitle()).append('\n');
             }

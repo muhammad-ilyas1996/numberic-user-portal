@@ -25,10 +25,10 @@ import java.util.regex.Pattern;
 public class TaalrIntentParserService {
 
     private static final Pattern YES_PATTERN = Pattern.compile(
-            "^(yes|y|yeah|yep|confirm|proceed|go ahead)\\b.*",
+            "^(yes|y|yeah|yep|yup|ok|okay|sure|alright|confirm|proceed|go ahead|send it|do it)\\b.*",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern NO_PATTERN = Pattern.compile(
-            "^(no|n|nope|discard|don't|dont|no thanks|cancel that)(\\s*[.!])?$",
+            "^(no|n|nope|nah|discard|don't|dont|no thanks|cancel that)(\\s*[.!])?$",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern CANCEL_PATTERN = Pattern.compile(
             "^(cancel|nevermind|never mind|abort|stop)(\\s+.*)?$",
@@ -164,8 +164,10 @@ public class TaalrIntentParserService {
             r.setIntent(TaalrIntent.RECEIPT);
             return r;
         }
-        if (lower.contains("resend") || lower.contains("send again") || lower.contains("remind")
-                || lower.contains("reminder") || lower.contains("follow up") || lower.contains("follow-up")) {
+        if (lower.contains("resend") || lower.contains("send again")
+                || ((lower.contains("remind") || lower.contains("reminder")
+                || lower.contains("follow up") || lower.contains("follow-up"))
+                && (containsWord(lower, "invoice") || lower.contains("inv-") || lower.contains("payment")))) {
             TaalrIntentParseResult r = new TaalrIntentParseResult();
             r.setIntent(TaalrIntent.INVOICE_RESEND);
             r.setInvoice(extractInvoiceHeuristic(message));
@@ -256,11 +258,19 @@ public class TaalrIntentParserService {
         TaalrLlcDraft draft = new TaalrLlcDraft();
         String lower = message.toLowerCase();
         Matcher stateCode = Pattern.compile("\\b([A-Z]{2})\\b").matcher(message);
-        if (stateCode.find()) {
+        while (stateCode.find()) {
             String code = stateCode.group(1).toUpperCase();
-            if (!"LL".equals(code) && !"IN".equals(code)) {
-                draft.setJurisdiction(code);
+            if ("LL".equals(code)) {
+                continue;
             }
+            // Skip bare "IN" unless clearly a state cue (avoids English "in").
+            if ("IN".equals(code)
+                    && !(lower.contains("indiana") || lower.contains("state") || lower.contains("jurisdiction")
+                    || lower.matches(".*\\bin\\s+in\\b.*") || lower.contains("llc in"))) {
+                continue;
+            }
+            draft.setJurisdiction(code);
+            break;
         }
         Matcher forName = Pattern.compile("(?i)(?:named|name|llc name)\\s+([A-Za-z0-9&'\\- ]{3,60})").matcher(message);
         if (forName.find()) {

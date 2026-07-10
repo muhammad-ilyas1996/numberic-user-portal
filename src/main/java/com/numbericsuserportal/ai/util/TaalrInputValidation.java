@@ -73,10 +73,16 @@ public final class TaalrInputValidation {
         if (digits.length() == 10) {
             return "+1" + digits;
         }
+        if (digits.length() == 11 && digits.startsWith("1")) {
+            return "+" + digits;
+        }
         if (digits.startsWith("00")) {
             return "+" + digits.substring(2);
         }
-        return text.trim().startsWith("+") ? "+" + digits : digits;
+        if (text.trim().startsWith("+") || digits.length() >= 10) {
+            return "+" + digits;
+        }
+        return digits;
     }
 
     public static boolean isValidPersonName(String text) {
@@ -182,10 +188,13 @@ public final class TaalrInputValidation {
             return null;
         }
         String lower = text.trim().toLowerCase(Locale.ROOT);
-        if (lower.matches("^(yes|y|yeah|yep|true|1|haan|han)\\b.*")) {
+        if (lower.matches("^(yes|y|yeah|yep|yup|ok|okay|sure|alright|confirm|proceed|true|1|haan|han|"
+                + "go ahead|send it|do it)\\b.*")) {
             return Boolean.TRUE;
         }
-        if (lower.matches("^(no|n|nope|false|0|nahin|nahi)\\b.*")) {
+        if (lower.matches("^(no|n|nope|nah|false|0|nahin|nahi|don't|dont|no thanks|cancel that)"
+                + "(\\s*[.!])?$")
+                || lower.matches("^(no|nope|nah)\\b.*")) {
             return Boolean.FALSE;
         }
         return null;

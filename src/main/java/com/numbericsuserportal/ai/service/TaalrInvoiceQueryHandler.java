@@ -7,6 +7,7 @@ import com.numbericsuserportal.ai.action.dto.TaalrIntentParseResult;
 import com.numbericsuserportal.ai.action.dto.TaalrInvoiceDraft;
 import com.numbericsuserportal.ai.action.dto.TaalrSessionContext;
 import com.numbericsuserportal.ai.entity.TaalrActionSessionEntity;
+import com.numbericsuserportal.ai.util.TaalrInputValidation;
 import com.numbericsuserportal.invoice.dto.InvoiceSearch;
 import com.numbericsuserportal.invoice.dto.SendInvoiceRequestDto;
 import com.numbericsuserportal.invoice.dto.SendInvoiceResponseDto;
@@ -62,7 +63,7 @@ public class TaalrInvoiceQueryHandler {
         String filter = normalizeFilter(parsed.getStatusFilter());
         InvoiceSearch search = new InvoiceSearch();
         search.setPageNumber(1);
-        search.setPageSize(50);
+        search.setPageSize(100);
 
         Page<InvoiceAndTaxEntity> page = invoiceAndTaxService.searchInvoice(search, user);
         List<InvoiceAndTaxEntity> all = page.getContent();
@@ -87,6 +88,10 @@ public class TaalrInvoiceQueryHandler {
 
         for (InvoiceAndTaxEntity inv : shown) {
             sb.append(formatInvoiceLine(inv)).append('\n');
+        }
+
+        if (page.getTotalElements() > all.size()) {
+            sb.append("\n(Showing recent page only — ask by invoice number for older ones.)\n");
         }
 
         sb.append('\n').append(summarizeCounts(all));
@@ -139,16 +144,22 @@ public class TaalrInvoiceQueryHandler {
         }
 
         if (rawMessage != null && !rawMessage.isBlank()) {
-            if (rawMessage.contains("@")) {
+            if (!TaalrInputValidation.isValidRecipient(rawMessage)) {
+                sessionService.updateSession(session, TaalrPendingAction.INVOICE_RESEND_CONFIRM, ctx);
+                return TaalrActionResult.handled(
+                        "That doesn't look like a valid email or phone. Example: jane@example.com or +15551234567.");
+            }
+            if (TaalrInputValidation.isValidEmail(rawMessage)) {
                 draft.setRecipientPhoneOrEmail(rawMessage.trim());
                 draft.setChannel(InvoiceSendServiceImpl.CHANNEL_EMAIL);
             } else {
-                draft.setRecipientPhoneOrEmail(rawMessage.trim());
+                draft.setRecipientPhoneOrEmail(TaalrInputValidation.normalizePhone(rawMessage));
                 draft.setChannel(InvoiceSendServiceImpl.CHANNEL_WHATSAPP);
             }
         }
 
-        if (draft.getRecipientPhoneOrEmail() == null || draft.getRecipientPhoneOrEmail().isBlank()) {
+        if (draft.getRecipientPhoneOrEmail() == null || draft.getRecipientPhoneOrEmail().isBlank()
+                || !TaalrInputValidation.isValidRecipient(draft.getRecipientPhoneOrEmail())) {
             return TaalrActionResult.handled("Please provide the email or phone number to resend the invoice to.");
         }
 
@@ -174,21 +185,31 @@ public class TaalrInvoiceQueryHandler {
             return TaalrActionResult.handled("Session expired. Please ask to resend the invoice again.");
         }
 
+        String recipient = draft.getRecipientPhoneOrEmail();
+        if (!TaalrInputValidation.isValidRecipient(recipient)) {
+            sessionService.updateSession(session, TaalrPendingAction.INVOICE_RESEND_CONFIRM, ctx);
+            return TaalrActionResult.handled(
+                    "Please provide a valid email or phone number to resend the invoice to.");
+        }
+
         SendInvoiceRequestDto sendReq = new SendInvoiceRequestDto();
         sendReq.setInvoiceId(invoiceId);
         sendReq.setChannel(resolveChannel(draft));
-        sendReq.setRecipientPhoneOrEmail(draft.getRecipientPhoneOrEmail());
+        sendReq.setRecipientPhoneOrEmail(
+                TaalrInputValidation.isValidEmail(recipient) ? recipient.trim()
+                        : TaalrInputValidation.normalizePhone(recipient));
 
         SendInvoiceResponseDto result = invoiceSendService.sendInvoice(sendReq, user);
-        sessionService.clearSession(request);
-
         if (result.isSuccess()) {
+            sessionService.clearSession(request);
             return TaalrActionResult.handled(
                     "Reminder sent for invoice via " + sendReq.getChannel()
                             + " to " + sendReq.getRecipientPhoneOrEmail() + ".");
         }
+        sessionService.updateSession(session, TaalrPendingAction.INVOICE_RESEND_CONFIRM, ctx);
         return TaalrActionResult.handled(
-                result.getMessage() != null ? result.getMessage() : "Failed to resend invoice. Try from the dashboard.");
+                (result.getMessage() != null ? result.getMessage() : "Failed to resend invoice.")
+                        + " Reply YES to retry, or NO to cancel.");
     }
 
     public TaalrActionResult cancel(TaalrActionRequest request) {

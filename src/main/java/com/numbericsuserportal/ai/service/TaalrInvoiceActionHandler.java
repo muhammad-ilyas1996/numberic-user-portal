@@ -86,23 +86,49 @@ public class TaalrInvoiceActionHandler {
                 }
             }
         }
-        return nextInvoiceStep(request, user, ctx, session, parsed != null ? parsed.getQuestion() : null);
+        return nextInvoiceStep(request, user, ctx, session, null);
+    }
+
+    /** Re-ask the next missing field without treating the user message as an answer (e.g. resume). */
+    public TaalrActionResult promptContinue(TaalrActionRequest request, User user, TaalrActionSessionEntity session) {
+        TaalrSessionContext ctx = sessionService.loadContext(session);
+        if (ctx.getInvoiceDraft() == null) {
+            ctx.setInvoiceDraft(new TaalrInvoiceDraft());
+        }
+        return nextInvoiceStep(request, user, ctx, session, null);
     }
 
     public TaalrActionResult confirmSend(TaalrActionRequest request, User user, TaalrActionSessionEntity session) {
         TaalrSessionContext ctx = sessionService.loadContext(session);
-        Long invoiceId = ctx.getCreatedInvoiceId();
-        if (invoiceId == null) {
+        TaalrInvoiceDraft draft = ctx.getInvoiceDraft();
+        if (draft == null) {
             sessionService.clearSession(request);
             return TaalrActionResult.handled("Session expired. Please describe the invoice again.");
         }
 
-        TaalrInvoiceDraft draft = ctx.getInvoiceDraft();
         String recipient = resolveRecipient(draft);
         if (!TaalrInputValidation.isValidRecipient(recipient)) {
             sessionService.updateSession(session, TaalrPendingAction.INVOICE_DRAFT, ctx);
             return TaalrActionResult.handled(
                     "Recipient is invalid. Please send a valid email or phone number (with country code if needed).");
+        }
+
+        Long invoiceId = ctx.getCreatedInvoiceId();
+        if (invoiceId == null) {
+            try {
+                InvoiceAndTaxDTO created = createInvoiceFromDraft(draft, user);
+                invoiceId = created.getId();
+                ctx.setCreatedInvoiceId(invoiceId);
+                if (created.getInvoiceNum() != null) {
+                    draft.setInvoiceNum(created.getInvoiceNum());
+                }
+                sessionService.updateSession(session, TaalrPendingAction.INVOICE_SEND_CONFIRM, ctx);
+            } catch (Exception e) {
+                log.error("Taalr invoice create failed for user {}", user.getUserId(), e);
+                sessionService.updateSession(session, TaalrPendingAction.INVOICE_SEND_CONFIRM, ctx);
+                return TaalrActionResult.handled("I couldn't create that invoice: " + safeMessage(e)
+                        + ". Reply YES to retry, or NO to cancel.");
+            }
         }
 
         SendInvoiceRequestDto sendReq = new SendInvoiceRequestDto();
@@ -112,17 +138,37 @@ public class TaalrInvoiceActionHandler {
                 TaalrInputValidation.isValidEmail(recipient) ? recipient : TaalrInputValidation.normalizePhone(recipient));
 
         SendInvoiceResponseDto sendResult = invoiceSendService.sendInvoice(sendReq, user);
-        sessionService.clearSession(request);
-
         if (sendResult.isSuccess()) {
+            sessionService.clearSession(request);
             return TaalrActionResult.handled(
                     "Invoice sent successfully via " + sendReq.getChannel() + " to " + sendReq.getRecipientPhoneOrEmail() + ".");
         }
+        sessionService.updateSession(session, TaalrPendingAction.INVOICE_SEND_CONFIRM, ctx);
         return TaalrActionResult.handled(
-                sendResult.getMessage() != null ? sendResult.getMessage() : "Failed to send invoice. Please try from the dashboard.");
+                (sendResult.getMessage() != null ? sendResult.getMessage() : "Failed to send invoice.")
+                        + " Reply YES to retry, or NO to cancel.");
     }
 
     public TaalrActionResult cancel(TaalrActionRequest request) {
+        return cancel(request, null);
+    }
+
+    public TaalrActionResult cancel(TaalrActionRequest request, User user) {
+        try {
+            sessionService.findActiveSession(request).ifPresent(session -> {
+                TaalrSessionContext ctx = sessionService.loadContext(session);
+                Long invoiceId = ctx.getCreatedInvoiceId();
+                if (invoiceId != null && user != null) {
+                    try {
+                        invoiceAndTaxService.deleteInvoice(invoiceId, user);
+                    } catch (Exception e) {
+                        log.warn("Could not delete cancelled draft invoice {}: {}", invoiceId, e.getMessage());
+                    }
+                }
+            });
+        } catch (Exception e) {
+            log.warn("Invoice cancel cleanup failed: {}", e.getMessage());
+        }
         sessionService.clearSession(request);
         return TaalrActionResult.handled("Invoice cancelled. Say \"create invoice\" anytime, or ask me to guide you manually.");
     }
@@ -136,9 +182,7 @@ public class TaalrInvoiceActionHandler {
             } else {
                 sessionService.saveSession(request, TaalrPendingAction.INVOICE_DRAFT, ctx);
             }
-            if (preferredQuestion != null && !preferredQuestion.isBlank()) {
-                return TaalrActionResult.handled(preferredQuestion);
-            }
+            // Prefer state-machine question; ignore Claude preferredQuestion (can disagree with missing field).
             return TaalrActionResult.handled(questionForMissing(missing, ctx.getInvoiceDraft()));
         }
         return prepareSendConfirmation(request, user, ctx, existingSession);
@@ -146,30 +190,13 @@ public class TaalrInvoiceActionHandler {
 
     private TaalrActionResult prepareSendConfirmation(TaalrActionRequest request, User user,
             TaalrSessionContext ctx, TaalrActionSessionEntity existingSession) {
-        try {
-            Long invoiceId = ctx.getCreatedInvoiceId();
-            if (invoiceId == null) {
-                InvoiceAndTaxDTO created = createInvoiceFromDraft(ctx.getInvoiceDraft(), user);
-                invoiceId = created.getId();
-                ctx.setCreatedInvoiceId(invoiceId);
-                if (created.getInvoiceNum() != null) {
-                    ctx.getInvoiceDraft().setInvoiceNum(created.getInvoiceNum());
-                }
-            }
-
-            if (existingSession != null) {
-                sessionService.updateSession(existingSession, TaalrPendingAction.INVOICE_SEND_CONFIRM, ctx);
-            } else {
-                sessionService.saveSession(request, TaalrPendingAction.INVOICE_SEND_CONFIRM, ctx);
-            }
-
-            return TaalrActionResult.handled(formatInvoicePreview(ctx.getInvoiceDraft(), invoiceId));
-        } catch (Exception e) {
-            log.error("Taalr invoice create failed for user {}", user.getUserId(), e);
-            sessionService.clearSession(request);
-            return TaalrActionResult.handled("I couldn't create that invoice: " + safeMessage(e)
-                    + ". Please check the details and try again.");
+        // Create invoice only on YES (confirmSend) to avoid orphan DRAFT rows on cancel/expiry.
+        if (existingSession != null) {
+            sessionService.updateSession(existingSession, TaalrPendingAction.INVOICE_SEND_CONFIRM, ctx);
+        } else {
+            sessionService.saveSession(request, TaalrPendingAction.INVOICE_SEND_CONFIRM, ctx);
         }
+        return TaalrActionResult.handled(formatInvoicePreview(ctx.getInvoiceDraft(), ctx.getCreatedInvoiceId()));
     }
 
     private InvoiceAndTaxDTO createInvoiceFromDraft(TaalrInvoiceDraft draft, User user) {
@@ -208,7 +235,9 @@ public class TaalrInvoiceActionHandler {
         for (TaalrInvoiceLineItem item : draft.getLineItems()) {
             InvoiceProductDTO line = new InvoiceProductDTO();
             line.setProductName(item.getName());
-            line.setQuantity(item.getQuantity() != null && item.getQuantity() > 0 ? item.getQuantity() : 1.0);
+            double qty = item.getQuantity() != null && item.getQuantity() > 0 ? item.getQuantity() : 1.0;
+            line.setQuantity(qty);
+            // Store unit price; invoice taxableAmount already = sum(qty × unit).
             line.setAmount(item.getAmount());
             line.setDescription(item.getName());
             dto.getInvoiceProductList().add(line);
@@ -222,14 +251,23 @@ public class TaalrInvoiceActionHandler {
         recalculateTotal(draft);
         int dueDays = draft.getDueDays() != null ? draft.getDueDays() : 30;
         StringBuilder sb = new StringBuilder("Invoice ready to send:\n\n");
-        sb.append("• Invoice #: ").append(draft.getInvoiceNum() != null ? draft.getInvoiceNum() : ("ID " + invoiceId)).append('\n');
+        if (draft.getInvoiceNum() != null) {
+            sb.append("• Invoice #: ").append(draft.getInvoiceNum()).append('\n');
+        } else if (invoiceId != null) {
+            sb.append("• Invoice ID: ").append(invoiceId).append('\n');
+        } else {
+            sb.append("• Invoice #: will be assigned when you confirm\n");
+        }
         sb.append("• Customer: ").append(draft.getCustomerName()).append('\n');
         sb.append("• Line items:\n");
         int i = 1;
         for (TaalrInvoiceLineItem item : draft.getLineItems()) {
+            double qty = item.getQuantity() != null ? item.getQuantity() : 1;
+            double unit = item.getAmount() != null ? item.getAmount() : 0;
             sb.append("  ").append(i++).append(") ").append(item.getName())
-                    .append(" | qty ").append(item.getQuantity() != null ? item.getQuantity() : 1)
-                    .append(" | $").append(String.format(Locale.US, "%.2f", item.getAmount())).append('\n');
+                    .append(" | qty ").append(qty)
+                    .append(" | $").append(String.format(Locale.US, "%.2f", unit)).append(" each")
+                    .append(" | line $").append(String.format(Locale.US, "%.2f", unit * qty)).append('\n');
         }
         sb.append("• Total: $").append(String.format(Locale.US, "%.2f", draft.getAmount())).append('\n');
         sb.append("• Channel: ").append(resolveChannel(draft)).append('\n');
@@ -249,13 +287,8 @@ public class TaalrInvoiceActionHandler {
         if (notBlank(source.getInvoiceNum())) {
             target.setInvoiceNum(source.getInvoiceNum().trim());
         }
-        if (TaalrInputValidation.isValidPersonName(source.getCustomerName())
-                || (notBlank(source.getCustomerName()) && !TaalrInputValidation.isConfusion(source.getCustomerName())
-                && !TaalrInputValidation.isValidEmail(source.getCustomerName())
-                && !TaalrInputValidation.isValidPhone(source.getCustomerName()))) {
-            if (notBlank(source.getCustomerName()) && source.getCustomerName().trim().length() >= 2) {
-                target.setCustomerName(source.getCustomerName().trim());
-            }
+        if (TaalrInputValidation.isValidPersonName(source.getCustomerName())) {
+            target.setCustomerName(source.getCustomerName().trim());
         }
         if (TaalrInputValidation.isValidEmail(source.getCustomerEmail())) {
             target.setCustomerEmail(source.getCustomerEmail().trim());
@@ -306,7 +339,7 @@ public class TaalrInvoiceActionHandler {
         if (draft.getLineItems() == null) {
             draft.setLineItems(new ArrayList<>());
         }
-        if (draft.getInvoiceId() != null || notBlank(draft.getInvoiceNum())) {
+        if (draft.getInvoiceId() != null) {
             if (!notBlank(resolveRecipient(draft))) {
                 return "recipient";
             }
@@ -390,7 +423,7 @@ public class TaalrInvoiceActionHandler {
                     ? "Next line item name? (e.g. Design work)"
                     : "First line item name? (e.g. Consulting services)";
             case "lineQty" -> "Quantity for this line item? (e.g. 1)";
-            case "lineAmount" -> "Amount for this line item? (e.g. 300)";
+            case "lineAmount" -> "Unit price for this line item? (e.g. 300 — total = qty × price)";
             case "addAnotherLine" -> "Add another line item? Reply YES or NO.";
             case "channel" -> "How should I send it — Email or WhatsApp?";
             case "recipient" -> {
@@ -415,9 +448,7 @@ public class TaalrInvoiceActionHandler {
         }
         return switch (missingField) {
             case "customerName" -> {
-                if (!TaalrInputValidation.isValidPersonName(answer)
-                        && (answer.trim().length() < 2 || TaalrInputValidation.isValidEmail(answer)
-                        || TaalrInputValidation.isValidPhone(answer))) {
+                if (!TaalrInputValidation.isValidPersonName(answer)) {
                     yield "Please enter a valid customer name (letters only, e.g. Ali Ahmed).";
                 }
                 draft.setCustomerName(answer.trim());
@@ -534,7 +565,8 @@ public class TaalrInvoiceActionHandler {
         double total = 0.0;
         for (TaalrInvoiceLineItem item : draft.getLineItems()) {
             if (item.getAmount() != null) {
-                total += item.getAmount();
+                double qty = item.getQuantity() != null && item.getQuantity() > 0 ? item.getQuantity() : 1.0;
+                total += item.getAmount() * qty;
             }
         }
         draft.setAmount(total);
