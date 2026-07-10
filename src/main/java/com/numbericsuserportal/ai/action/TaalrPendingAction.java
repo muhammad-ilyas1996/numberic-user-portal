@@ -5,5 +5,6 @@ public enum TaalrPendingAction {
     INVOICE_DRAFT,
     INVOICE_SEND_CONFIRM,
     INVOICE_RESEND_CONFIRM,
-    LLC_DRAFT
+    LLC_DRAFT,
+    LLC_PREPARE_CONFIRM
 }

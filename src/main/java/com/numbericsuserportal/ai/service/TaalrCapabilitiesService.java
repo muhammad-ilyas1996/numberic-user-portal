@@ -33,16 +33,20 @@ public final class TaalrCapabilitiesService {
     public static String buildWelcomeMessage(TaalrActionChannel channel) {
         StringBuilder sb = new StringBuilder();
         sb.append("Hello! I'm Taalr, your Numbrics assistant.\n\n");
-        sb.append("Do you want me to do this through chat automation, or guide you to do it manually on the dashboard?\n\n");
-        sb.append("Tell me what you need:\n");
-        sb.append("1. Invoice — create, send, list, or resend reminder\n");
-        sb.append("2. Receipt OCR — scan and save a receipt\n");
-        sb.append("3. Sales tax — guidance and questions\n");
-        sb.append("4. Something else — general Numbrics help\n\n");
+        sb.append("You can either:\n");
+        sb.append("• Automate in chat (I'll collect required fields with validation), or\n");
+        sb.append("• Ask for guidance (I'll explain how to do it on the dashboard)\n\n");
+        sb.append("What do you need?\n");
+        sb.append("1. Invoice — create, send, list, resend\n");
+        sb.append("2. Receipt OCR — scan, edit, categorize, save\n");
+        sb.append("3. LLC Formation — draft, name check, prepare\n");
+        sb.append("4. Sales tax / general Numbrics help\n\n");
         sb.append("Examples:\n");
         sb.append("• Create invoice for Jane $500 via email jane@example.com\n");
         sb.append("• Show my unpaid invoices\n");
-        sb.append("• I want to upload a receipt\n");
+        sb.append("• Upload a receipt / manual receipt / show my receipts\n");
+        sb.append("• Start LLC formation in TX\n");
+        sb.append("• Guide me on invoices (no automation)\n");
         if (channel == TaalrActionChannel.WHATSAPP) {
             sb.append("\nOn WhatsApp you can also send a receipt photo directly.");
         } else {

@@ -73,8 +73,11 @@ public class TaalrPendingContextService {
     }
 
     private static String resumePhrase(TaalrPendingAction action) {
-        if (action == TaalrPendingAction.LLC_DRAFT) {
+        if (action == TaalrPendingAction.LLC_DRAFT || action == TaalrPendingAction.LLC_PREPARE_CONFIRM) {
             return "continue llc";
+        }
+        if (action == TaalrPendingAction.RECEIPT_SAVE_CONFIRM) {
+            return "continue receipt";
         }
         return "continue invoice";
     }
@@ -89,6 +92,7 @@ public class TaalrPendingContextService {
             case INVOICE_RESEND_CONFIRM -> describeInvoiceResendConfirm(ctx);
             case RECEIPT_SAVE_CONFIRM -> describeReceiptConfirm(ctx);
             case LLC_DRAFT -> describeLlcDraft(ctx);
+            case LLC_PREPARE_CONFIRM -> describeLlcPrepareConfirm(ctx);
         };
     }
 
@@ -149,5 +153,13 @@ public class TaalrPendingContextService {
         }
         sb.append(" — draft is incomplete.");
         return sb.toString();
+    }
+
+    private static String describeLlcPrepareConfirm(TaalrSessionContext ctx) {
+        TaalrLlcDraft d = ctx.getLlcDraft();
+        if (d != null && d.getLlcName() != null) {
+            return "LLC \"" + d.getLlcName() + "\" is ready — waiting for YES to run name check + prepare.";
+        }
+        return "LLC draft is ready — waiting for YES to prepare filing.";
     }
 }

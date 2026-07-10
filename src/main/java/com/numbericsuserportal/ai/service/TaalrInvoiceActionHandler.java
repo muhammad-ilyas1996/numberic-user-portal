@@ -6,8 +6,10 @@ import com.numbericsuserportal.ai.action.dto.TaalrActionRequest;
 import com.numbericsuserportal.ai.action.dto.TaalrActionResult;
 import com.numbericsuserportal.ai.action.dto.TaalrIntentParseResult;
 import com.numbericsuserportal.ai.action.dto.TaalrInvoiceDraft;
+import com.numbericsuserportal.ai.action.dto.TaalrInvoiceLineItem;
 import com.numbericsuserportal.ai.action.dto.TaalrSessionContext;
 import com.numbericsuserportal.ai.entity.TaalrActionSessionEntity;
+import com.numbericsuserportal.ai.util.TaalrInputValidation;
 import com.numbericsuserportal.invoice.dto.InvoiceAndTaxDTO;
 import com.numbericsuserportal.invoice.dto.SendInvoiceRequestDto;
 import com.numbericsuserportal.invoice.dto.SendInvoiceResponseDto;
@@ -48,53 +50,43 @@ public class TaalrInvoiceActionHandler {
         TaalrSessionContext ctx = existingSession != null
                 ? sessionService.loadContext(existingSession)
                 : new TaalrSessionContext();
+        if (ctx.getInvoiceDraft() == null) {
+            ctx.setInvoiceDraft(new TaalrInvoiceDraft());
+        }
 
         mergeInvoiceDraft(ctx.getInvoiceDraft(), incoming);
-
-        if (parsed.getMissingField() != null && !parsed.getMissingField().isBlank()
-                && parsed.getQuestion() != null && !parsed.getQuestion().isBlank()) {
-            if (existingSession != null) {
-                sessionService.updateSession(existingSession, TaalrPendingAction.INVOICE_DRAFT, ctx);
-            } else {
-                sessionService.saveSession(request, TaalrPendingAction.INVOICE_DRAFT, ctx);
-            }
-            return TaalrActionResult.handled(parsed.getQuestion());
-        }
-
-        String missing = findMissingRequiredField(ctx.getInvoiceDraft());
-        if (missing != null) {
-            ctx.setInvoiceDraft(ctx.getInvoiceDraft());
-            if (existingSession != null) {
-                sessionService.updateSession(existingSession, TaalrPendingAction.INVOICE_DRAFT, ctx);
-            } else {
-                sessionService.saveSession(request, TaalrPendingAction.INVOICE_DRAFT, ctx);
-            }
-            return TaalrActionResult.handled(questionForMissing(missing, ctx.getInvoiceDraft()));
-        }
-
-        return prepareSendConfirmation(request, user, ctx, existingSession);
+        return nextInvoiceStep(request, user, ctx, existingSession, null);
     }
 
     public TaalrActionResult continueDraft(TaalrActionRequest request, User user,
             TaalrActionSessionEntity session, TaalrIntentParseResult parsed, String rawMessage) {
         TaalrSessionContext ctx = sessionService.loadContext(session);
+        if (ctx.getInvoiceDraft() == null) {
+            ctx.setInvoiceDraft(new TaalrInvoiceDraft());
+        }
         if (parsed.getInvoice() != null) {
             mergeInvoiceDraft(ctx.getInvoiceDraft(), parsed.getInvoice());
         }
+
         String missingBefore = findMissingRequiredField(ctx.getInvoiceDraft());
-        if (missingBefore != null && rawMessage != null && !rawMessage.isBlank()
-                && parsed.getIntent() == TaalrIntent.CHAT) {
-            applyDirectAnswer(ctx.getInvoiceDraft(), missingBefore, rawMessage.trim());
-        }
-        String missing = findMissingRequiredField(ctx.getInvoiceDraft());
-        if (missing != null) {
-            sessionService.updateSession(session, TaalrPendingAction.INVOICE_DRAFT, ctx);
-            if (parsed.getQuestion() != null && !parsed.getQuestion().isBlank()) {
-                return TaalrActionResult.handled(parsed.getQuestion());
+        if (rawMessage != null && !rawMessage.isBlank()) {
+            if (TaalrInputValidation.isConfusion(rawMessage)) {
+                sessionService.updateSession(session, TaalrPendingAction.INVOICE_DRAFT, ctx);
+                return TaalrActionResult.handled(
+                        "No problem — let's keep it simple.\n\n" + questionForMissing(missingBefore, ctx.getInvoiceDraft()));
             }
-            return TaalrActionResult.handled(questionForMissing(missing, ctx.getInvoiceDraft()));
+            if (missingBefore != null && (parsed.getIntent() == TaalrIntent.CHAT
+                    || parsed.getIntent() == TaalrIntent.INVOICE
+                    || parsed.getIntent() == TaalrIntent.CONFIRM_YES
+                    || parsed.getIntent() == TaalrIntent.CONFIRM_NO)) {
+                String err = applyDirectAnswer(ctx.getInvoiceDraft(), missingBefore, rawMessage.trim());
+                if (err != null) {
+                    sessionService.updateSession(session, TaalrPendingAction.INVOICE_DRAFT, ctx);
+                    return TaalrActionResult.handled(err + "\n\n" + questionForMissing(missingBefore, ctx.getInvoiceDraft()));
+                }
+            }
         }
-        return prepareSendConfirmation(request, user, ctx, session);
+        return nextInvoiceStep(request, user, ctx, session, parsed != null ? parsed.getQuestion() : null);
     }
 
     public TaalrActionResult confirmSend(TaalrActionRequest request, User user, TaalrActionSessionEntity session) {
@@ -106,18 +98,25 @@ public class TaalrInvoiceActionHandler {
         }
 
         TaalrInvoiceDraft draft = ctx.getInvoiceDraft();
+        String recipient = resolveRecipient(draft);
+        if (!TaalrInputValidation.isValidRecipient(recipient)) {
+            sessionService.updateSession(session, TaalrPendingAction.INVOICE_DRAFT, ctx);
+            return TaalrActionResult.handled(
+                    "Recipient is invalid. Please send a valid email or phone number (with country code if needed).");
+        }
+
         SendInvoiceRequestDto sendReq = new SendInvoiceRequestDto();
         sendReq.setInvoiceId(invoiceId);
         sendReq.setChannel(resolveChannel(draft));
-        sendReq.setRecipientPhoneOrEmail(resolveRecipient(draft));
+        sendReq.setRecipientPhoneOrEmail(
+                TaalrInputValidation.isValidEmail(recipient) ? recipient : TaalrInputValidation.normalizePhone(recipient));
 
         SendInvoiceResponseDto sendResult = invoiceSendService.sendInvoice(sendReq, user);
         sessionService.clearSession(request);
 
         if (sendResult.isSuccess()) {
-            String channel = sendReq.getChannel();
             return TaalrActionResult.handled(
-                    "Invoice sent successfully via " + channel + " to " + sendReq.getRecipientPhoneOrEmail() + ".");
+                    "Invoice sent successfully via " + sendReq.getChannel() + " to " + sendReq.getRecipientPhoneOrEmail() + ".");
         }
         return TaalrActionResult.handled(
                 sendResult.getMessage() != null ? sendResult.getMessage() : "Failed to send invoice. Please try from the dashboard.");
@@ -125,7 +124,24 @@ public class TaalrInvoiceActionHandler {
 
     public TaalrActionResult cancel(TaalrActionRequest request) {
         sessionService.clearSession(request);
-        return TaalrActionResult.handled("Invoice cancelled. Let me know if you'd like to create another one.");
+        return TaalrActionResult.handled("Invoice cancelled. Say \"create invoice\" anytime, or ask me to guide you manually.");
+    }
+
+    private TaalrActionResult nextInvoiceStep(TaalrActionRequest request, User user, TaalrSessionContext ctx,
+            TaalrActionSessionEntity existingSession, String preferredQuestion) {
+        String missing = findMissingRequiredField(ctx.getInvoiceDraft());
+        if (missing != null) {
+            if (existingSession != null) {
+                sessionService.updateSession(existingSession, TaalrPendingAction.INVOICE_DRAFT, ctx);
+            } else {
+                sessionService.saveSession(request, TaalrPendingAction.INVOICE_DRAFT, ctx);
+            }
+            if (preferredQuestion != null && !preferredQuestion.isBlank()) {
+                return TaalrActionResult.handled(preferredQuestion);
+            }
+            return TaalrActionResult.handled(questionForMissing(missing, ctx.getInvoiceDraft()));
+        }
+        return prepareSendConfirmation(request, user, ctx, existingSession);
     }
 
     private TaalrActionResult prepareSendConfirmation(TaalrActionRequest request, User user,
@@ -151,7 +167,8 @@ public class TaalrInvoiceActionHandler {
         } catch (Exception e) {
             log.error("Taalr invoice create failed for user {}", user.getUserId(), e);
             sessionService.clearSession(request);
-            return TaalrActionResult.handled("I couldn't create that invoice: " + safeMessage(e) + ". Please check the details and try again.");
+            return TaalrActionResult.handled("I couldn't create that invoice: " + safeMessage(e)
+                    + ". Please check the details and try again.");
         }
     }
 
@@ -167,55 +184,57 @@ public class TaalrInvoiceActionHandler {
                 return dto;
             }
         }
-        if (draft.getInvoiceNum() != null && !draft.getInvoiceNum().isBlank()) {
-            InvoiceAndTaxEntity existing = invoiceAndTaxService.getInvoiceDetailByInvoiceNumber(
-                    draft.getInvoiceNum().trim(), user);
-            if (existing.getId() != null) {
-                draft.setInvoiceId(existing.getId());
-                if (draft.getAmount() == null && existing.getTaxableAmount() != null) {
-                    draft.setAmount(existing.getTaxableAmount());
-                }
-                if (draft.getCustomerName() == null) {
-                    draft.setCustomerName(existing.getCustomerName());
-                }
-                InvoiceAndTaxDTO dto = new InvoiceAndTaxDTO();
-                dto.setId(existing.getId());
-                dto.setInvoiceNum(existing.getInvoiceNum());
-                return dto;
-            }
-        }
 
+        ensureLineItemsSeeded(draft);
+        recalculateTotal(draft);
         double amount = draft.getAmount() != null ? draft.getAmount() : 0.0;
+        int dueDays = draft.getDueDays() != null ? draft.getDueDays() : 30;
+        String description = draft.getDescription() != null ? draft.getDescription().trim()
+                : (draft.getLineItems().isEmpty() ? "Services" : draft.getLineItems().get(0).getName());
+
         InvoiceAndTaxDTO dto = new InvoiceAndTaxDTO();
         dto.setCustomerName(draft.getCustomerName());
         dto.setCustomerEmail(draft.getCustomerEmail());
         dto.setCurrency("USD");
-        dto.setDescription(draft.getDescription() != null ? draft.getDescription() : "Services");
+        dto.setDescription(description);
         dto.setInvoiceNum("INV-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT));
         dto.setInvoiceIssueDate(LocalDate.now());
-        dto.setInvoiceDueDate(LocalDate.now().plusDays(30));
+        dto.setInvoiceDueDate(LocalDate.now().plusDays(dueDays));
         dto.setInvoiceStatus("DRAFT");
         dto.setTaxableAmount(amount);
-        dto.setTotalTaxAmountCalculated(amount);
-
-        InvoiceProductDTO line = new InvoiceProductDTO();
-        line.setProductName(draft.getDescription() != null ? draft.getDescription() : "Service");
-        line.setQuantity(1.0);
-        line.setAmount(amount);
+        dto.setTotalTaxAmountCalculated(0.0);
         dto.setInvoiceProductList(new ArrayList<>());
-        dto.getInvoiceProductList().add(line);
+
+        for (TaalrInvoiceLineItem item : draft.getLineItems()) {
+            InvoiceProductDTO line = new InvoiceProductDTO();
+            line.setProductName(item.getName());
+            line.setQuantity(item.getQuantity() != null && item.getQuantity() > 0 ? item.getQuantity() : 1.0);
+            line.setAmount(item.getAmount());
+            line.setDescription(item.getName());
+            dto.getInvoiceProductList().add(line);
+        }
 
         return invoiceAndTaxService.createInvoiceAndTax(dto, user);
     }
 
     private String formatInvoicePreview(TaalrInvoiceDraft draft, Long invoiceId) {
+        ensureLineItemsSeeded(draft);
+        recalculateTotal(draft);
+        int dueDays = draft.getDueDays() != null ? draft.getDueDays() : 30;
         StringBuilder sb = new StringBuilder("Invoice ready to send:\n\n");
         sb.append("• Invoice #: ").append(draft.getInvoiceNum() != null ? draft.getInvoiceNum() : ("ID " + invoiceId)).append('\n');
         sb.append("• Customer: ").append(draft.getCustomerName()).append('\n');
-        sb.append("• Amount: $").append(draft.getAmount()).append('\n');
+        sb.append("• Line items:\n");
+        int i = 1;
+        for (TaalrInvoiceLineItem item : draft.getLineItems()) {
+            sb.append("  ").append(i++).append(") ").append(item.getName())
+                    .append(" | qty ").append(item.getQuantity() != null ? item.getQuantity() : 1)
+                    .append(" | $").append(String.format(Locale.US, "%.2f", item.getAmount())).append('\n');
+        }
+        sb.append("• Total: $").append(String.format(Locale.US, "%.2f", draft.getAmount())).append('\n');
         sb.append("• Channel: ").append(resolveChannel(draft)).append('\n');
         sb.append("• Send to: ").append(resolveRecipient(draft)).append('\n');
-        sb.append("• Due: ").append(LocalDate.now().plusDays(30).format(DATE_FMT)).append("\n\n");
+        sb.append("• Due: ").append(LocalDate.now().plusDays(dueDays).format(DATE_FMT)).append("\n\n");
         sb.append("Reply YES to send, or NO to cancel.");
         return sb.toString();
     }
@@ -227,133 +246,297 @@ public class TaalrInvoiceActionHandler {
         if (source.getInvoiceId() != null) {
             target.setInvoiceId(source.getInvoiceId());
         }
-        if (source.getInvoiceNum() != null && !source.getInvoiceNum().isBlank()) {
+        if (notBlank(source.getInvoiceNum())) {
             target.setInvoiceNum(source.getInvoiceNum().trim());
         }
-        if (source.getCustomerName() != null && !source.getCustomerName().isBlank()) {
-            target.setCustomerName(source.getCustomerName().trim());
+        if (TaalrInputValidation.isValidPersonName(source.getCustomerName())
+                || (notBlank(source.getCustomerName()) && !TaalrInputValidation.isConfusion(source.getCustomerName())
+                && !TaalrInputValidation.isValidEmail(source.getCustomerName())
+                && !TaalrInputValidation.isValidPhone(source.getCustomerName()))) {
+            if (notBlank(source.getCustomerName()) && source.getCustomerName().trim().length() >= 2) {
+                target.setCustomerName(source.getCustomerName().trim());
+            }
         }
-        if (source.getCustomerEmail() != null && !source.getCustomerEmail().isBlank()) {
+        if (TaalrInputValidation.isValidEmail(source.getCustomerEmail())) {
             target.setCustomerEmail(source.getCustomerEmail().trim());
         }
-        if (source.getCustomerPhone() != null && !source.getCustomerPhone().isBlank()) {
-            target.setCustomerPhone(source.getCustomerPhone().trim());
+        if (TaalrInputValidation.isValidPhone(source.getCustomerPhone())) {
+            target.setCustomerPhone(TaalrInputValidation.normalizePhone(source.getCustomerPhone()));
         }
-        if (source.getAmount() != null) {
-            target.setAmount(source.getAmount());
-        }
-        if (source.getDescription() != null && !source.getDescription().isBlank()) {
+        if (TaalrInputValidation.isValidDescription(source.getDescription())) {
             target.setDescription(source.getDescription().trim());
         }
-        if (source.getChannel() != null && !source.getChannel().isBlank()) {
-            target.setChannel(source.getChannel().trim().toUpperCase());
+        if (source.getQuantity() != null && source.getQuantity() > 0) {
+            target.setQuantity(source.getQuantity());
         }
-        if (source.getRecipientPhoneOrEmail() != null && !source.getRecipientPhoneOrEmail().isBlank()) {
-            target.setRecipientPhoneOrEmail(source.getRecipientPhoneOrEmail().trim());
+        if (source.getAmount() != null && source.getAmount() > 0
+                && (target.getLineItems() == null || target.getLineItems().isEmpty())
+                && notBlank(target.getDescription())) {
+            target.setAmount(source.getAmount());
+            ensureLineItemsSeeded(target);
+            target.setAskingAddAnotherLine(true);
+        } else if (source.getAmount() != null && source.getAmount() > 0
+                && (target.getLineItems() == null || target.getLineItems().isEmpty())) {
+            target.setAmount(source.getAmount());
+        }
+        if (notBlank(source.getChannel())) {
+            String ch = source.getChannel().trim().toUpperCase(Locale.ROOT);
+            if ("EMAIL".equals(ch) || "WHATSAPP".equals(ch)) {
+                target.setChannel(ch);
+            }
+        }
+        if (TaalrInputValidation.isValidRecipient(source.getRecipientPhoneOrEmail())) {
+            String recipient = source.getRecipientPhoneOrEmail().trim();
+            target.setRecipientPhoneOrEmail(
+                    TaalrInputValidation.isValidEmail(recipient) ? recipient : TaalrInputValidation.normalizePhone(recipient));
+            if (TaalrInputValidation.isValidEmail(recipient)) {
+                target.setCustomerEmail(recipient);
+                target.setChannel(InvoiceSendServiceImpl.CHANNEL_EMAIL);
+            } else {
+                target.setCustomerPhone(TaalrInputValidation.normalizePhone(recipient));
+                target.setChannel(InvoiceSendServiceImpl.CHANNEL_WHATSAPP);
+            }
+        }
+        if (source.getDueDays() != null && source.getDueDays() >= 1 && source.getDueDays() <= 365) {
+            target.setDueDays(source.getDueDays());
         }
     }
 
     private String findMissingRequiredField(TaalrInvoiceDraft draft) {
-        if (draft.getInvoiceId() != null || (draft.getInvoiceNum() != null && !draft.getInvoiceNum().isBlank())) {
-            String recipient = resolveRecipient(draft);
-            if (recipient == null || recipient.isBlank()) {
+        if (draft.getLineItems() == null) {
+            draft.setLineItems(new ArrayList<>());
+        }
+        if (draft.getInvoiceId() != null || notBlank(draft.getInvoiceNum())) {
+            if (!notBlank(resolveRecipient(draft))) {
                 return "recipient";
             }
             return null;
         }
-        if (draft.getCustomerName() == null || draft.getCustomerName().isBlank()) {
+        if (!notBlank(draft.getCustomerName())) {
             return "customerName";
         }
-        if (draft.getAmount() == null || draft.getAmount() <= 0) {
-            return "amount";
+        if (draft.getLineItems().isEmpty()) {
+            if (!notBlank(draft.getPendingLineName())) {
+                return "lineName";
+            }
+            if (draft.getPendingLineQty() == null) {
+                return "lineQty";
+            }
+            return "lineAmount";
         }
-        if (resolveRecipient(draft) == null || resolveRecipient(draft).isBlank()) {
+        if (Boolean.TRUE.equals(draft.getAskingAddAnotherLine())) {
+            return "addAnotherLine";
+        }
+        if (draft.getPendingLineName() != null || draft.getPendingLineQty() != null) {
+            if (!notBlank(draft.getPendingLineName())) {
+                return "lineName";
+            }
+            if (draft.getPendingLineQty() == null) {
+                return "lineQty";
+            }
+            return "lineAmount";
+        }
+        recalculateTotal(draft);
+        if (draft.getAmount() == null || draft.getAmount() <= 0) {
+            return "lineName";
+        }
+        if (!notBlank(draft.getChannel())) {
+            return "channel";
+        }
+        if (!notBlank(resolveRecipient(draft))) {
             return "recipient";
+        }
+        if (draft.getDueDays() == null) {
+            return "dueDays";
         }
         return null;
     }
 
     private String resolveRecipient(TaalrInvoiceDraft draft) {
-        if (draft.getRecipientPhoneOrEmail() != null && !draft.getRecipientPhoneOrEmail().isBlank()) {
+        if (notBlank(draft.getRecipientPhoneOrEmail())) {
             return draft.getRecipientPhoneOrEmail().trim();
         }
         if (InvoiceSendServiceImpl.CHANNEL_EMAIL.equals(resolveChannel(draft))
-                && draft.getCustomerEmail() != null && !draft.getCustomerEmail().isBlank()) {
+                && notBlank(draft.getCustomerEmail())) {
             return draft.getCustomerEmail().trim();
         }
-        if (draft.getCustomerPhone() != null && !draft.getCustomerPhone().isBlank()) {
+        if (notBlank(draft.getCustomerPhone())) {
             return draft.getCustomerPhone().trim();
         }
         return null;
     }
 
     private String resolveChannel(TaalrInvoiceDraft draft) {
-        if (draft.getChannel() != null && !draft.getChannel().isBlank()) {
-            String ch = draft.getChannel().trim().toUpperCase();
+        if (notBlank(draft.getChannel())) {
+            String ch = draft.getChannel().trim().toUpperCase(Locale.ROOT);
             if (InvoiceSendServiceImpl.CHANNEL_EMAIL.equals(ch)) {
                 return InvoiceSendServiceImpl.CHANNEL_EMAIL;
             }
             return InvoiceSendServiceImpl.CHANNEL_WHATSAPP;
         }
-        if (draft.getCustomerEmail() != null && draft.getCustomerEmail().contains("@")
-                && (draft.getCustomerPhone() == null || draft.getCustomerPhone().isBlank())) {
+        if (notBlank(draft.getCustomerEmail()) && draft.getCustomerEmail().contains("@")
+                && !notBlank(draft.getCustomerPhone())) {
             return InvoiceSendServiceImpl.CHANNEL_EMAIL;
         }
         return InvoiceSendServiceImpl.CHANNEL_WHATSAPP;
     }
 
     private String questionForMissing(String field, TaalrInvoiceDraft draft) {
+        if (field == null) {
+            return "Please provide the missing invoice details.";
+        }
         return switch (field) {
             case "customerName" -> "Who is this invoice for? Please provide the customer name.";
-            case "amount" -> "What is the invoice amount? (e.g. $500)";
+            case "lineName" -> draft.getLineItems() != null && !draft.getLineItems().isEmpty()
+                    ? "Next line item name? (e.g. Design work)"
+                    : "First line item name? (e.g. Consulting services)";
+            case "lineQty" -> "Quantity for this line item? (e.g. 1)";
+            case "lineAmount" -> "Amount for this line item? (e.g. 300)";
+            case "addAnotherLine" -> "Add another line item? Reply YES or NO.";
+            case "channel" -> "How should I send it — Email or WhatsApp?";
             case "recipient" -> {
                 String ch = resolveChannel(draft);
                 if (InvoiceSendServiceImpl.CHANNEL_EMAIL.equals(ch)) {
                     yield "What email address should I send the invoice to?";
                 }
-                yield "What phone number should I send the invoice to? (include country code if outside US)";
+                yield "What phone number should I send the invoice to? (include country code, e.g. +15551234567)";
             }
+            case "dueDays" -> "How many days until due? (e.g. 15 or 30). Reply \"skip\" for default 30 days.";
             default -> "Please provide the missing invoice details.";
         };
     }
 
-    private void applyDirectAnswer(TaalrInvoiceDraft draft, String missingField, String answer) {
-        switch (missingField) {
-            case "customerName" -> draft.setCustomerName(answer);
-            case "amount" -> {
-                Double parsed = parseAmount(answer);
-                if (parsed != null) {
-                    draft.setAmount(parsed);
+    /** @return error message if invalid, otherwise null */
+    private String applyDirectAnswer(TaalrInvoiceDraft draft, String missingField, String answer) {
+        if (TaalrInputValidation.isConfusion(answer)) {
+            return "I didn't catch that as a valid answer.";
+        }
+        if (draft.getLineItems() == null) {
+            draft.setLineItems(new ArrayList<>());
+        }
+        return switch (missingField) {
+            case "customerName" -> {
+                if (!TaalrInputValidation.isValidPersonName(answer)
+                        && (answer.trim().length() < 2 || TaalrInputValidation.isValidEmail(answer)
+                        || TaalrInputValidation.isValidPhone(answer))) {
+                    yield "Please enter a valid customer name (letters only, e.g. Ali Ahmed).";
                 }
+                draft.setCustomerName(answer.trim());
+                yield null;
+            }
+            case "lineName" -> {
+                if (!TaalrInputValidation.isValidDescription(answer)) {
+                    yield "Please enter a line item name (2–200 characters).";
+                }
+                draft.setPendingLineName(answer.trim());
+                draft.setAskingAddAnotherLine(false);
+                yield null;
+            }
+            case "lineQty" -> {
+                Double qty = TaalrInputValidation.parseQuantity(answer);
+                if (qty == null) {
+                    yield "Please enter a valid quantity greater than 0.";
+                }
+                draft.setPendingLineQty(qty);
+                yield null;
+            }
+            case "lineAmount" -> {
+                Double amt = TaalrInputValidation.parseAmount(answer);
+                if (amt == null) {
+                    yield "Please enter a valid line amount greater than 0.";
+                }
+                TaalrInvoiceLineItem item = new TaalrInvoiceLineItem();
+                item.setName(draft.getPendingLineName());
+                item.setQuantity(draft.getPendingLineQty() != null ? draft.getPendingLineQty() : 1.0);
+                item.setAmount(amt);
+                draft.getLineItems().add(item);
+                draft.setPendingLineName(null);
+                draft.setPendingLineQty(null);
+                draft.setAskingAddAnotherLine(true);
+                draft.setDescription(draft.getLineItems().get(0).getName());
+                recalculateTotal(draft);
+                yield null;
+            }
+            case "addAnotherLine" -> {
+                Boolean yn = TaalrInputValidation.parseYesNo(answer);
+                if (yn == null) {
+                    yield "Please reply YES to add another line item, or NO to continue.";
+                }
+                draft.setAskingAddAnotherLine(false);
+                if (Boolean.TRUE.equals(yn)) {
+                    draft.setPendingLineName(null);
+                    draft.setPendingLineQty(null);
+                }
+                yield null;
+            }
+            case "channel" -> {
+                String ch = TaalrInputValidation.parseChannel(answer);
+                if (ch == null) {
+                    yield "Please reply with Email or WhatsApp.";
+                }
+                draft.setChannel(ch);
+                yield null;
             }
             case "recipient" -> {
-                if (answer.contains("@")) {
-                    draft.setRecipientPhoneOrEmail(answer);
-                    draft.setCustomerEmail(answer);
+                if (!TaalrInputValidation.isValidRecipient(answer)) {
+                    yield "That doesn't look like a valid email or phone. Example: jane@example.com or +15551234567.";
+                }
+                if (TaalrInputValidation.isValidEmail(answer)) {
+                    draft.setRecipientPhoneOrEmail(answer.trim());
+                    draft.setCustomerEmail(answer.trim());
                     draft.setChannel(InvoiceSendServiceImpl.CHANNEL_EMAIL);
                 } else {
-                    draft.setRecipientPhoneOrEmail(answer);
-                    draft.setCustomerPhone(answer);
+                    String phone = TaalrInputValidation.normalizePhone(answer);
+                    draft.setRecipientPhoneOrEmail(phone);
+                    draft.setCustomerPhone(phone);
                     draft.setChannel(InvoiceSendServiceImpl.CHANNEL_WHATSAPP);
                 }
+                yield null;
             }
-            default -> { /* ignore */ }
+            case "dueDays" -> {
+                Integer days = TaalrInputValidation.parseDueDays(answer);
+                if (days == null) {
+                    yield "Please enter due days between 1 and 365, or reply \"skip\" for 30 days.";
+                }
+                draft.setDueDays(days);
+                yield null;
+            }
+            default -> null;
+        };
+    }
+
+    private static void ensureLineItemsSeeded(TaalrInvoiceDraft draft) {
+        if (draft.getLineItems() == null) {
+            draft.setLineItems(new ArrayList<>());
+        }
+        if (draft.getLineItems().isEmpty()
+                && notBlank(draft.getDescription())
+                && draft.getAmount() != null
+                && draft.getAmount() > 0) {
+            TaalrInvoiceLineItem item = new TaalrInvoiceLineItem();
+            item.setName(draft.getDescription().trim());
+            item.setQuantity(draft.getQuantity() != null && draft.getQuantity() > 0 ? draft.getQuantity() : 1.0);
+            item.setAmount(draft.getAmount());
+            draft.getLineItems().add(item);
+            draft.setAskingAddAnotherLine(false);
         }
     }
 
-    private static Double parseAmount(String text) {
-        if (text == null || text.isBlank()) {
-            return null;
+    private static void recalculateTotal(TaalrInvoiceDraft draft) {
+        if (draft.getLineItems() == null || draft.getLineItems().isEmpty()) {
+            return;
         }
-        String normalized = text.replaceAll("[^0-9.]", "");
-        if (normalized.isBlank()) {
-            return null;
+        double total = 0.0;
+        for (TaalrInvoiceLineItem item : draft.getLineItems()) {
+            if (item.getAmount() != null) {
+                total += item.getAmount();
+            }
         }
-        try {
-            return Double.parseDouble(normalized);
-        } catch (NumberFormatException e) {
-            return null;
-        }
+        draft.setAmount(total);
+    }
+
+    private static boolean notBlank(String value) {
+        return value != null && !value.isBlank();
     }
 
     private static String safeMessage(Exception e) {

@@ -10,17 +10,18 @@ import com.numbericsuserportal.ai.action.dto.TaalrIntentParseResult;
 import com.numbericsuserportal.ai.config.TaalrActionProperties;
 import com.numbericsuserportal.ai.action.dto.TaalrSessionContext;
 import com.numbericsuserportal.ai.entity.TaalrActionSessionEntity;
+import com.numbericsuserportal.ai.util.TaalrInputValidation;
 import com.numbericsuserportal.usermanagement.domain.User;
 import com.numbericsuserportal.usermanagement.repo.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
 import java.util.Locale;
+import java.util.Optional;
 
 /**
- * Routes app chat and WhatsApp messages to receipt OCR and invoice automation before generic AI replies.
+ * Routes app chat and WhatsApp messages to receipt OCR, invoice, and LLC automation before Claude guidance.
  */
 @Service
 @Slf4j
@@ -80,14 +81,16 @@ public class TaalrActionOrchestratorService {
 
         boolean awaitingConfirm = sessionOpt.map(s -> s.getPendingAction() == TaalrPendingAction.RECEIPT_SAVE_CONFIRM
                 || s.getPendingAction() == TaalrPendingAction.INVOICE_SEND_CONFIRM
-                || s.getPendingAction() == TaalrPendingAction.INVOICE_RESEND_CONFIRM).orElse(false);
+                || s.getPendingAction() == TaalrPendingAction.INVOICE_RESEND_CONFIRM
+                || s.getPendingAction() == TaalrPendingAction.LLC_PREPARE_CONFIRM).orElse(false);
 
         String message = request.getMessage() != null ? request.getMessage().trim() : "";
         TaalrIntentParseResult parsed = intentParser.parse(message, awaitingConfirm);
-        boolean guideMode = resolveMode(request) == TaalrChatMode.GUIDE;
+        boolean guideMode = resolveMode(request) == TaalrChatMode.GUIDE
+                || TaalrInputValidation.wantsGuidanceOnly(message);
 
         if (sessionOpt.isPresent()) {
-            TaalrActionResult pending = handlePendingSession(request, sessionOpt.get(), parsed);
+            TaalrActionResult pending = handlePendingSession(request, sessionOpt.get(), parsed, message);
             if (pending.isHandled()) {
                 return pending;
             }
@@ -110,7 +113,8 @@ public class TaalrActionOrchestratorService {
                 return invoiceHandler.continueDraft(request, user, sessionOpt.get(), parsed, message);
             }
         }
-        if (sessionOpt.isPresent() && sessionOpt.get().getPendingAction() == TaalrPendingAction.LLC_DRAFT) {
+        if (sessionOpt.isPresent() && (sessionOpt.get().getPendingAction() == TaalrPendingAction.LLC_DRAFT
+                || sessionOpt.get().getPendingAction() == TaalrPendingAction.LLC_PREPARE_CONFIRM)) {
             if (parsed.getIntent() == TaalrIntent.CANCEL) {
                 return llcFormationHandler.cancel(request);
             }
@@ -122,7 +126,7 @@ public class TaalrActionOrchestratorService {
         if (user == null) {
             if (!guideMode && isAutomationIntent(parsed.getIntent())) {
                 return TaalrActionResult.handled(
-                        "Please log in to Numbrics (or link your WhatsApp number to your account) to use invoices and receipts.");
+                        "Please log in to Numbrics (or link your WhatsApp number to your account) to use invoices, receipts, and LLC formation.");
             }
             return TaalrActionResult.notHandled();
         }
@@ -137,10 +141,17 @@ public class TaalrActionOrchestratorService {
             }
         }
 
+        // Guidance-only: Claude answers professionally (no new automation).
         if (guideMode) {
             return TaalrActionResult.notHandled();
         }
 
+        if (parsed.getIntent() == TaalrIntent.RECEIPT_LIST) {
+            return receiptHandler.handleList(user);
+        }
+        if (parsed.getIntent() == TaalrIntent.RECEIPT_MANUAL) {
+            return receiptHandler.startManualEntry(request, user);
+        }
         if (parsed.getIntent() == TaalrIntent.RECEIPT) {
             return receiptHandler.promptForPhoto(request.getChannel());
         }
@@ -180,16 +191,17 @@ public class TaalrActionOrchestratorService {
             return TaalrActionResult.handled("Please reply YES to resend the reminder, or NO to cancel.");
         }
         if (action == TaalrPendingAction.RECEIPT_SAVE_CONFIRM) {
-            return TaalrActionResult.handled("Please reply YES to save the receipt, or NO to discard.");
+            return receiptHandler.continueConfirm(request, user, session, parsed, message);
         }
-        if (action == TaalrPendingAction.LLC_DRAFT) {
+        if (action == TaalrPendingAction.LLC_DRAFT || action == TaalrPendingAction.LLC_PREPARE_CONFIRM) {
             return llcFormationHandler.handleStartOrContinue(request, user, parsed, session, message);
         }
         return TaalrActionResult.notHandled();
     }
 
     private static boolean isAutomationIntent(TaalrIntent intent) {
-        return intent == TaalrIntent.INVOICE || intent == TaalrIntent.RECEIPT
+        return intent == TaalrIntent.INVOICE || intent == TaalrIntent.RECEIPT || intent == TaalrIntent.RECEIPT_LIST
+                || intent == TaalrIntent.RECEIPT_MANUAL
                 || intent == TaalrIntent.INVOICE_LIST || intent == TaalrIntent.INVOICE_RESEND
                 || intent == TaalrIntent.LLC_FORMATION || intent == TaalrIntent.LLC_STATUS;
     }
@@ -199,7 +211,7 @@ public class TaalrActionOrchestratorService {
     }
 
     private TaalrActionResult handlePendingSession(TaalrActionRequest request, TaalrActionSessionEntity session,
-            TaalrIntentParseResult parsed) {
+            TaalrIntentParseResult parsed, String message) {
         User user = resolveUser(request);
         if (user == null) {
             sessionService.clearSession(request);
@@ -208,13 +220,7 @@ public class TaalrActionOrchestratorService {
 
         TaalrPendingAction action = session.getPendingAction();
         if (action == TaalrPendingAction.RECEIPT_SAVE_CONFIRM) {
-            if (parsed.getIntent() == TaalrIntent.CONFIRM_YES) {
-                return receiptHandler.confirmSave(request, user, session);
-            }
-            if (parsed.getIntent() == TaalrIntent.CONFIRM_NO || parsed.getIntent() == TaalrIntent.CANCEL) {
-                return receiptHandler.discard(request);
-            }
-            return TaalrActionResult.handled("Please reply YES to save the receipt, or NO to discard.");
+            return receiptHandler.continueConfirm(request, user, session, parsed, message);
         }
 
         if (action == TaalrPendingAction.INVOICE_SEND_CONFIRM) {
@@ -247,10 +253,17 @@ public class TaalrActionOrchestratorService {
             return TaalrActionResult.handled("Please reply YES to resend the reminder, or NO to cancel.");
         }
 
-        if (action == TaalrPendingAction.INVOICE_DRAFT) {
-            return TaalrActionResult.notHandled();
+        if (action == TaalrPendingAction.LLC_PREPARE_CONFIRM) {
+            if (parsed.getIntent() == TaalrIntent.CONFIRM_YES) {
+                return llcFormationHandler.confirmPrepare(request, user, session);
+            }
+            if (parsed.getIntent() == TaalrIntent.CONFIRM_NO || parsed.getIntent() == TaalrIntent.CANCEL) {
+                return llcFormationHandler.cancel(request);
+            }
+            return llcFormationHandler.handleStartOrContinue(request, user, parsed, session, message);
         }
-        if (action == TaalrPendingAction.LLC_DRAFT) {
+
+        if (action == TaalrPendingAction.INVOICE_DRAFT || action == TaalrPendingAction.LLC_DRAFT) {
             return TaalrActionResult.notHandled();
         }
 
@@ -264,7 +277,8 @@ public class TaalrActionOrchestratorService {
         if (session.getPendingAction() == TaalrPendingAction.INVOICE_RESEND_CONFIRM) {
             return invoiceQueryHandler.cancel(request);
         }
-        if (session.getPendingAction() == TaalrPendingAction.LLC_DRAFT) {
+        if (session.getPendingAction() == TaalrPendingAction.LLC_DRAFT
+                || session.getPendingAction() == TaalrPendingAction.LLC_PREPARE_CONFIRM) {
             return llcFormationHandler.cancel(request);
         }
         return invoiceHandler.cancel(request);
@@ -336,7 +350,7 @@ public class TaalrActionOrchestratorService {
         java.util.regex.Matcher m = java.util.regex.Pattern.compile(
                 "\\b(INV-[A-Za-z0-9\\-]+)\\b", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(message);
         if (m.find()) {
-            parsed.getInvoice().setInvoiceNum(m.group(1).toUpperCase(java.util.Locale.ROOT));
+            parsed.getInvoice().setInvoiceNum(m.group(1).toUpperCase(Locale.ROOT));
         }
     }
 }

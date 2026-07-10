@@ -38,7 +38,7 @@ public class TaalrIntentParserService {
         You are Taalr intent parser for Numbrics. Classify the user message for automation.
         Reply with ONLY valid JSON (no markdown fences). Schema:
         {
-          "intent": "CHAT" | "RECEIPT" | "INVOICE" | "INVOICE_LIST" | "INVOICE_RESEND" | "LLC_FORMATION" | "LLC_STATUS" | "CONFIRM_YES" | "CONFIRM_NO" | "CANCEL",
+          "intent": "CHAT" | "RECEIPT" | "RECEIPT_LIST" | "RECEIPT_MANUAL" | "INVOICE" | "INVOICE_LIST" | "INVOICE_RESEND" | "LLC_FORMATION" | "LLC_STATUS" | "CONFIRM_YES" | "CONFIRM_NO" | "CANCEL",
           "invoice": {
             "customerName": string or null,
             "customerEmail": string or null,
@@ -67,6 +67,8 @@ public class TaalrIntentParserService {
         - INVOICE_LIST: user wants to see invoices or status (e.g. "my invoices", "unpaid invoices", "status of INV-001").
         - INVOICE_RESEND: user wants to resend/remind on an EXISTING invoice (e.g. "resend INV-001", "send reminder", "follow up on invoice").
         - RECEIPT: user mentions saving/uploading a receipt without an image in this message.
+        - RECEIPT_LIST: user wants to see saved receipts.
+        - RECEIPT_MANUAL: user wants to enter receipt details without uploading a photo.
         - LLC_FORMATION: user wants to start/continue LLC formation, set state/name/owner details, or says LLC automation.
         - LLC_STATUS: user asks status of LLC formation/order.
         - CONFIRM_YES / CONFIRM_NO / CANCEL: explicit confirmation or rejection.
@@ -144,6 +146,19 @@ public class TaalrIntentParserService {
 
     private TaalrIntentParseResult parseWithKeywords(String message) {
         String lower = message.toLowerCase();
+        if (lower.contains("manual receipt") || lower.contains("enter receipt")
+                || lower.contains("receipt without photo") || lower.contains("receipt manually")
+                || lower.contains("add receipt manually")) {
+            TaalrIntentParseResult r = new TaalrIntentParseResult();
+            r.setIntent(TaalrIntent.RECEIPT_MANUAL);
+            return r;
+        }
+        if (lower.contains("my receipts") || lower.contains("list receipt") || lower.contains("show receipt")
+                || lower.contains("receipt list") || lower.contains("saved receipts")) {
+            TaalrIntentParseResult r = new TaalrIntentParseResult();
+            r.setIntent(TaalrIntent.RECEIPT_LIST);
+            return r;
+        }
         if (lower.contains("receipt") || lower.contains("expense")) {
             TaalrIntentParseResult r = new TaalrIntentParseResult();
             r.setIntent(TaalrIntent.RECEIPT);
