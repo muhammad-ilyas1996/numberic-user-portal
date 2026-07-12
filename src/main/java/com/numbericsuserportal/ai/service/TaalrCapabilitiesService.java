@@ -40,12 +40,13 @@ public final class TaalrCapabilitiesService {
         sb.append("1. Invoice — create, send, list, resend\n");
         sb.append("2. Receipt OCR — scan, edit, categorize, save\n");
         sb.append("3. LLC Formation — draft, name check, prepare\n");
-        sb.append("4. Sales tax / general Numbrics help\n\n");
+        sb.append("4. Sales tax — quarterly draft, estimate, status (pay on dashboard)\n\n");
         sb.append("Examples:\n");
         sb.append("• Create invoice for Jane $500 via email jane@example.com\n");
         sb.append("• Show my unpaid invoices\n");
         sb.append("• Upload a receipt / manual receipt / show my receipts\n");
         sb.append("• Start LLC formation in TX\n");
+        sb.append("• File sales tax for TX / sales tax status\n");
         sb.append("• Guide me on invoices (no automation)\n");
         if (channel == TaalrActionChannel.WHATSAPP) {
             sb.append("\nOn WhatsApp you can also send a receipt photo directly.");

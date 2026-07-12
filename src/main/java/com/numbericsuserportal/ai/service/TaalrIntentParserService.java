@@ -6,8 +6,11 @@ import com.numbericsuserportal.ai.action.TaalrIntent;
 import com.numbericsuserportal.ai.action.dto.TaalrIntentParseResult;
 import com.numbericsuserportal.ai.action.dto.TaalrInvoiceDraft;
 import com.numbericsuserportal.ai.action.dto.TaalrLlcDraft;
+import com.numbericsuserportal.ai.action.dto.TaalrSalesTaxDraft;
 import com.numbericsuserportal.ai.config.AnthropicProperties;
 import com.numbericsuserportal.ai.config.TaalrActionProperties;
+import com.numbericsuserportal.ai.util.TaalrInputValidation;
+import com.numbericsuserportal.kintsugi.domain.SalesTaxBusinessType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -16,6 +19,7 @@ import org.springframework.web.client.RestClient;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,7 +42,7 @@ public class TaalrIntentParserService {
         You are Taalr intent parser for Numbrics. Classify the user message for automation.
         Reply with ONLY valid JSON (no markdown fences). Schema:
         {
-          "intent": "CHAT" | "RECEIPT" | "RECEIPT_LIST" | "RECEIPT_MANUAL" | "INVOICE" | "INVOICE_LIST" | "INVOICE_RESEND" | "LLC_FORMATION" | "LLC_STATUS" | "CONFIRM_YES" | "CONFIRM_NO" | "CANCEL",
+          "intent": "CHAT" | "RECEIPT" | "RECEIPT_LIST" | "RECEIPT_MANUAL" | "INVOICE" | "INVOICE_LIST" | "INVOICE_RESEND" | "LLC_FORMATION" | "LLC_STATUS" | "SALES_TAX_FILE" | "SALES_TAX_STATUS" | "CONFIRM_YES" | "CONFIRM_NO" | "CANCEL",
           "invoice": {
             "customerName": string or null,
             "customerEmail": string or null,
@@ -58,6 +62,16 @@ public class TaalrIntentParserService {
             "filingSpeed": "standard" | "expedited" | "sameday" or null,
             "addonEin": boolean or null
           },
+          "salesTax": {
+            "stateCode": string or null,
+            "businessType": string or null,
+            "category": string or null,
+            "subcategory": string or null,
+            "taxableAmount": number or null,
+            "exemptAmount": number or null,
+            "city": string or null,
+            "postalCode": string or null
+          },
           "missingField": string or null,
           "question": string or null,
           "statusFilter": "ALL" | "UNPAID" | "PAID" | "DRAFT" or null
@@ -71,8 +85,10 @@ public class TaalrIntentParserService {
         - RECEIPT_MANUAL: user wants to enter receipt details without uploading a photo.
         - LLC_FORMATION: user wants to start/continue LLC formation, set state/name/owner details, or says LLC automation.
         - LLC_STATUS: user asks status of LLC formation/order.
+        - SALES_TAX_FILE: user wants to file/prepare sales tax, enter quarterly sales, start sales tax automation.
+        - SALES_TAX_STATUS: user asks sales tax status, filings, due dates, nexus summary.
         - CONFIRM_YES / CONFIRM_NO / CANCEL: explicit confirmation or rejection.
-        - CHAT: general questions, taxes, greetings, unrelated — NOT when user wants to create/list/resend an invoice.
+        - CHAT: general questions, greetings, unrelated — NOT when user wants invoice/receipt/llc/sales-tax automation.
         - If user asks "can I create invoice in chat" or wants to create one, use INVOICE not CHAT.
         - Extract amounts as numbers without currency symbols. Default channel WHATSAPP if phone mentioned, EMAIL if email mentioned.
         - If INVOICE intent but customer name or amount missing, set missingField and a short question.
@@ -218,7 +234,61 @@ public class TaalrIntentParserService {
             r.setIntent(TaalrIntent.LLC_STATUS);
             return r;
         }
+        if (isSalesTaxStatus(lower)) {
+            TaalrIntentParseResult r = new TaalrIntentParseResult();
+            r.setIntent(TaalrIntent.SALES_TAX_STATUS);
+            return r;
+        }
+        if (isSalesTaxFile(lower)) {
+            TaalrIntentParseResult r = new TaalrIntentParseResult();
+            r.setIntent(TaalrIntent.SALES_TAX_FILE);
+            r.setSalesTax(extractSalesTaxHeuristic(message));
+            return r;
+        }
         return defaultChat();
+    }
+
+    private static boolean isSalesTaxStatus(String lower) {
+        return lower.contains("sales tax status") || lower.contains("sales-tax status")
+                || (lower.contains("filing status") && lower.contains("tax"))
+                || (lower.contains("sales tax") && (lower.contains("status") || lower.contains("due")
+                || lower.contains("schedule") || lower.contains("summary") || lower.contains("pending")))
+                || lower.contains("my sales tax") || lower.contains("sales tax filings");
+    }
+
+    private static boolean isSalesTaxFile(String lower) {
+        if (lower.equals("sales tax") || lower.equals("sales-tax") || lower.equals("salestax")
+                || lower.equals("sales taxes")) {
+            return true;
+        }
+        return lower.contains("file sales tax") || lower.contains("sales tax filing")
+                || lower.contains("file my sales tax") || lower.contains("prepare sales tax")
+                || lower.contains("sales tax automation") || lower.contains("start sales tax")
+                || lower.contains("sales tax draft") || lower.contains("quarterly sales tax")
+                || (containsWord(lower, "sales") && containsWord(lower, "tax")
+                && (lower.contains("file") || lower.contains("filing") || lower.contains("remit")
+                || lower.contains("nexus") || lower.contains("estimate")));
+    }
+
+    private TaalrSalesTaxDraft extractSalesTaxHeuristic(String message) {
+        TaalrSalesTaxDraft draft = new TaalrSalesTaxDraft();
+        String state = TaalrInputValidation.parseUsState(message);
+        if (state != null) {
+            draft.setStateCode(state);
+        }
+        java.util.regex.Matcher amountMatcher = Pattern.compile("\\$?([0-9]+(?:\\.[0-9]{1,2})?)")
+                .matcher(message);
+        if (amountMatcher.find()) {
+            draft.setTaxableAmount(Double.parseDouble(amountMatcher.group(1)));
+        }
+        String lower = message.toLowerCase(Locale.ROOT);
+        for (SalesTaxBusinessType type : SalesTaxBusinessType.values()) {
+            if (lower.contains(type.name().replace('_', ' ')) || lower.contains(type.name())) {
+                draft.setBusinessType(type.name());
+                break;
+            }
+        }
+        return draft;
     }
 
     private static boolean containsWord(String lowerMessage, String word) {
@@ -396,6 +466,35 @@ public class TaalrIntentParserService {
                 draft.setAddonEin(llc.path("addonEin").asBoolean());
             }
             result.setLlc(draft);
+        }
+        JsonNode salesTax = node.path("salesTax");
+        if (!salesTax.isMissingNode() && !salesTax.isNull()) {
+            TaalrSalesTaxDraft draft = new TaalrSalesTaxDraft();
+            if (salesTax.hasNonNull("stateCode")) {
+                draft.setStateCode(salesTax.path("stateCode").asText(null));
+            }
+            if (salesTax.hasNonNull("businessType")) {
+                draft.setBusinessType(salesTax.path("businessType").asText(null));
+            }
+            if (salesTax.hasNonNull("category")) {
+                draft.setCategory(salesTax.path("category").asText(null));
+            }
+            if (salesTax.hasNonNull("subcategory")) {
+                draft.setSubcategory(salesTax.path("subcategory").asText(null));
+            }
+            if (salesTax.has("taxableAmount") && !salesTax.path("taxableAmount").isNull()) {
+                draft.setTaxableAmount(salesTax.path("taxableAmount").asDouble());
+            }
+            if (salesTax.has("exemptAmount") && !salesTax.path("exemptAmount").isNull()) {
+                draft.setExemptAmount(salesTax.path("exemptAmount").asDouble());
+            }
+            if (salesTax.hasNonNull("city")) {
+                draft.setCity(salesTax.path("city").asText(null));
+            }
+            if (salesTax.hasNonNull("postalCode")) {
+                draft.setPostalCode(salesTax.path("postalCode").asText(null));
+            }
+            result.setSalesTax(draft);
         }
         if (node.hasNonNull("missingField")) {
             result.setMissingField(node.path("missingField").asText(null));

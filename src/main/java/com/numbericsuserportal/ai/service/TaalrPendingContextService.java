@@ -6,6 +6,7 @@ import com.numbericsuserportal.ai.action.dto.TaalrActionRequest;
 import com.numbericsuserportal.ai.action.dto.TaalrInvoiceDraft;
 import com.numbericsuserportal.ai.action.dto.TaalrLlcDraft;
 import com.numbericsuserportal.ai.action.dto.TaalrReceiptDraft;
+import com.numbericsuserportal.ai.action.dto.TaalrSalesTaxDraft;
 import com.numbericsuserportal.ai.action.dto.TaalrSessionContext;
 import com.numbericsuserportal.ai.entity.TaalrActionSessionEntity;
 import com.numbericsuserportal.usermanagement.domain.User;
@@ -24,7 +25,7 @@ import java.util.regex.Pattern;
 public class TaalrPendingContextService {
 
     private static final Pattern RESUME_PATTERN = Pattern.compile(
-            ".*(continue|resume|finish|complete)\\s+(my\\s+)?(invoice|receipt|draft|reminder|llc|formation).*",
+            ".*(continue|resume|finish|complete)\\s+(my\\s+)?(invoice|receipt|draft|reminder|llc|formation|sales\\s*tax|salestax).*",
             Pattern.CASE_INSENSITIVE);
 
     @Autowired
@@ -79,6 +80,9 @@ public class TaalrPendingContextService {
         if (action == TaalrPendingAction.RECEIPT_SAVE_CONFIRM) {
             return "continue receipt";
         }
+        if (action == TaalrPendingAction.SALES_TAX_DRAFT || action == TaalrPendingAction.SALES_TAX_REVIEW_CONFIRM) {
+            return "continue sales tax";
+        }
         return "continue invoice";
     }
 
@@ -93,6 +97,8 @@ public class TaalrPendingContextService {
             case RECEIPT_SAVE_CONFIRM -> describeReceiptConfirm(ctx);
             case LLC_DRAFT -> describeLlcDraft(ctx);
             case LLC_PREPARE_CONFIRM -> describeLlcPrepareConfirm(ctx);
+            case SALES_TAX_DRAFT -> describeSalesTaxDraft(ctx);
+            case SALES_TAX_REVIEW_CONFIRM -> describeSalesTaxReview(ctx);
         };
     }
 
@@ -161,5 +167,26 @@ public class TaalrPendingContextService {
             return "LLC \"" + d.getLlcName() + "\" is ready — waiting for YES to run name check + prepare.";
         }
         return "LLC draft is ready — waiting for YES to prepare filing.";
+    }
+
+    private static String describeSalesTaxDraft(TaalrSessionContext ctx) {
+        TaalrSalesTaxDraft d = ctx.getSalesTaxDraft();
+        if (d == null) {
+            return "You were preparing a sales tax filing draft.";
+        }
+        StringBuilder sb = new StringBuilder("You were preparing a sales tax filing");
+        if (d.getStateCode() != null && !d.getStateCode().isBlank()) {
+            sb.append(" for ").append(d.getStateCode().trim().toUpperCase(Locale.ROOT));
+        }
+        sb.append(" — draft is incomplete.");
+        return sb.toString();
+    }
+
+    private static String describeSalesTaxReview(TaalrSessionContext ctx) {
+        TaalrSalesTaxDraft d = ctx.getSalesTaxDraft();
+        if (d != null && d.getStateCode() != null) {
+            return "Sales tax draft for " + d.getStateCode() + " is ready — waiting for YES to save.";
+        }
+        return "Sales tax draft is ready — waiting for YES to save.";
     }
 }

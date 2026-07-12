@@ -22,7 +22,7 @@ public final class TaalrInputValidation {
     private static final Pattern GUIDE = Pattern.compile(
             "(?i).*(guide\\s*me|manual\\s*on\\s*dashboard|just\\s*guide|"
                     + "don'?t\\s*automate|no\\s*automation|dashboard\\s*guide|"
-                    + "explain\\s*(how|invoice|llc|receipt)).*");
+                    + "explain\\s*(how|invoice|llc|receipt|sales\\s*tax)).*");
 
     private static final Set<String> US_STATES = Set.of(
             "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA",
