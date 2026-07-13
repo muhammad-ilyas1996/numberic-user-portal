@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Numberics Invoice APIs",
-    "description": "Run Auth → Login first (sets {{token}}).\n\n• Dashboard: GET /v1/dashboard/summary\n• Invoice / recurring / transactions / NMI / pay-by-token: see folders\n• Onboarding: GET|POST /api/onboarding\n• Taalr automation: folder **Taalr Automation** — receipt OCR + invoice via POST /api/chat (step-by-step requests)\n• Taalr chat (general): folder Taalr Chat\n• Public website chat (no auth): POST /api/public/chat\n• LLC companies: GET|POST|PATCH /api/llc-northwest/companies\n• view-detail invoice: POST body {\"id\": <invoiceId>}\n• WhatsApp: Twilio sandbox — join code first (postman/README.md).",
+    "description": "Run Auth → Login first (sets {{token}}).\n\n• Dashboard: GET /v1/dashboard/summary\n• Invoice / recurring / transactions / NMI / pay-by-token: see folders\n• Onboarding: GET|POST /api/onboarding\n• Taalr automation: folder **Taalr Automation** — receipt OCR + invoice via POST /api/chat (step-by-step requests)\n• Taalr chat (general): folder Taalr Chat\n• Public website chat (no auth): POST /api/public/chat\n• LLC companies: GET|POST|PATCH /api/llc-northwest/companies\n• Subscription: folder **Subscription** — public plans, subscribe, admin plan/subscriber CRUD\n• view-detail invoice: POST body {\"id\": <invoiceId>}\n• WhatsApp: Twilio sandbox — join code first (postman/README.md).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -19,7 +19,11 @@
     { "key": "testCustomerEmail", "value": "jane.doe@example.com" },
     { "key": "testCustomerPhone", "value": "+15551234567" },
     { "key": "testInvoiceAmount", "value": "250" },
-    { "key": "whatsappFrom", "value": "whatsapp:+923001234567" }
+    { "key": "whatsappFrom", "value": "whatsapp:+923001234567" },
+    { "key": "subscriptionUserId", "value": "1" },
+    { "key": "subscriptionPlanId", "value": "1" },
+    { "key": "subscriptionPlanCode", "value": "SOLOPRENEUR" },
+    { "key": "stripePaymentMethodId", "value": "pm_card_visa" }
   ],
   "item": [
     {
@@ -1263,6 +1267,217 @@
             "url": "{{baseUrl}}/api/taxbandits/artifacts/pdf?submissionId={{tbSubmissionId}}&recordId={{tbRecordId}}&file={{tbPdfFile}}",
             "description": "Downloads a PDF from the latest webhook artifact folder on disk.\n\nRequires server config:\n• taxbandits.artifact.api-key\n• taxbandits.artifact.require-api-key (default true)\n\nSet Postman variable artifactApiKey to match the server key."
           }
+        }
+      ]
+    },
+    {
+      "name": "Subscription",
+      "description": "Public pricing + subscribe + admin plan catalog + subscriber management.\n\nPlans: SOLOPRENEUR | BUSINESS_OWNER | ACCOUNTANT_PRO\nSet variables: subscriptionUserId, subscriptionPlanId, subscriptionPlanCode, stripePaymentMethodId.\nAdmin endpoints need Auth → Login (Bearer {{token}}).",
+      "item": [
+        {
+          "name": "Public — GET Plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/subscription/plans",
+            "description": "Public pricing page. Active plans only (amount, trialDays, hybridAddon). No auth."
+          }
+        },
+        {
+          "name": "Subscribe — Add to User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentMethodId\": \"{{stripePaymentMethodId}}\",\n  \"plan\": \"SOLOPRENEUR\",\n  \"hybridAddOn\": false,\n  \"seats\": 1\n}\n"
+            },
+            "url": "{{baseUrl}}/api/subscription/add-to-user/{{subscriptionUserId}}",
+            "description": "Start trial for existing user. plan = SOLOPRENEUR | BUSINESS_OWNER | ACCOUNTANT_PRO. hybridAddOn adds catalog hybrid fee. seats used for ACCOUNTANT_PRO (per-seat)."
+          }
+        },
+        {
+          "name": "GET Subscription Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/subscription/status/{{subscriptionUserId}}"
+          }
+        },
+        {
+          "name": "Process Payment (manual)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/subscription/process-payment/{{subscriptionUserId}}",
+            "description": "Manually charge trial-end / due payment for a user."
+          }
+        },
+        {
+          "name": "Assign Super Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/subscription/assign-super-admin/{{subscriptionUserId}}",
+            "description": "Assign NUMBRICS_SUPER_ADMIN and clear subscription fields."
+          }
+        },
+        {
+          "name": "Admin — Plans",
+          "item": [
+            {
+              "name": "GET All Plans (admin)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": "{{baseUrl}}/api/subscription/admin/plans",
+                "description": "Full catalog including inactive plans."
+              }
+            },
+            {
+              "name": "PUT Update Plan by ID",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"displayName\": \"Solopreneur\",\n  \"amount\": 19,\n  \"trialDays\": 7,\n  \"hybridAddonAmount\": 10,\n  \"defaultRoleCode\": \"NUMBRICS_BUSINESS_OWNER\",\n  \"active\": true\n}\n"
+                },
+                "url": "{{baseUrl}}/api/subscription/admin/plans/{{subscriptionPlanId}}",
+                "description": "Edit amount (dollars), trialDays, hybridAddonAmount, role, active. Or use amountCents / hybridAddonCents."
+              }
+            },
+            {
+              "name": "PUT Update Plan by Code",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 29,\n  \"trialDays\": 10,\n  \"hybridAddonAmount\": 10,\n  \"active\": true\n}\n"
+                },
+                "url": "{{baseUrl}}/api/subscription/admin/plans/code/{{subscriptionPlanCode}}",
+                "description": "Same as update-by-id, keyed by planCode (SOLOPRENEUR, BUSINESS_OWNER, ACCOUNTANT_PRO)."
+              }
+            },
+            {
+              "name": "POST Activate Plan",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": "{{baseUrl}}/api/subscription/admin/plans/{{subscriptionPlanId}}/activate"
+              }
+            },
+            {
+              "name": "POST Deactivate Plan",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": "{{baseUrl}}/api/subscription/admin/plans/{{subscriptionPlanId}}/deactivate"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin — Subscribers",
+          "item": [
+            {
+              "name": "GET Subscribers (all)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": "{{baseUrl}}/api/subscription/admin/subscribers",
+                "description": "Full subscriber list."
+              }
+            },
+            {
+              "name": "GET Subscribers (filter status/plan)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/subscription/admin/subscribers?status=TRIAL&plan=SOLOPRENEUR",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "subscription", "admin", "subscribers"],
+                  "query": [
+                    { "key": "status", "value": "TRIAL", "description": "TRIAL | ACTIVE | CANCELLED | PAYMENT_FAILED | INACTIVE" },
+                    { "key": "plan", "value": "SOLOPRENEUR", "description": "SOLOPRENEUR | BUSINESS_OWNER | ACCOUNTANT_PRO" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "GET Subscriber Detail",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": "{{baseUrl}}/api/subscription/admin/subscribers/{{subscriptionUserId}}"
+              }
+            },
+            {
+              "name": "PUT Update Subscriber",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"plan\": \"BUSINESS_OWNER\",\n  \"hybridAddOn\": true,\n  \"seats\": 1,\n  \"subscriptionStatus\": \"ACTIVE\",\n  \"extendTrialDays\": 7,\n  \"paymentCompleted\": false\n}\n"
+                },
+                "url": "{{baseUrl}}/api/subscription/admin/subscribers/{{subscriptionUserId}}",
+                "description": "Edit plan, hybrid, seats, status, extend trial, optional subscriptionAmountCents override."
+              }
+            },
+            {
+              "name": "POST Activate Subscriber",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": "{{baseUrl}}/api/subscription/admin/subscribers/{{subscriptionUserId}}/activate"
+              }
+            },
+            {
+              "name": "POST Deactivate Subscriber",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": "{{baseUrl}}/api/subscription/admin/subscribers/{{subscriptionUserId}}/deactivate"
+              }
+            }
+          ]
         }
       ]
     }

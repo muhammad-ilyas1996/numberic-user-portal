@@ -1,17 +1,25 @@
 package com.numbericsuserportal.stripeintegration.controller;
-import com.numbericsuserportal.usermanagement.domain.User;
+
+import com.numbericsuserportal.stripeintegration.dto.AdminUpdateSubscriberRequest;
+import com.numbericsuserportal.stripeintegration.dto.UpdateSubscriptionPlanRequest;
+import com.numbericsuserportal.stripeintegration.service.SubscriptionPlanCatalogService;
+import com.numbericsuserportal.stripeintegration.service.SubscriptionService;
 import com.numbericsuserportal.usermanagement.domain.Role;
+import com.numbericsuserportal.usermanagement.domain.User;
 import com.numbericsuserportal.usermanagement.domain.UserRole;
 import com.numbericsuserportal.usermanagement.domain.UserRoleId;
-import com.numbericsuserportal.usermanagement.repo.UserRepository;
 import com.numbericsuserportal.usermanagement.repo.RoleRepository;
+import com.numbericsuserportal.usermanagement.repo.UserRepository;
 import com.numbericsuserportal.usermanagement.repo.UserRoleRepository;
-import com.numbericsuserportal.stripeintegration.service.SubscriptionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import java.util.*;
+
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/subscription")
@@ -20,144 +28,98 @@ public class SubscriptionController {
 
     @Autowired
     private SubscriptionService subscriptionService;
-    
+
+    @Autowired
+    private SubscriptionPlanCatalogService catalogService;
+
     @Autowired
     private UserRepository userRepository;
-    
+
     @Autowired
     private RoleRepository roleRepository;
-    
+
     @Autowired
     private UserRoleRepository userRoleRepository;
 
-    // Get available plans
+    /** Public pricing page — active plans only (amounts/trial from admin catalog). */
     @GetMapping("/plans")
     public ResponseEntity<?> getPlans() {
-        List<Map<String, Object>> plans = new ArrayList<>();
-
-        for (User.SubscriptionPlan plan : User.SubscriptionPlan.values()) {
-            Map<String, Object> planInfo = new HashMap<>();
-            planInfo.put("id", plan.name());
-            planInfo.put("name", plan.getDescription());
-            planInfo.put("amount", plan.getAmountInDollars());
-            planInfo.put("currency", "USD");
-            planInfo.put("defaultRole", plan.getDefaultRoleCode());
-            plans.add(planInfo);
-        }
-
-        return ResponseEntity.ok(plans);
+        return ResponseEntity.ok(catalogService.listPublicPlans());
     }
 
-    // Add subscription to existing user
+    /**
+     * Start trial for existing user.
+     * Body: { paymentMethodId, plan, hybridAddOn?, seats? }
+     */
     @PostMapping("/add-to-user/{userId}")
     public ResponseEntity<?> addSubscriptionToUser(
             @PathVariable Long userId,
-            @RequestBody Map<String, String> request) {
+            @RequestBody Map<String, Object> request) {
         try {
-            String paymentMethodId = request.get("paymentMethodId");
-            String planName = request.get("plan");
+            String paymentMethodId = request.get("paymentMethodId") != null
+                    ? String.valueOf(request.get("paymentMethodId")) : null;
+            String planName = request.get("plan") != null ? String.valueOf(request.get("plan")) : null;
+            boolean hybrid = parseBool(request.get("hybridAddOn"));
+            int seats = parseInt(request.get("seats"), 1);
 
-            if (planName == null || planName.isEmpty()) {
-                String validPlans = String.join(", ", 
-                    Arrays.stream(User.SubscriptionPlan.values())
-                        .map(Enum::name)
-                        .toArray(String[]::new));
-                return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Plan is required. Valid plans: " + validPlans));
+            if (planName == null || planName.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Plan is required. Use GET /api/subscription/plans"));
+            }
+            if (paymentMethodId == null || paymentMethodId.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "paymentMethodId is required"));
             }
 
-            User.SubscriptionPlan plan = User.SubscriptionPlan.valueOf(planName.toUpperCase());
+            User user = subscriptionService.addSubscriptionToUser(
+                    userId, paymentMethodId, planName, hybrid, seats);
 
-            User user = subscriptionService.addSubscriptionToUser(userId, paymentMethodId, plan);
-
-            Map<String, Object> response = new HashMap<>();
+            Map<String, Object> response = new HashMap<>(subscriptionService.toSubscriberMap(user));
             response.put("message", "Subscription added successfully. Trial period started.");
-            response.put("userId", user.getUserId());
-            response.put("email", user.getEmail());
-            response.put("plan", user.getSubscriptionPlan().name());
-            response.put("planDescription", user.getSubscriptionPlan().getDescription());
-            response.put("amount", user.getSubscriptionPlan().getAmountInDollars());
-            response.put("trialEndsAt", user.getPaymentDueDate());
-            response.put("status", user.getSubscriptionStatus());
-            response.put("assignedRole", plan.getDefaultRoleCode());
-
             return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            String validPlans = String.join(", ", 
-                Arrays.stream(User.SubscriptionPlan.values())
-                    .map(Enum::name)
-                    .toArray(String[]::new));
-            return ResponseEntity.badRequest()
-                .body(Map.of("error", "Invalid plan. Valid plans: " + validPlans));
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                .body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
-    // Get subscription status
     @GetMapping("/status/{userId}")
     public ResponseEntity<?> getSubscriptionStatus(@PathVariable Long userId) {
         try {
             User user = subscriptionService.getSubscriptionStatus(userId);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("userId", user.getUserId());
-            response.put("email", user.getEmail());
-            response.put("name", user.getFirstName() + " " + user.getLastName());
-
-            if (user.getSubscriptionPlan() != null) {
-                response.put("plan", user.getSubscriptionPlan().name());
-                response.put("planDescription", user.getSubscriptionPlan().getDescription());
-                response.put("amount", user.getSubscriptionPlan().getAmountInDollars());
-                response.put("status", user.getSubscriptionStatus());
-                response.put("paymentCompleted", user.getPaymentCompleted());
-                response.put("trialStartDate", user.getTrialStartDate());
-                response.put("paymentDueDate", user.getPaymentDueDate());
-                response.put("lastPaymentDate", user.getLastPaymentDate());
-            } else {
+            Map<String, Object> response = subscriptionService.toSubscriberMap(user);
+            if (user.getSubscriptionPlan() == null && user.getSubscriptionStatus() == null) {
                 response.put("message", "No subscription found for this user");
             }
-
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                .body(Map.of("error", "User not found"));
+            return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
         }
     }
 
-    // Manual payment trigger
     @PostMapping("/process-payment/{userId}")
     public ResponseEntity<?> processPaymentManually(@PathVariable Long userId) {
         try {
-            User user = subscriptionService.getSubscriptionStatus(userId);
             subscriptionService.processTrialEndPayment(userId);
-
+            User user = subscriptionService.getSubscriptionStatus(userId);
             return ResponseEntity.ok(Map.of(
-                "message", "Payment processed successfully",
-                "plan", user.getSubscriptionPlan().name(),
-                "amount", user.getSubscriptionPlan().getAmountInDollars()
+                    "message", "Payment processed successfully",
+                    "subscriber", subscriptionService.toSubscriberMap(user)
             ));
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                .body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
-    
-    // Assign Super Admin role (no subscription plan)
+
     @PostMapping("/assign-super-admin/{userId}")
     public ResponseEntity<?> assignSuperAdmin(@PathVariable Long userId) {
         try {
             User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-            
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
             Role superAdminRole = roleRepository.findByCodeName("NUMBRICS_SUPER_ADMIN")
-                .orElseThrow(() -> new RuntimeException("Super Admin role not found"));
-            
-            // Remove existing roles
+                    .orElseThrow(() -> new RuntimeException("Super Admin role not found"));
+
             userRoleRepository.deleteByUserId(userId);
-            
-            // Assign Super Admin role
+
             UserRole userRole = new UserRole();
             UserRoleId userRoleId = new UserRoleId();
             userRoleId.setUserId(userId);
@@ -168,24 +130,179 @@ public class SubscriptionController {
             userRole.setIsActive(true);
             userRole.setCreatedAt(LocalDateTime.now());
             userRole.setAddedBy(userId);
-            
             userRoleRepository.save(userRole);
-            
-            // Clear subscription plan for Super Admin
+
             user.setSubscriptionPlan(null);
             user.setSubscriptionAmount(null);
+            user.setHybridAddOn(false);
+            user.setSubscriptionSeats(1);
+            user.setSubscriptionStatus(null);
             user.setStripeCustomerId(null);
             user.setStripePaymentMethodId(null);
             userRepository.save(user);
-            
+
             return ResponseEntity.ok(Map.of(
-                "message", "Super Admin role assigned successfully",
-                "userId", userId,
-                "role", "NUMBRICS_SUPER_ADMIN"
+                    "message", "Super Admin role assigned successfully",
+                    "userId", userId,
+                    "role", "NUMBRICS_SUPER_ADMIN"
             ));
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                .body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ─── Admin: plan catalog ─────────────────────────────────────────────────
+
+    @GetMapping("/admin/plans")
+    public ResponseEntity<?> adminListPlans(@AuthenticationPrincipal User currentUser) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(catalogService.listAllPlansAdmin());
+    }
+
+    @PutMapping("/admin/plans/{id}")
+    public ResponseEntity<?> adminUpdatePlan(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id,
+            @RequestBody UpdateSubscriptionPlanRequest request) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            return ResponseEntity.ok(catalogService.updatePlan(id, request));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/admin/plans/code/{planCode}")
+    public ResponseEntity<?> adminUpdatePlanByCode(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable String planCode,
+            @RequestBody UpdateSubscriptionPlanRequest request) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            return ResponseEntity.ok(catalogService.updatePlanByCode(planCode, request));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/admin/plans/{id}/activate")
+    public ResponseEntity<?> adminActivatePlan(
+            @AuthenticationPrincipal User currentUser, @PathVariable Long id) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            return ResponseEntity.ok(catalogService.setActive(id, true));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/admin/plans/{id}/deactivate")
+    public ResponseEntity<?> adminDeactivatePlan(
+            @AuthenticationPrincipal User currentUser, @PathVariable Long id) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            return ResponseEntity.ok(catalogService.setActive(id, false));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ─── Admin: subscribers ──────────────────────────────────────────────────
+
+    @GetMapping("/admin/subscribers")
+    public ResponseEntity<?> adminListSubscribers(
+            @AuthenticationPrincipal User currentUser,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String plan) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+        List<Map<String, Object>> rows = subscriptionService.listSubscribers(status, plan);
+        return ResponseEntity.ok(Map.of("count", rows.size(), "subscribers", rows));
+    }
+
+    @GetMapping("/admin/subscribers/{userId}")
+    public ResponseEntity<?> adminGetSubscriber(
+            @AuthenticationPrincipal User currentUser, @PathVariable Long userId) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            return ResponseEntity.ok(subscriptionService.getSubscriberDetail(userId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/admin/subscribers/{userId}")
+    public ResponseEntity<?> adminUpdateSubscriber(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long userId,
+            @RequestBody AdminUpdateSubscriberRequest request) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            return ResponseEntity.ok(subscriptionService.adminUpdateSubscriber(userId, request));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/admin/subscribers/{userId}/activate")
+    public ResponseEntity<?> adminActivateSubscriber(
+            @AuthenticationPrincipal User currentUser, @PathVariable Long userId) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            return ResponseEntity.ok(subscriptionService.setSubscriberActive(userId, true));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/admin/subscribers/{userId}/deactivate")
+    public ResponseEntity<?> adminDeactivateSubscriber(
+            @AuthenticationPrincipal User currentUser, @PathVariable Long userId) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            return ResponseEntity.ok(subscriptionService.setSubscriberActive(userId, false));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    private static boolean parseBool(Object v) {
+        if (v == null) {
+            return false;
+        }
+        if (v instanceof Boolean b) {
+            return b;
+        }
+        return "true".equalsIgnoreCase(String.valueOf(v)) || "1".equals(String.valueOf(v));
+    }
+
+    private static int parseInt(Object v, int def) {
+        if (v == null) {
+            return def;
+        }
+        try {
+            return Math.max(1, Integer.parseInt(String.valueOf(v)));
+        } catch (Exception e) {
+            return def;
         }
     }
 }

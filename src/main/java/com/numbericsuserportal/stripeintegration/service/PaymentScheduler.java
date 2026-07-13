@@ -18,19 +18,15 @@ public class PaymentScheduler {
     @Scheduled(cron = "0 0 * * * *")
     public void processDuePayments() {
         LocalDateTime now = LocalDateTime.now();
-
-        // Find users with due payments
-        List<User> dueUsers = userRepository.findAll().stream()
-                .filter(user -> user.getPaymentDueDate() != null)
-                .filter(user -> user.getPaymentDueDate().isBefore(now))
-                .filter(user -> user.getPaymentCompleted() == null || !user.getPaymentCompleted())
-                .filter(user -> user.getIsDeleted() == null || !user.getIsDeleted())
-                .toList();
-
+        List<User> dueUsers = userRepository.findUsersWithDuePayments(now);
         System.out.println("Processing " + dueUsers.size() + " due payments...");
 
         for (User user : dueUsers) {
             try {
+                if ("CANCELLED".equalsIgnoreCase(user.getSubscriptionStatus())
+                        || "INACTIVE".equalsIgnoreCase(user.getSubscriptionStatus())) {
+                    continue;
+                }
                 subscriptionService.processTrialEndPayment(user.getUserId());
             } catch (Exception e) {
                 System.err.println("Payment processing error for user: " + user.getEmail());

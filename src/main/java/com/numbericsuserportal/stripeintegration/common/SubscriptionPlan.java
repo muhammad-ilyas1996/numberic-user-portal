@@ -1,19 +1,18 @@
 package com.numbericsuserportal.stripeintegration.common;
 
 /**
- * Subscription Plan Enum
- * Note: This enum is kept for reference. The actual subscription plans are defined in User.SubscriptionPlan
- * and should be used throughout the application.
- * 
- * This enum matches User.SubscriptionPlan for consistency.
+ * Legacy reference enum. Prefer User.SubscriptionPlan + subscription_plan_catalog table.
  */
 public enum SubscriptionPlan {
 
-    STARTER(29900L, "Starter Plan - $299/season"),           // $299
-    PROFESSIONAL(59900L, "Professional Plan - $599/season"), // $599
-    ENTERPRISE(129900L, "Enterprise Plan - $1,299/season"); // $1,299
+    SOLOPRENEUR(1900L, "Solopreneur (founder) - $19/mo"),
+    BUSINESS_OWNER(7900L, "Business Owner - $79/mo"),
+    ACCOUNTANT_PRO(19900L, "Accountant Pro - $199/mo per seat"),
+    STARTER(29900L, "Starter Plan - $299/season"),
+    PROFESSIONAL(59900L, "Professional Plan - $599/season"),
+    ENTERPRISE(129900L, "Enterprise Plan - $1,299/season");
 
-    private final Long amount; // Amount in cents
+    private final Long amount;
     private final String description;
 
     SubscriptionPlan(Long amount, String description) {
@@ -32,16 +31,11 @@ public enum SubscriptionPlan {
     public Double getAmountInDollars() {
         return amount / 100.0;
     }
-    
-    /**
-     * Helper method to get default role based on plan
-     * Note: Use User.SubscriptionPlan.getDefaultRoleCode() in actual implementation
-     */
+
     public String getDefaultRoleCode() {
         return switch (this) {
-            case STARTER -> "NUMBRICS_BUSINESS_OWNER";
-            case PROFESSIONAL -> "NUMBRICS_ACCOUNTANT_PRO";
-            case ENTERPRISE -> "NUMBRICS_ACCOUNTANT_PRO";
+            case SOLOPRENEUR, BUSINESS_OWNER, STARTER -> "NUMBRICS_BUSINESS_OWNER";
+            case ACCOUNTANT_PRO, PROFESSIONAL, ENTERPRISE -> "NUMBRICS_ACCOUNTANT_PRO";
         };
     }
 }

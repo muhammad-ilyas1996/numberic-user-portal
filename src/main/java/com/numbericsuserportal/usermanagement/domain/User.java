@@ -126,6 +126,14 @@ public class User {
     @Column(name = "stripe_subscription_id", length = 100)
     private String stripeSubscriptionId;
 
+    /** Public pricing hybrid add-on (+$10/mo when true). */
+    @Column(name = "hybrid_addon")
+    private Boolean hybridAddOn = false;
+
+    /** Seat count for per-seat plans (Accountant Pro). */
+    @Column(name = "subscription_seats")
+    private Integer subscriptionSeats = 1;
+
     // ============================================
     // REGISTRATION FIELDS
     // ============================================
@@ -211,11 +219,16 @@ public class User {
     // ============================================
 
     public enum SubscriptionPlan {
-        STARTER(29900L, "Starter Plan - $299/season"),           // $299
-        PROFESSIONAL(59900L, "Professional Plan - $599/season"), // $599
-        ENTERPRISE(129900L, "Enterprise Plan - $1,299/season"); // $1,299
+        // Public pricing page (current)
+        SOLOPRENEUR(1900L, "Solopreneur (founder) - $19/mo"),
+        BUSINESS_OWNER(7900L, "Business Owner - $79/mo"),
+        ACCOUNTANT_PRO(19900L, "Accountant Pro - $199/mo per seat"),
+        // Legacy (kept for existing rows)
+        STARTER(29900L, "Starter Plan - $299/season"),
+        PROFESSIONAL(59900L, "Professional Plan - $599/season"),
+        ENTERPRISE(129900L, "Enterprise Plan - $1,299/season");
 
-        private final Long amount; // Amount in cents
+        private final Long amount; // fallback cents if catalog missing
         private final String description;
 
         SubscriptionPlan(Long amount, String description) {
@@ -235,19 +248,23 @@ public class User {
             return amount / 100.0;
         }
 
-        // Helper method to get default role based on plan
         public String getDefaultRoleCode() {
             return switch (this) {
-                case STARTER -> "NUMBRICS_BUSINESS_OWNER";
-                case PROFESSIONAL -> "NUMBRICS_ACCOUNTANT_PRO";
-                case ENTERPRISE -> "NUMBRICS_ACCOUNTANT_PRO";
+                case SOLOPRENEUR, BUSINESS_OWNER, STARTER -> "NUMBRICS_BUSINESS_OWNER";
+                case ACCOUNTANT_PRO, PROFESSIONAL, ENTERPRISE -> "NUMBRICS_ACCOUNTANT_PRO";
             };
         }
+
+        public static SubscriptionPlan fromCode(String code) {
+            if (code == null || code.isBlank()) {
+                throw new IllegalArgumentException("Plan code is required");
+            }
+            return SubscriptionPlan.valueOf(code.trim().toUpperCase());
+        }
     }
+
     public void setSubscriptionPlan(SubscriptionPlan subscriptionPlan) {
         this.subscriptionPlan = subscriptionPlan;
-        if (subscriptionPlan != null) {
-            this.subscriptionAmount = subscriptionPlan.getAmount();
-        }
+        // Amount is set from catalog (+ hybrid/seats) in SubscriptionService — do not overwrite here.
     }
 }
