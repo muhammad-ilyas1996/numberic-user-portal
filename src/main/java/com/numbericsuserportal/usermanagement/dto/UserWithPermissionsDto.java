@@ -36,6 +36,17 @@ public class UserWithPermissionsDto {
     
     // Available permissions for this portal
     private List<PermissionDto> availablePermissions;
+
+    // ── Subscription / Billing fields ──────────────────────────────────────────
+    /** One of: TRIAL, ACTIVE, PAYMENT_FAILED, CANCELLED, INACTIVE, or null (no plan) */
+    private String subscriptionStatus;
+    /** One of: STARTER, PROFESSIONAL, ENTERPRISE, or null */
+    private String subscriptionPlan;
+    private Boolean paymentCompleted;
+    private LocalDateTime trialStartDate;
+    private LocalDateTime paymentDueDate;
 }
+
+
 
 

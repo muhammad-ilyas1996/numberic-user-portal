@@ -1,5 +1,6 @@
 package com.numbericsuserportal.LlcNorthwest.LLCFormation.service;
 
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.UpdateAddonsRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.UpdateNorthwestShoppingCartJsonRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.UpdateStep1StateRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.UpdateStep2NameRequestDTO;
@@ -55,6 +56,24 @@ public class LlcFormationService {
         if (user == null || user.getUserId() == null) throw new IllegalArgumentException("User is required");
         Optional<LlcFormation> found = repo.findByIdAndUserId(formationId, user.getUserId());
         return found.orElseThrow(() -> new IllegalArgumentException("Formation not found"));
+    }
+
+    @Transactional
+    public LlcFormation updateAddons(Long formationId, User user, UpdateAddonsRequestDTO req) {
+        LlcFormation f = getForUserOrThrow(formationId, user);
+        
+        if (req.getAddonEin() != null) f.setAddonEin(req.getAddonEin());
+        if (req.getAddonScorp() != null) f.setAddonScorp(req.getAddonScorp());
+        if (req.getAddonOperatingAgreement() != null) f.setAddonOperatingAgreement(req.getAddonOperatingAgreement());
+        if (req.getAddonRegisteredAgent() != null) f.setAddonRegisteredAgent(req.getAddonRegisteredAgent());
+        if (req.getAddonTaxAnalytics() != null) f.setAddonTaxAnalytics(req.getAddonTaxAnalytics());
+        if (req.getAddonExpenseTracking() != null) f.setAddonExpenseTracking(req.getAddonExpenseTracking());
+        if (req.getAddonBasicAiReporting() != null) f.setAddonBasicAiReporting(req.getAddonBasicAiReporting());
+        if (req.getAddonCorporateBylaws() != null) f.setAddonCorporateBylaws(req.getAddonCorporateBylaws());
+        if (req.getFilingSpeed() != null) f.setFilingSpeed(req.getFilingSpeed().trim().toLowerCase());
+
+        pricingService.applySnapshotToFormation(f, pricingService.calculate(f));
+        return repo.save(f);
     }
 
     @Transactional

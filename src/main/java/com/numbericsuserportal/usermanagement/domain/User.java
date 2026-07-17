@@ -102,7 +102,7 @@ public class User {
     private String stripePaymentMethodId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "subscription_plan")
+    @Column(name = "subscription_plan", length = 50)
     private SubscriptionPlan subscriptionPlan;
 
     @Column(name = "subscription_amount")

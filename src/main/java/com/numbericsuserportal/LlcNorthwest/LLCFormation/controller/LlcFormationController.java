@@ -3,6 +3,7 @@ package com.numbericsuserportal.LlcNorthwest.LLCFormation.controller;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.CreateFormationResponseDTO;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.UpdateNorthwestShoppingCartJsonRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.UpdateStep1StateRequestDTO;
+import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.UpdateAddonsRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.UpdateStep2NameRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.UpdateStep3DetailsRequestDTO;
 import com.numbericsuserportal.LlcNorthwest.LLCFormation.dto.UpdateStep4RegisteredAgentRequestDTO;
@@ -58,6 +59,18 @@ public class LlcFormationController {
         }
         try {
             return ResponseEntity.ok(formationService.getForUserOrThrow(formationId, currentUser));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{formationId}/addons")
+    public ResponseEntity<?> updateAddons(@AuthenticationPrincipal User currentUser,
+                                          @PathVariable Long formationId,
+                                          @RequestBody UpdateAddonsRequestDTO req) {
+        if (currentUser == null) return ResponseEntity.status(401).build();
+        try {
+            return ResponseEntity.ok(formationService.updateAddons(formationId, currentUser, req));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

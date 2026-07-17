@@ -1,5 +1,6 @@
 package com.numbericsuserportal.usermanagement.jwt;
 
+import com.numbericsuserportal.stripeintegration.filter.SubscriptionRequiredFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,15 +10,19 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final SubscriptionRequiredFilter subscriptionRequiredFilter;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter,
+                          SubscriptionRequiredFilter subscriptionRequiredFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.subscriptionRequiredFilter = subscriptionRequiredFilter;
     }
 
     @Bean
@@ -37,7 +42,6 @@ public class SecurityConfig {
                         .requestMatchers("/v1/invoice/pay-by-token").permitAll() // Invoice pay page: get invoice by link token
                         .requestMatchers("/v1/invoice/pay-with-token").permitAll() // Invoice pay: process payment by token
                         .requestMatchers("/pay-invoice", "/pay-invoice.html").permitAll() // Public payment page (link from WhatsApp/email)
-//                        .requestMatchers("/webhooks/**").permitAll() // Allow Twilio webhooks without authentication
 
                         .anyRequest().authenticated()
                 )
@@ -45,8 +49,11 @@ public class SecurityConfig {
                         .authenticationEntryPoint((req, res, ex1) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED))
                 );
 
+        // JWT auth must run first, then subscription gate enforces business-API access
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(subscriptionRequiredFilter, JwtAuthFilter.class);
         return http.build();
     }
 }
+
 

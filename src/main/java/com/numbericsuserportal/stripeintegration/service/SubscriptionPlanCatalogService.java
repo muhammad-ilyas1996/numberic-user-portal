@@ -20,9 +20,17 @@ public class SubscriptionPlanCatalogService {
     @Autowired
     private SubscriptionPlanCatalogRepository catalogRepository;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     @PostConstruct
     @Transactional
     public void seedDefaultsIfEmpty() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE users MODIFY subscription_plan VARCHAR(50)");
+        } catch (Exception e) {
+            log.warn("Could not alter users table: {}", e.getMessage());
+        }
         try {
             if (catalogRepository.count() > 0) {
                 return;

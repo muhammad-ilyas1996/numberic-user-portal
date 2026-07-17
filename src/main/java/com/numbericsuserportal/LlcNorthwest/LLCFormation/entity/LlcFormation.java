@@ -112,6 +112,24 @@ public class LlcFormation {
     @Column(name = "addon_scorp")
     private Boolean addonScorp;
 
+    @Column(name = "addon_operating_agreement")
+    private Boolean addonOperatingAgreement;
+
+    @Column(name = "addon_registered_agent")
+    private Boolean addonRegisteredAgent;
+
+    @Column(name = "addon_tax_analytics")
+    private Boolean addonTaxAnalytics;
+
+    @Column(name = "addon_expense_tracking")
+    private Boolean addonExpenseTracking;
+
+    @Column(name = "addon_basic_ai_reporting")
+    private Boolean addonBasicAiReporting;
+
+    @Column(name = "addon_corporate_bylaws")
+    private Boolean addonCorporateBylaws;
+
     @Column(name = "numbrics_fee_cents")
     private Integer numbricsFeeCents;
 
@@ -126,6 +144,24 @@ public class LlcFormation {
 
     @Column(name = "scorp_fee_cents")
     private Integer scorpFeeCents;
+
+    @Column(name = "operating_agreement_fee_cents")
+    private Integer operatingAgreementFeeCents;
+
+    @Column(name = "registered_agent_fee_cents")
+    private Integer registeredAgentFeeCents;
+
+    @Column(name = "tax_analytics_fee_cents")
+    private Integer taxAnalyticsFeeCents;
+
+    @Column(name = "expense_tracking_fee_cents")
+    private Integer expenseTrackingFeeCents;
+
+    @Column(name = "basic_ai_reporting_fee_cents")
+    private Integer basicAiReportingFeeCents;
+
+    @Column(name = "corporate_bylaws_fee_cents")
+    private Integer corporateBylawsFeeCents;
 
     @Column(name = "total_cents")
     private Integer totalCents;

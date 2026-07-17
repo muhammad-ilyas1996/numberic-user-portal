@@ -156,6 +156,14 @@ public class UserManagementService {
         dto.setAvailablePermissions(availablePermissions.stream()
                 .map(this::convertPermissionToDto)
                 .collect(Collectors.toList()));
+
+        // ── Subscription / Billing fields ──────────────────────────────────
+        dto.setSubscriptionStatus(user.getSubscriptionStatus());
+        dto.setSubscriptionPlan(
+                user.getSubscriptionPlan() != null ? user.getSubscriptionPlan().name() : null);
+        dto.setPaymentCompleted(user.getPaymentCompleted());
+        dto.setTrialStartDate(user.getTrialStartDate());
+        dto.setPaymentDueDate(user.getPaymentDueDate());
         
         return dto;
     }
