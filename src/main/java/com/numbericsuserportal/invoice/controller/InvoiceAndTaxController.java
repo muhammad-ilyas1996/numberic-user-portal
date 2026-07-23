@@ -10,6 +10,7 @@ import com.numbericsuserportal.invoice.dto.InvoiceSendHistorySearch;
 import com.numbericsuserportal.invoice.dto.PaymentTransactionSearch;
 import com.numbericsuserportal.invoice.dto.SendInvoiceRequestDto;
 import com.numbericsuserportal.invoice.dto.SendInvoiceResponseDto;
+import com.numbericsuserportal.invoice.dto.UpdateInvoiceStatusRequestDto;
 import com.numbericsuserportal.invoice.entity.InvoiceAndTaxEntity;
 import com.numbericsuserportal.invoice.service.InvoiceAndTaxService;
 import com.numbericsuserportal.invoice.service.InvoicePdfService;
@@ -105,6 +106,28 @@ public class InvoiceAndTaxController {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(java.util.Map.of("error", "Failed to update invoice: " + e.getMessage()));
+        }
+    }
+
+    /** Update only invoice status (listing UI). Body: {"id": 1, "invoiceStatus": "SENT"} */
+    @PostMapping("/update-status")
+    public ResponseEntity<?> updateInvoiceStatus(
+            @RequestBody UpdateInvoiceStatusRequestDto request,
+            @AuthenticationPrincipal User currentUser) {
+        try {
+            if (request == null || request.getId() == null) {
+                return ResponseEntity.badRequest().body(java.util.Map.of("error", "Invoice ID is required"));
+            }
+            InvoiceAndTaxDTO updated = invoiceAndTaxService.updateInvoiceStatus(
+                    request.getId(), request.getInvoiceStatus(), currentUser);
+            return ResponseEntity.ok(updated);
+        } catch (AccessDeniedException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(java.util.Map.of("error", "Failed to update invoice status: " + e.getMessage()));
         }
     }
 

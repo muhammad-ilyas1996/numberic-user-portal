@@ -23,5 +23,8 @@ public interface InvoiceAndTaxService {
 
     InvoiceAndTaxDTO updateInvoice(Long id, InvoiceAndTaxDTO dto, User currentUser);
 
+    /** Update only invoice status (for listing UI). */
+    InvoiceAndTaxDTO updateInvoiceStatus(Long id, String invoiceStatus, User currentUser);
+
     void deleteInvoice(Long id, User currentUser);
 }

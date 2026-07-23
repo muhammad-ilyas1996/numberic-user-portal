@@ -22,10 +22,16 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class InvoiceAndTaxServiceImpl implements InvoiceAndTaxService {
+
+    private static final Set<String> ALLOWED_INVOICE_STATUSES = Set.of(
+            "DRAFT", "SENT", "UNPAID", "PAID", "OVERDUE", "CANCELLED", "VOID"
+    );
 
     @Autowired
     private InvoiceAndTaxRepo invoiceAndTaxRepo;
@@ -151,6 +157,34 @@ public class InvoiceAndTaxServiceImpl implements InvoiceAndTaxService {
         entity.setInvoiceDueDate(dto.getInvoiceDueDate());
         entity.setInvoiceStatus(dto.getInvoiceStatus());
 
+        entity.setModifiedBy(currentUser.getUserId().toString());
+        entity.setModifiedOn(new java.util.Date());
+
+        InvoiceAndTaxEntity savedEntity = invoiceAndTaxRepo.save(entity);
+        return InvoiceAndTaxConverter.toDTO(savedEntity, currentUser);
+    }
+
+    @Override
+    public InvoiceAndTaxDTO updateInvoiceStatus(Long id, String invoiceStatus, User currentUser) {
+        if (invoiceStatus == null || invoiceStatus.isBlank()) {
+            throw new RuntimeException("invoiceStatus is required");
+        }
+        String normalized = invoiceStatus.trim().toUpperCase(Locale.ROOT);
+        if (!ALLOWED_INVOICE_STATUSES.contains(normalized)) {
+            throw new RuntimeException(
+                    "Invalid invoiceStatus. Allowed: " + String.join(", ", ALLOWED_INVOICE_STATUSES));
+        }
+
+        UserDataScopeContext scope = userDataScopeService.resolve(currentUser);
+        Optional<InvoiceAndTaxEntity> existingInvoice = invoiceAndTaxRepo.findByIdAndIsActiveTrue(id);
+        if (existingInvoice.isEmpty()) {
+            throw new RuntimeException("Invoice not found with id: " + id);
+        }
+
+        InvoiceAndTaxEntity entity = existingInvoice.get();
+        assertInvoiceAccess(entity, scope);
+
+        entity.setInvoiceStatus(normalized);
         entity.setModifiedBy(currentUser.getUserId().toString());
         entity.setModifiedOn(new java.util.Date());
 
