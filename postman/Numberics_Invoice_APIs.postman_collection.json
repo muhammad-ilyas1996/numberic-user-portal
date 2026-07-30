@@ -5,25 +5,86 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "https://www.numbrics.ai/numbricsservice" },
-    { "key": "localBaseUrl", "value": "http://localhost:8081/numbricsservice" },
-    { "key": "token", "value": "" },
-    { "key": "feeScheduleId", "value": "681312" },
-    { "key": "nmiWebhookSecret", "value": "" },
-    { "key": "tbSubmissionId", "value": "" },
-    { "key": "tbRecordId", "value": "" },
-    { "key": "tbPdfFile", "value": "1099NEC_COPY1_1Up.pdf" },
-    { "key": "artifactApiKey", "value": "" },
-    { "key": "receiptId", "value": "" },
-    { "key": "testCustomerName", "value": "Jane Doe" },
-    { "key": "testCustomerEmail", "value": "jane.doe@example.com" },
-    { "key": "testCustomerPhone", "value": "+15551234567" },
-    { "key": "testInvoiceAmount", "value": "250" },
-    { "key": "whatsappFrom", "value": "whatsapp:+923001234567" },
-    { "key": "subscriptionUserId", "value": "1" },
-    { "key": "subscriptionPlanId", "value": "1" },
-    { "key": "subscriptionPlanCode", "value": "SOLOPRENEUR" },
-    { "key": "stripePaymentMethodId", "value": "pm_card_visa" }
+    {
+      "key": "baseUrl",
+      "value": "https://www.numbrics.ai/numbricsservice"
+    },
+    {
+      "key": "localBaseUrl",
+      "value": "http://localhost:8081/numbricsservice"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "feeScheduleId",
+      "value": "681312"
+    },
+    {
+      "key": "nmiWebhookSecret",
+      "value": ""
+    },
+    {
+      "key": "tbSubmissionId",
+      "value": ""
+    },
+    {
+      "key": "tbRecordId",
+      "value": ""
+    },
+    {
+      "key": "tbPdfFile",
+      "value": "1099NEC_COPY1_1Up.pdf"
+    },
+    {
+      "key": "artifactApiKey",
+      "value": ""
+    },
+    {
+      "key": "receiptId",
+      "value": ""
+    },
+    {
+      "key": "testCustomerName",
+      "value": "Jane Doe"
+    },
+    {
+      "key": "testCustomerEmail",
+      "value": "jane.doe@example.com"
+    },
+    {
+      "key": "testCustomerPhone",
+      "value": "+15551234567"
+    },
+    {
+      "key": "testInvoiceAmount",
+      "value": "250"
+    },
+    {
+      "key": "whatsappFrom",
+      "value": "whatsapp:+923001234567"
+    },
+    {
+      "key": "subscriptionUserId",
+      "value": "1"
+    },
+    {
+      "key": "subscriptionPlanId",
+      "value": "1"
+    },
+    {
+      "key": "subscriptionPlanCode",
+      "value": "SOLOPRENEUR"
+    },
+    {
+      "key": "stripePaymentMethodId",
+      "value": "pm_card_visa"
+    },
+    {
+      "key": "proconnectIntakeRecordId",
+      "value": "1"
+    }
   ],
   "item": [
     {
@@ -45,7 +106,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"atiq.apo@apo.com\",\n  \"password\": \"Atiq.apo@1\"\n}\n"
@@ -63,7 +129,12 @@
           "name": "GET Dashboard Summary",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "description": "Returns JSON: totalRevenueNmi (NMI SUCCESS payments), totalInvoices, roleCodes[], primaryRoleCode, dataScope (ALL | USER). Path: /v1/dashboard/summary under baseUrl (e.g. .../numbricsservice).",
             "url": "{{baseUrl}}/v1/dashboard/summary"
           }
@@ -78,8 +149,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -93,8 +170,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -108,10 +191,19 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"id\": 1\n}\n" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1\n}\n"
+            },
             "url": "{{baseUrl}}/v1/invoice/view-detail"
           }
         },
@@ -120,10 +212,19 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"customerName\": \"Test Customer\"\n}\n" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Test Customer\"\n}\n"
+            },
             "url": "{{baseUrl}}/v1/invoice/view-detail-by-customer-name"
           }
         },
@@ -132,10 +233,19 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"invoiceNum\": \"INV-001\"\n}\n" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoiceNum\": \"INV-001\"\n}\n"
+            },
             "url": "{{baseUrl}}/v1/invoice/view-detail-by-invoice-num"
           }
         },
@@ -144,8 +254,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -159,8 +275,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -175,10 +297,19 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"id\": 1\n}\n" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1\n}\n"
+            },
             "url": "{{baseUrl}}/v1/invoice/delete-invoice"
           }
         },
@@ -187,8 +318,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -202,8 +339,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -217,10 +360,19 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"invoiceId\": 1,\n  \"pageNumber\": 1,\n  \"pageSize\": 20\n}\n" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoiceId\": 1,\n  \"pageNumber\": 1,\n  \"pageSize\": 20\n}\n"
+            },
             "url": "{{baseUrl}}/v1/invoice/send-history"
           }
         },
@@ -229,10 +381,19 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"id\": 1\n}\n" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1\n}\n"
+            },
             "url": "{{baseUrl}}/v1/invoice/download-pdf"
           }
         },
@@ -241,8 +402,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -263,9 +430,20 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/v1/invoice/pay-by-token?token=PASTE_TOKEN_HERE",
-              "host": ["{{baseUrl}}"],
-              "path": ["v1", "invoice", "pay-by-token"],
-              "query": [{ "key": "token", "value": "PASTE_TOKEN_HERE" }]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "invoice",
+                "pay-by-token"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "PASTE_TOKEN_HERE"
+                }
+              ]
             }
           }
         },
@@ -273,7 +451,12 @@
           "name": "Pay with Token (NMI)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"token\": \"PASTE_TOKEN_FROM_LINK\",\n  \"cardNumber\": \"4111111111111111\",\n  \"cardExpiry\": \"1225\",\n  \"cardCvv\": \"123\",\n  \"customerInfo\": {\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"email\": \"test@example.com\"\n  }\n}\n"
@@ -285,7 +468,12 @@
           "name": "Pay with Token (NMI Collect.js paymentToken)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"token\": \"PASTE_TOKEN_FROM_LINK\",\n  \"paymentToken\": \"PASTE_NMI_COLLECTJS_PAYMENT_TOKEN\",\n  \"customerInfo\": {\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"email\": \"test@example.com\"\n  }\n}\n"
@@ -299,8 +487,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-NMI-Webhook-Secret", "value": "{{nmiWebhookSecret}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-NMI-Webhook-Secret",
+                "value": "{{nmiWebhookSecret}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -320,8 +514,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -335,8 +535,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -349,7 +555,12 @@
           "name": "Recurring View (GET by id)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{baseUrl}}/v1/invoice/recurring/1"
           }
         },
@@ -358,8 +569,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -372,7 +589,12 @@
           "name": "Recurring Pause",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{baseUrl}}/v1/invoice/recurring/1/pause"
           }
         },
@@ -380,7 +602,12 @@
           "name": "Recurring Resume",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{baseUrl}}/v1/invoice/recurring/1/resume"
           }
         },
@@ -388,7 +615,12 @@
           "name": "Recurring Stop",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{baseUrl}}/v1/invoice/recurring/1/stop"
           }
         }
@@ -401,7 +633,12 @@
           "name": "Get My NMI Config",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{baseUrl}}/v1/settings/nmi"
           }
         },
@@ -410,8 +647,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -425,8 +668,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -460,7 +709,12 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{localBaseUrl}}/v1/merchant/nmi/fee-schedules",
             "description": "Returns NMI partner fee plans. Test script saves plans[0].feeScheduleId to {{feeScheduleId}} for step 2."
           }
@@ -470,8 +724,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -485,7 +745,12 @@
           "name": "3. Get Merchant NMI Dashboard",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{localBaseUrl}}/v1/merchant/nmi/dashboard",
             "description": "Expect paymentReady=true, nextAction=READY_TO_COLLECT, onboarding.status=ACTIVE after successful onboarding."
           }
@@ -494,7 +759,12 @@
           "name": "4. Get Merchant Onboarding Status",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{localBaseUrl}}/v1/merchant/nmi/onboarding/status"
           }
         },
@@ -502,7 +772,12 @@
           "name": "5. Get My NMI Config (Settings read-only)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{localBaseUrl}}/v1/settings/nmi",
             "description": "Masked security key + boardingStatus after auto onboarding."
           }
@@ -512,8 +787,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -527,8 +808,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-NMI-Webhook-Secret", "value": "{{nmiWebhookSecret}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-NMI-Webhook-Secret",
+                "value": "{{nmiWebhookSecret}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -547,15 +834,35 @@
           "name": "GET Filing Products (discover entity/jurisdiction)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/api/llc-northwest/filing-products?url=https://example.com&jurisdiction=Delaware&entityType=llc",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "llc-northwest", "filing-products"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "llc-northwest",
+                "filing-products"
+              ],
               "query": [
-                { "key": "url", "value": "https://example.com" },
-                { "key": "jurisdiction", "value": "Delaware" },
-                { "key": "entityType", "value": "llc" }
+                {
+                  "key": "url",
+                  "value": "https://example.com"
+                },
+                {
+                  "key": "jurisdiction",
+                  "value": "Delaware"
+                },
+                {
+                  "key": "entityType",
+                  "value": "llc"
+                }
               ]
             }
           }
@@ -564,14 +871,33 @@
           "name": "GET Companies",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/api/llc-northwest/companies?limit=20&offset=0",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "llc-northwest", "companies"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "llc-northwest",
+                "companies"
+              ],
               "query": [
-                { "key": "limit", "value": "20", "description": "optional" },
-                { "key": "offset", "value": "0", "description": "optional" }
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "optional"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "optional"
+                }
               ]
             }
           }
@@ -581,8 +907,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "description": "Use lowercase \"llc\" (CT returns INVALID_ENTITY_TYPE for \"LLC\"). Change name if duplicate error.",
             "body": {
@@ -597,8 +929,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "description": "If \"llc\" still fails, try this snake_case value (some CT environments use it).",
             "body": {
@@ -613,8 +951,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "description": "CT rule: provide jurisdictions OR home_state, not both. No home_state here.",
             "body": {
@@ -629,8 +973,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -648,7 +998,12 @@
           "name": "GET Onboarding",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{baseUrl}}/api/onboarding"
           }
         },
@@ -657,8 +1012,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -678,8 +1039,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -708,8 +1075,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -724,8 +1097,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -740,8 +1119,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -755,8 +1140,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -770,8 +1161,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -800,8 +1197,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -816,8 +1219,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -831,8 +1240,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -847,8 +1262,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -862,8 +1283,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -877,8 +1304,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -893,8 +1326,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -909,8 +1348,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -923,16 +1368,39 @@
           "name": "23 WhatsApp — list invoices",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
-                { "key": "From", "value": "{{whatsappFrom}}" },
-                { "key": "To", "value": "whatsapp:+14155238886" },
-                { "key": "Body", "value": "Show my unpaid invoices" },
-                { "key": "MessageSid", "value": "SM_test_list_{{$timestamp}}" },
-                { "key": "AccountSid", "value": "AC_test" },
-                { "key": "NumMedia", "value": "0" }
+                {
+                  "key": "From",
+                  "value": "{{whatsappFrom}}"
+                },
+                {
+                  "key": "To",
+                  "value": "whatsapp:+14155238886"
+                },
+                {
+                  "key": "Body",
+                  "value": "Show my unpaid invoices"
+                },
+                {
+                  "key": "MessageSid",
+                  "value": "SM_test_list_{{$timestamp}}"
+                },
+                {
+                  "key": "AccountSid",
+                  "value": "AC_test"
+                },
+                {
+                  "key": "NumMedia",
+                  "value": "0"
+                }
               ]
             },
             "url": "{{baseUrl}}/webhooks/whatsapp"
@@ -942,16 +1410,39 @@
           "name": "24 WhatsApp — resend reminder",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
-                { "key": "From", "value": "{{whatsappFrom}}" },
-                { "key": "To", "value": "whatsapp:+14155238886" },
-                { "key": "Body", "value": "Resend INV-001 reminder" },
-                { "key": "MessageSid", "value": "SM_test_resend_{{$timestamp}}" },
-                { "key": "AccountSid", "value": "AC_test" },
-                { "key": "NumMedia", "value": "0" }
+                {
+                  "key": "From",
+                  "value": "{{whatsappFrom}}"
+                },
+                {
+                  "key": "To",
+                  "value": "whatsapp:+14155238886"
+                },
+                {
+                  "key": "Body",
+                  "value": "Resend INV-001 reminder"
+                },
+                {
+                  "key": "MessageSid",
+                  "value": "SM_test_resend_{{$timestamp}}"
+                },
+                {
+                  "key": "AccountSid",
+                  "value": "AC_test"
+                },
+                {
+                  "key": "NumMedia",
+                  "value": "0"
+                }
               ]
             },
             "url": "{{baseUrl}}/webhooks/whatsapp"
@@ -962,8 +1453,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -989,12 +1486,27 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "file", "type": "file", "src": "", "description": "Pick a JPEG/PNG receipt image" },
-                { "key": "userId", "value": "", "type": "text", "description": "Optional — JWT user used if omitted" }
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "Pick a JPEG/PNG receipt image"
+                },
+                {
+                  "key": "userId",
+                  "value": "",
+                  "type": "text",
+                  "description": "Optional — JWT user used if omitted"
+                }
               ]
             },
             "url": "{{baseUrl}}/api/receipt/upload",
@@ -1006,8 +1518,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1021,7 +1539,12 @@
           "name": "13 Receipt save OCR (direct API)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "body": {
               "mode": "formdata",
               "formdata": [
@@ -1041,8 +1564,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1055,16 +1584,39 @@
           "name": "20 WhatsApp webhook — invoice text",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
-                { "key": "From", "value": "{{whatsappFrom}}" },
-                { "key": "To", "value": "whatsapp:+14155238886" },
-                { "key": "Body", "value": "Create invoice for {{testCustomerName}} ${{testInvoiceAmount}} via WhatsApp {{testCustomerPhone}}" },
-                { "key": "MessageSid", "value": "SM_test_{{$timestamp}}" },
-                { "key": "AccountSid", "value": "AC_test" },
-                { "key": "NumMedia", "value": "0" }
+                {
+                  "key": "From",
+                  "value": "{{whatsappFrom}}"
+                },
+                {
+                  "key": "To",
+                  "value": "whatsapp:+14155238886"
+                },
+                {
+                  "key": "Body",
+                  "value": "Create invoice for {{testCustomerName}} ${{testInvoiceAmount}} via WhatsApp {{testCustomerPhone}}"
+                },
+                {
+                  "key": "MessageSid",
+                  "value": "SM_test_{{$timestamp}}"
+                },
+                {
+                  "key": "AccountSid",
+                  "value": "AC_test"
+                },
+                {
+                  "key": "NumMedia",
+                  "value": "0"
+                }
               ]
             },
             "url": "{{baseUrl}}/webhooks/whatsapp",
@@ -1075,16 +1627,39 @@
           "name": "21 WhatsApp webhook — confirm YES",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
-                { "key": "From", "value": "{{whatsappFrom}}" },
-                { "key": "To", "value": "whatsapp:+14155238886" },
-                { "key": "Body", "value": "YES" },
-                { "key": "MessageSid", "value": "SM_test_yes_{{$timestamp}}" },
-                { "key": "AccountSid", "value": "AC_test" },
-                { "key": "NumMedia", "value": "0" }
+                {
+                  "key": "From",
+                  "value": "{{whatsappFrom}}"
+                },
+                {
+                  "key": "To",
+                  "value": "whatsapp:+14155238886"
+                },
+                {
+                  "key": "Body",
+                  "value": "YES"
+                },
+                {
+                  "key": "MessageSid",
+                  "value": "SM_test_yes_{{$timestamp}}"
+                },
+                {
+                  "key": "AccountSid",
+                  "value": "AC_test"
+                },
+                {
+                  "key": "NumMedia",
+                  "value": "0"
+                }
               ]
             },
             "url": "{{baseUrl}}/webhooks/whatsapp"
@@ -1094,16 +1669,39 @@
           "name": "22 WhatsApp webhook — receipt text prompt",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
-                { "key": "From", "value": "{{whatsappFrom}}" },
-                { "key": "To", "value": "whatsapp:+14155238886" },
-                { "key": "Body", "value": "I want to save a receipt" },
-                { "key": "MessageSid", "value": "SM_test_rcpt_{{$timestamp}}" },
-                { "key": "AccountSid", "value": "AC_test" },
-                { "key": "NumMedia", "value": "0" }
+                {
+                  "key": "From",
+                  "value": "{{whatsappFrom}}"
+                },
+                {
+                  "key": "To",
+                  "value": "whatsapp:+14155238886"
+                },
+                {
+                  "key": "Body",
+                  "value": "I want to save a receipt"
+                },
+                {
+                  "key": "MessageSid",
+                  "value": "SM_test_rcpt_{{$timestamp}}"
+                },
+                {
+                  "key": "AccountSid",
+                  "value": "AC_test"
+                },
+                {
+                  "key": "NumMedia",
+                  "value": "0"
+                }
               ]
             },
             "url": "{{baseUrl}}/webhooks/whatsapp",
@@ -1121,8 +1719,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1141,7 +1745,12 @@
           "name": "POST /api/public/chat",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"message\": \"Hello from website\"\n}\n"
@@ -1160,8 +1769,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1176,8 +1791,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1192,8 +1813,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1208,8 +1835,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1223,8 +1856,16 @@
           "name": "POST TaxBandits Webhook (ping)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"test\": \"ping\"\n}\n" },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"test\": \"ping\"\n}\n"
+            },
             "url": "{{baseUrl}}/api/taxbandits/webhook",
             "description": "Quick health check for the registered Callback URL (TaxBandits verification / manual testing)."
           }
@@ -1233,7 +1874,12 @@
           "name": "POST TaxBandits Webhook (sample PDF_COMPLETE)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"EventType\": \"PDF_COMPLETE\",\n  \"SubmissionId\": \"{{tbSubmissionId}}\",\n  \"BusinessId\": \"\",\n  \"PayerRef\": null,\n  \"FormType\": \"Form1099K\",\n  \"Records\": [\n    {\n      \"RecordId\": \"{{tbRecordId}}\",\n      \"SequenceId\": \"1\",\n      \"FileName\": \"{{tbRecordId}}.Zip\",\n      \"FilePath\": \"PASTE_ZIP_URL_FROM_TAXBANDITS_WEBHOOK_LOG\",\n      \"Status\": \"SUCCESS\",\n      \"StatusTime\": \"2026-05-02T11:10:26.3003414-04:00\",\n      \"Errors\": null\n    }\n  ]\n}\n"
@@ -1264,7 +1910,12 @@
           "name": "POST Form 1099-K — RequestPdfURLs",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"SubmissionId\": \"{{tbSubmissionId}}\",\n  \"RecordIds\": [\n    { \"RecordId\": \"{{tbRecordId}}\" }\n  ],\n  \"Customization\": {\n    \"TINMaskType\": \"BOTH\"\n  }\n}\n"
@@ -1278,7 +1929,10 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "X-Numbrics-Artifact-Key", "value": "{{artifactApiKey}}" }
+              {
+                "key": "X-Numbrics-Artifact-Key",
+                "value": "{{artifactApiKey}}"
+              }
             ],
             "url": "{{baseUrl}}/api/taxbandits/artifacts/pdf?submissionId={{tbSubmissionId}}&recordId={{tbRecordId}}&file={{tbPdfFile}}",
             "description": "Downloads a PDF from the latest webhook artifact folder on disk.\n\nRequires server config:\n• taxbandits.artifact.api-key\n• taxbandits.artifact.require-api-key (default true)\n\nSet Postman variable artifactApiKey to match the server key."
@@ -1304,8 +1958,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1320,7 +1980,10 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "url": "{{baseUrl}}/api/subscription/status/{{subscriptionUserId}}"
           }
@@ -1330,7 +1993,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "url": "{{baseUrl}}/api/subscription/process-payment/{{subscriptionUserId}}",
             "description": "Manually charge trial-end / due payment for a user."
@@ -1341,7 +2007,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "url": "{{baseUrl}}/api/subscription/assign-super-admin/{{subscriptionUserId}}",
             "description": "Assign NUMBRICS_SUPER_ADMIN and clear subscription fields."
@@ -1355,7 +2024,10 @@
               "request": {
                 "method": "GET",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
                 ],
                 "url": "{{baseUrl}}/api/subscription/admin/plans",
                 "description": "Full catalog including inactive plans."
@@ -1366,8 +2038,14 @@
               "request": {
                 "method": "PUT",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -1382,8 +2060,14 @@
               "request": {
                 "method": "PUT",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -1398,7 +2082,10 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
                 ],
                 "url": "{{baseUrl}}/api/subscription/admin/plans/{{subscriptionPlanId}}/activate"
               }
@@ -1408,7 +2095,10 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
                 ],
                 "url": "{{baseUrl}}/api/subscription/admin/plans/{{subscriptionPlanId}}/deactivate"
               }
@@ -1423,7 +2113,10 @@
               "request": {
                 "method": "GET",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
                 ],
                 "url": "{{baseUrl}}/api/subscription/admin/subscribers",
                 "description": "Full subscriber list."
@@ -1434,15 +2127,33 @@
               "request": {
                 "method": "GET",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/api/subscription/admin/subscribers?status=TRIAL&plan=SOLOPRENEUR",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "subscription", "admin", "subscribers"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "subscription",
+                    "admin",
+                    "subscribers"
+                  ],
                   "query": [
-                    { "key": "status", "value": "TRIAL", "description": "TRIAL | ACTIVE | CANCELLED | PAYMENT_FAILED | INACTIVE" },
-                    { "key": "plan", "value": "SOLOPRENEUR", "description": "SOLOPRENEUR | BUSINESS_OWNER | ACCOUNTANT_PRO" }
+                    {
+                      "key": "status",
+                      "value": "TRIAL",
+                      "description": "TRIAL | ACTIVE | CANCELLED | PAYMENT_FAILED | INACTIVE"
+                    },
+                    {
+                      "key": "plan",
+                      "value": "SOLOPRENEUR",
+                      "description": "SOLOPRENEUR | BUSINESS_OWNER | ACCOUNTANT_PRO"
+                    }
                   ]
                 }
               }
@@ -1452,7 +2163,10 @@
               "request": {
                 "method": "GET",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
                 ],
                 "url": "{{baseUrl}}/api/subscription/admin/subscribers/{{subscriptionUserId}}"
               }
@@ -1462,8 +2176,14 @@
               "request": {
                 "method": "PUT",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -1478,7 +2198,10 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
                 ],
                 "url": "{{baseUrl}}/api/subscription/admin/subscribers/{{subscriptionUserId}}/activate"
               }
@@ -1488,12 +2211,121 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
                 ],
                 "url": "{{baseUrl}}/api/subscription/admin/subscribers/{{subscriptionUserId}}/deactivate"
               }
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Tax Intake — ProConnect",
+      "description": "Upload tax document (PDF/PNG/JPG), OCR extract, save, then list/view records.",
+      "item": [
+        {
+          "name": "Upload + OCR + Save",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/tax/intake/proconnect/upload",
+            "description": "Accepts PDF/JPG/JPEG/PNG. Runs OCR and stores extracted_data_json."
+          }
+        },
+        {
+          "name": "Upload Intake Sheet (CSV/XLS/XLSX)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/tax/intake/proconnect/upload-sheet",
+            "description": "Upload CSV/XLS/XLSX intake sheet; parses rows and stores extracted_data_json."
+          }
+        },
+        {
+          "name": "List My Intake Records",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tax/intake/proconnect/list"
+          }
+        },
+        {
+          "name": "View Intake Record Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tax/intake/proconnect/{{proconnectIntakeRecordId}}"
+          }
+        },
+        {
+          "name": "Download Template CSV",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tax/intake/proconnect/template/csv"
+          }
+        },
+        {
+          "name": "Download Template Excel",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tax/intake/proconnect/template/excel"
+          }
         }
       ]
     }
