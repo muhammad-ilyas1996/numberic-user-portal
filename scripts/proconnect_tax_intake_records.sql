@@ -1,4 +1,7 @@
--- ProConnect tax intake OCR records
+-- Tax intake OCR/sheet records (shared by ALL softwares).
+-- software_name: PROCONNECT | DRAKE | PROSERIES | TAXWISE | CCH_AXCESS | LACERTE
+-- Run on deploy BEFORE first traffic if table is missing.
+
 CREATE TABLE IF NOT EXISTS proconnect_tax_intake_records (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
@@ -24,3 +27,31 @@ CREATE TABLE IF NOT EXISTS proconnect_tax_intake_records (
     INDEX idx_proconnect_tax_intake_user_created (user_id, created_on),
     INDEX idx_proconnect_tax_intake_status (processing_status)
 );
+
+-- Safe upgrade if an older table exists without software_name
+SET @col_exists := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'proconnect_tax_intake_records'
+      AND COLUMN_NAME = 'software_name'
+);
+SET @sql := IF(@col_exists = 0,
+    'ALTER TABLE proconnect_tax_intake_records ADD COLUMN software_name VARCHAR(40) NOT NULL DEFAULT ''PROCONNECT'' AFTER user_id',
+    'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Optional composite index for list-by-software
+SET @idx_exists := (
+    SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'proconnect_tax_intake_records'
+      AND INDEX_NAME = 'idx_tax_intake_user_software'
+);
+SET @sql2 := IF(@idx_exists = 0,
+    'CREATE INDEX idx_tax_intake_user_software ON proconnect_tax_intake_records (user_id, software_name)',
+    'SELECT 1');
+PREPARE stmt2 FROM @sql2;
+EXECUTE stmt2;
+DEALLOCATE PREPARE stmt2;

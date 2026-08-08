@@ -1,0 +1,2 @@
+client_id,first_name,last_name,ssn,dob,filing_status,email,phone,address,city,state,zip,w2_employer,w2_wages,w2_federal_withholding,form1099_type,form1099_payer,form1099_amount
+D-1001,John,Doe,111-22-3333,1988-03-12,SINGLE,john@example.com,+15551112222,10 Oak St,Austin,TX,78701,Acme LLC,75000,8000,1099-NEC,Northwind,5000

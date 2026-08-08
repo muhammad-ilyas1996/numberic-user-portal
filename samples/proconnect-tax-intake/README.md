@@ -1,12 +1,18 @@
-# ProConnect Intake Samples
+# Multi-software tax intake samples
 
-This folder contains ready demo files.
+Software codes for API path `{software}`:
+- PROCONNECT
+- DRAKE
+- PROSERIES
+- TAXWISE
+- CCH_AXCESS
+- LACERTE
 
-## Files
-- `proconnect_intake_template.csv` (blank template with headers)
-- `proconnect_intake_template.xlsx` (blank template with headers)
-- `proconnect_intake_sample.csv` (sample rows for demo discussion)
+Examples:
+- GET /api/tax/intake/softwares
+- POST /api/tax/intake/CCH_AXCESS/upload-sheet
+- POST /api/tax/intake/DRAKE/upload
+- GET /api/tax/intake/PROSERIES/template/csv
 
-## API usage
-- OCR upload (PDF/JPG/JPEG/PNG): `POST /api/tax/intake/proconnect/upload`
-- Sheet upload (CSV/XLS/XLSX): `POST /api/tax/intake/proconnect/upload-sheet`
+Legacy ProConnect paths still work:
+- /api/tax/intake/proconnect/...

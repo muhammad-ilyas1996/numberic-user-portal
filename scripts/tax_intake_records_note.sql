@@ -1,0 +1,2 @@
+-- Tax intake uses table proconnect_tax_intake_records for ALL softwares.
+-- Prefer running: scripts/proconnect_tax_intake_records.sql (CREATE + safe ALTER + index).

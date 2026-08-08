@@ -1,0 +1,2 @@
+Client ID,Client Sub-ID,NameLine1,NameLine2,SortName,Federal ID,ClientType,email,phone,address,city,state,zip,w2_employer,w2_wages,form1099_type,form1099_amount
+AX-2001,,Jane,Smith,SMITH JANE,222-33-4444,Individual,jane@example.com,+15553334444,22 Elm Rd,Dallas,TX,75001,Globex,62000,1099-MISC,2500

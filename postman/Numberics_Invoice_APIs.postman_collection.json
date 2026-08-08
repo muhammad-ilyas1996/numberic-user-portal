@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Numberics Invoice APIs",
-    "description": "Run Auth → Login first (sets {{token}}).\n\n• Dashboard: GET /v1/dashboard/summary\n• Invoice / recurring / transactions / NMI / pay-by-token: see folders\n• Onboarding: GET|POST /api/onboarding\n• Taalr automation: folder **Taalr Automation** — receipt OCR + invoice via POST /api/chat (step-by-step requests)\n• Taalr chat (general): folder Taalr Chat\n• Public website chat (no auth): POST /api/public/chat\n• LLC companies: GET|POST|PATCH /api/llc-northwest/companies\n• Subscription: folder **Subscription** — public plans, subscribe, admin plan/subscriber CRUD\n• view-detail invoice: POST body {\"id\": <invoiceId>}\n• WhatsApp: Twilio sandbox — join code first (postman/README.md).",
+    "description": "Run Auth → Login first (sets {{token}}).\n\n• Dashboard: GET /v1/dashboard/summary\n• Invoice / recurring / transactions / NMI / pay-by-token: see folders\n• Onboarding: GET|POST /api/onboarding\n• Taalr automation: folder **Taalr Automation** — receipt OCR + invoice via POST /api/chat (step-by-step requests)\n• Taalr chat (general): folder Taalr Chat\n• Public website chat (no auth): POST /api/public/chat\n• LLC companies: GET|POST|PATCH /api/llc-northwest/companies\n• Subscription: folder **Subscription** — public plans, subscribe, admin plan/subscriber CRUD\n• view-detail invoice: POST body {\"id\": <invoiceId>}\n• WhatsApp: Twilio sandbox — join code first (postman/README.md).\n• Tax Intake: folders **Tax Intake — ProConnect** (legacy) and **Tax Intake — Multi Software** — GET /api/tax/intake/softwares + /{software}/upload|upload-sheet|template|list|{id}",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -83,6 +83,14 @@
     },
     {
       "key": "proconnectIntakeRecordId",
+      "value": "1"
+    },
+    {
+      "key": "taxSoftware",
+      "value": "CCH_AXCESS"
+    },
+    {
+      "key": "taxIntakeRecordId",
       "value": "1"
     }
   ],
@@ -2326,6 +2334,888 @@
             ],
             "url": "{{baseUrl}}/api/tax/intake/proconnect/template/excel"
           }
+        }
+      ]
+    },
+    {
+      "name": "Tax Intake — Multi Software",
+      "description": "Multi-software tax intake (ProConnect, Drake, ProSeries, TaxWise, CCH Axcess, Lacerte). Phase-1 = CSV/PDF file intake for all. CCH live OIK API needs vendor key later (apiStatus PENDING_VENDOR_KEY). Legacy ProConnect folder still works at /api/tax/intake/proconnect/*.",
+      "item": [
+        {
+          "name": "Tax Intake — By Software (use {{taxSoftware}})",
+          "description": "Set collection var taxSoftware to one of: PROCONNECT, DRAKE, PROSERIES, TAXWISE, CCH_AXCESS, LACERTE.",
+          "item": [
+            {
+              "name": "List Softwares",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/softwares",
+                "description": "Catalog: codes, CSV/PDF support, apiStatus, template headers."
+              }
+            },
+            {
+              "name": "Software Info",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/{{taxSoftware}}/info",
+                "description": ""
+              }
+            },
+            {
+              "name": "Upload Document (PDF/JPG/PNG OCR)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/{{taxSoftware}}/upload",
+                "description": "OCR extract + save.",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Upload Sheet (CSV/XLS/XLSX)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/{{taxSoftware}}/upload-sheet",
+                "description": "Parse sheet rows into extracted_data_json.",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Download Template CSV",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/{{taxSoftware}}/template/csv",
+                "description": ""
+              }
+            },
+            {
+              "name": "Download Template Excel",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/{{taxSoftware}}/template/excel",
+                "description": ""
+              }
+            },
+            {
+              "name": "List My Records",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/{{taxSoftware}}/list",
+                "description": ""
+              }
+            },
+            {
+              "name": "View Record Detail",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/{{taxSoftware}}/{{taxIntakeRecordId}}",
+                "description": ""
+              }
+            }
+          ]
+        },
+        {
+          "name": "PROCONNECT",
+          "item": [
+            {
+              "name": "PROCONNECT — Info",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/PROCONNECT/info",
+                "description": ""
+              }
+            },
+            {
+              "name": "PROCONNECT — Upload Document",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/PROCONNECT/upload",
+                "description": "",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "PROCONNECT — Upload Sheet",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/PROCONNECT/upload-sheet",
+                "description": "",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "PROCONNECT — Template CSV",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/PROCONNECT/template/csv",
+                "description": ""
+              }
+            },
+            {
+              "name": "PROCONNECT — Template Excel",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/PROCONNECT/template/excel",
+                "description": ""
+              }
+            },
+            {
+              "name": "PROCONNECT — List",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/PROCONNECT/list",
+                "description": ""
+              }
+            },
+            {
+              "name": "PROCONNECT — Detail",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/PROCONNECT/{{taxIntakeRecordId}}",
+                "description": ""
+              }
+            }
+          ]
+        },
+        {
+          "name": "DRAKE",
+          "item": [
+            {
+              "name": "DRAKE — Info",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/DRAKE/info",
+                "description": ""
+              }
+            },
+            {
+              "name": "DRAKE — Upload Document",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/DRAKE/upload",
+                "description": "",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "DRAKE — Upload Sheet",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/DRAKE/upload-sheet",
+                "description": "",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "DRAKE — Template CSV",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/DRAKE/template/csv",
+                "description": ""
+              }
+            },
+            {
+              "name": "DRAKE — Template Excel",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/DRAKE/template/excel",
+                "description": ""
+              }
+            },
+            {
+              "name": "DRAKE — List",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/DRAKE/list",
+                "description": ""
+              }
+            },
+            {
+              "name": "DRAKE — Detail",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/DRAKE/{{taxIntakeRecordId}}",
+                "description": ""
+              }
+            }
+          ]
+        },
+        {
+          "name": "PROSERIES",
+          "item": [
+            {
+              "name": "PROSERIES — Info",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/PROSERIES/info",
+                "description": ""
+              }
+            },
+            {
+              "name": "PROSERIES — Upload Document",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/PROSERIES/upload",
+                "description": "",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "PROSERIES — Upload Sheet",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/PROSERIES/upload-sheet",
+                "description": "",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "PROSERIES — Template CSV",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/PROSERIES/template/csv",
+                "description": ""
+              }
+            },
+            {
+              "name": "PROSERIES — Template Excel",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/PROSERIES/template/excel",
+                "description": ""
+              }
+            },
+            {
+              "name": "PROSERIES — List",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/PROSERIES/list",
+                "description": ""
+              }
+            },
+            {
+              "name": "PROSERIES — Detail",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/PROSERIES/{{taxIntakeRecordId}}",
+                "description": ""
+              }
+            }
+          ]
+        },
+        {
+          "name": "TAXWISE",
+          "item": [
+            {
+              "name": "TAXWISE — Info",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/TAXWISE/info",
+                "description": ""
+              }
+            },
+            {
+              "name": "TAXWISE — Upload Document",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/TAXWISE/upload",
+                "description": "",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "TAXWISE — Upload Sheet",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/TAXWISE/upload-sheet",
+                "description": "",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "TAXWISE — Template CSV",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/TAXWISE/template/csv",
+                "description": ""
+              }
+            },
+            {
+              "name": "TAXWISE — Template Excel",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/TAXWISE/template/excel",
+                "description": ""
+              }
+            },
+            {
+              "name": "TAXWISE — List",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/TAXWISE/list",
+                "description": ""
+              }
+            },
+            {
+              "name": "TAXWISE — Detail",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/TAXWISE/{{taxIntakeRecordId}}",
+                "description": ""
+              }
+            }
+          ]
+        },
+        {
+          "name": "CCH_AXCESS",
+          "item": [
+            {
+              "name": "CCH_AXCESS — Info",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/CCH_AXCESS/info",
+                "description": ""
+              }
+            },
+            {
+              "name": "CCH_AXCESS — Upload Document",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/CCH_AXCESS/upload",
+                "description": "",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "CCH_AXCESS — Upload Sheet",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/CCH_AXCESS/upload-sheet",
+                "description": "",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "CCH_AXCESS — Template CSV",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/CCH_AXCESS/template/csv",
+                "description": ""
+              }
+            },
+            {
+              "name": "CCH_AXCESS — Template Excel",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/CCH_AXCESS/template/excel",
+                "description": ""
+              }
+            },
+            {
+              "name": "CCH_AXCESS — List",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/CCH_AXCESS/list",
+                "description": ""
+              }
+            },
+            {
+              "name": "CCH_AXCESS — Detail",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/CCH_AXCESS/{{taxIntakeRecordId}}",
+                "description": ""
+              }
+            }
+          ]
+        },
+        {
+          "name": "LACERTE",
+          "item": [
+            {
+              "name": "LACERTE — Info",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/LACERTE/info",
+                "description": ""
+              }
+            },
+            {
+              "name": "LACERTE — Upload Document",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/LACERTE/upload",
+                "description": "",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "LACERTE — Upload Sheet",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/LACERTE/upload-sheet",
+                "description": "",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "LACERTE — Template CSV",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/LACERTE/template/csv",
+                "description": ""
+              }
+            },
+            {
+              "name": "LACERTE — Template Excel",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/LACERTE/template/excel",
+                "description": ""
+              }
+            },
+            {
+              "name": "LACERTE — List",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/LACERTE/list",
+                "description": ""
+              }
+            },
+            {
+              "name": "LACERTE — Detail",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/tax/intake/LACERTE/{{taxIntakeRecordId}}",
+                "description": ""
+              }
+            }
+          ]
         }
       ]
     }
