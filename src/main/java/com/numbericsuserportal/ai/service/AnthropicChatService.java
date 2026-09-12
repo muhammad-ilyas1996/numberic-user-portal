@@ -91,6 +91,62 @@ public class AnthropicChatService {
             return new ChatResponseDto(true, actionResult.getReply(), null, "taalr-action", null);
         }
 
+        return runClaudeGuidance(user, userMessage, request == null || request.getIncludeProfileInPrompt() == null
+                || Boolean.TRUE.equals(request.getIncludeProfileInPrompt()));
+    }
+
+    /**
+     * WhatsApp Taalr agent — same automation + Claude as in-app chat.
+     * Does not change {@code /api/chat}; used only by the Twilio webhook path.
+     */
+    public ChatResponseDto chatFromWhatsApp(User user, String phoneNumber, String message,
+            String mediaUrl, String mediaContentType) {
+        if (user == null || user.getUserId() == null) {
+            return new ChatResponseDto(false, null,
+                    "To use Taalr on WhatsApp, register on Numbrics and link this phone number to your account.",
+                    null, null);
+        }
+
+        try {
+            chatRateLimiter.checkAllowed(user.getUserId());
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            String reason = e.getReason() != null ? e.getReason()
+                    : "Too many messages. Please try again in a few minutes.";
+            return new ChatResponseDto(false, null, reason, null, null);
+        }
+
+        String userMessage = message != null ? message.trim() : "";
+        boolean hasMedia = mediaUrl != null && !mediaUrl.isBlank();
+        if (userMessage.isBlank() && !hasMedia) {
+            return new ChatResponseDto(false, null, "Message is required.", null, null);
+        }
+
+        if (isWhatsAppResetCommand(userMessage)) {
+            taalrAgentSessionService.clearSessionForUser(user.getUserId());
+            taalrChatHistoryService.clearHistoryForUser(user.getUserId());
+            taalrActionSessionService.clearSession(
+                    taalrActionOrchestrator.buildWhatsAppRequest(phoneNumber, user.getUserId(), "", null, null));
+            return new ChatResponseDto(true,
+                    "Session cleared. Send hi for the menu, or ask me to create an invoice, scan a receipt, and more.",
+                    null, "taalr-reset", null);
+        }
+
+        TaalrChatMode chatMode = com.numbericsuserportal.ai.util.TaalrInputValidation.wantsGuidanceOnly(userMessage)
+                ? TaalrChatMode.GUIDE
+                : TaalrChatMode.AUTO;
+
+        var actionRequest = taalrActionOrchestrator.buildWhatsAppRequest(
+                phoneNumber, user.getUserId(), userMessage, mediaUrl, mediaContentType, chatMode);
+        var actionResult = taalrActionOrchestrator.handle(actionRequest);
+        if (actionResult.isHandled()) {
+            recordActionExchange(user, userMessage, actionResult.getReply());
+            return new ChatResponseDto(true, actionResult.getReply(), null, "taalr-action", null);
+        }
+
+        return runClaudeGuidance(user, userMessage.isBlank() ? "(media received)" : userMessage, true);
+    }
+
+    private ChatResponseDto runClaudeGuidance(User user, String userMessage, boolean includeProfile) {
         if (anthropicProperties.getKey() == null || anthropicProperties.getKey().isBlank()) {
             Optional<String> pendingOnly = taalrPendingContextService.buildGuidanceReminder(user);
             if (pendingOnly.isPresent()) {
@@ -102,9 +158,6 @@ public class AnthropicChatService {
 
         OnboardingResponseDto profile = onboardingService.getOnboarding(user);
 
-        boolean includeProfile = request.getIncludeProfileInPrompt() == null
-                || Boolean.TRUE.equals(request.getIncludeProfileInPrompt());
-
         ChatResponseDto guidance;
         if (anthropicProperties.isManagedAgentsReady()) {
             guidance = chatViaManagedAgents(user, userMessage, profile, includeProfile);
@@ -112,6 +165,15 @@ public class AnthropicChatService {
             guidance = chatViaMessagesApi(user, profile, userMessage, includeProfile);
         }
         return appendPendingReminderIfNeeded(user, guidance);
+    }
+
+    private static boolean isWhatsAppResetCommand(String message) {
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+        String m = message.trim().toLowerCase(java.util.Locale.ROOT);
+        return m.equals("reset") || m.equals("reset session") || m.equals("clear")
+                || m.equals("clear chat") || m.equals("start over") || m.equals("new chat");
     }
 
     private ChatResponseDto appendPendingReminderIfNeeded(User user, ChatResponseDto response) {

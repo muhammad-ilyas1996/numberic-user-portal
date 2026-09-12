@@ -8,6 +8,8 @@ import com.numbericsuserportal.twilio.entity.TaxDocument;
 import com.numbericsuserportal.twilio.entity.WhatsAppMessage;
 import com.numbericsuserportal.ai.action.dto.TaalrActionRequest;
 import com.numbericsuserportal.ai.action.dto.TaalrActionResult;
+import com.numbericsuserportal.ai.dto.ChatResponseDto;
+import com.numbericsuserportal.ai.service.AnthropicChatService;
 import com.numbericsuserportal.ai.service.TaalrActionOrchestratorService;
 import com.numbericsuserportal.twilio.service.DocumentProcessingService;
 import com.numbericsuserportal.twilio.repository.OcrExtractionResultRepository;
@@ -21,6 +23,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Service for handling WhatsApp message operations
@@ -54,6 +59,9 @@ public class WhatsAppMessageService {
 
     @Autowired
     private TaalrActionOrchestratorService taalrActionOrchestrator;
+
+    @Autowired
+    private AnthropicChatService anthropicChatService;
 
     /**
      * Process and save incoming WhatsApp message
@@ -89,8 +97,9 @@ public class WhatsAppMessageService {
         // Step 1: Normalize phone number - remove "whatsapp:" prefix if present
         String normalizedFromNumber = normalizePhoneNumber(fromNumber);
 
-        // Step 2: Find user by phone number
-        Long userId = findUserIdByPhone(normalizedFromNumber);
+        // Step 2: Find user by phone number (E.164 variants)
+        User linkedUser = findUserByPhone(normalizedFromNumber);
+        Long userId = linkedUser != null ? linkedUser.getUserId() : null;
 
         // Step 3: Create and save message entity (INCOMING)
         WhatsAppMessage message = new WhatsAppMessage();
@@ -101,68 +110,141 @@ public class WhatsAppMessageService {
         message.setToNumber(toNumber);
         message.setNumMedia(numMedia);
         message.setReceivedAt(LocalDateTime.now());
-        message.setUserId(userId); // Will be null if user not found
+        message.setUserId(userId);
 
         WhatsAppMessage savedMessage = whatsAppMessageRepository.save(message);
 
-        // Log the result
         if (userId != null) {
             System.out.println("Message saved with user_id: " + userId);
         } else {
             System.out.println("Message saved without user_id (user not found for phone: " + normalizedFromNumber + ")");
         }
 
-        // Step 4: Process media — tax documents take priority when an active TaxCase exists
-        boolean taalrHandledMedia = false;
+        boolean hasMedia = false;
+        String mediaUrl = null;
+        String mediaType = null;
         if (numMedia != null && !numMedia.trim().isEmpty()) {
             try {
                 int mediaCount = Integer.parseInt(numMedia.trim());
                 if (mediaCount > 0 && mediaUrl0 != null && !mediaUrl0.trim().isEmpty()) {
-                    TaxCase activeTaxCase = taxCaseService.findActiveTaxCase(normalizedFromNumber);
-                    if (activeTaxCase != null) {
-                        processMediaDocument(normalizedFromNumber, mediaUrl0, mediaContentType0, userId);
-                    } else {
-                        TaalrActionRequest taalrReq = taalrActionOrchestrator.buildWhatsAppRequest(
-                                normalizedFromNumber, userId, messageBody, mediaUrl0, mediaContentType0);
-                        TaalrActionResult taalrResult = taalrActionOrchestrator.handle(taalrReq);
-                        if (taalrResult.isHandled()) {
-                            sendKeywordBasedReply(normalizedFromNumber, taalrResult.getReply(), userId);
-                            taalrHandledMedia = true;
-                        }
-                    }
+                    hasMedia = true;
+                    mediaUrl = mediaUrl0.trim();
+                    mediaType = mediaContentType0;
                 }
             } catch (NumberFormatException e) {
                 System.err.println("Invalid NumMedia value: " + numMedia);
+            }
+        }
+
+        // Step 4: Legacy TaxCase media OCR — only when NOT a linked Taalr user.
+        // Linked customers must get Taalr receipt OCR (same as in-app), even if an old TaxCase exists.
+        if (hasMedia && linkedUser == null) {
+            try {
+                TaxCase activeTaxCase = taxCaseService.findActiveTaxCase(normalizedFromNumber);
+                if (activeTaxCase != null) {
+                    processMediaDocument(normalizedFromNumber, mediaUrl, mediaType, userId);
+                    return savedMessage;
+                }
             } catch (Exception e) {
-                System.err.println("Error processing media: " + e.getMessage());
+                System.err.println("Error checking TaxCase for media: " + e.getMessage());
                 e.printStackTrace();
             }
         }
 
-        if (taalrHandledMedia) {
-            return savedMessage;
-        }
-
-        // Step 5: Taalr text automation (receipt confirm, invoice flow)
-        try {
-            TaalrActionRequest taalrTextReq = taalrActionOrchestrator.buildWhatsAppRequest(
-                    normalizedFromNumber, userId, messageBody, null, null);
-            TaalrActionResult taalrTextResult = taalrActionOrchestrator.handle(taalrTextReq);
-            if (taalrTextResult.isHandled()) {
-                sendKeywordBasedReply(normalizedFromNumber, taalrTextResult.getReply(), userId);
-                return savedMessage;
+        // Explicit tax-doc upload for linked users: message contains "tax" + media → TaxCase path
+        if (hasMedia && linkedUser != null && messageBody != null
+                && messageBody.toLowerCase().contains("tax")) {
+            try {
+                TaxCase activeTaxCase = taxCaseService.findActiveTaxCase(normalizedFromNumber);
+                if (activeTaxCase != null) {
+                    processMediaDocument(normalizedFromNumber, mediaUrl, mediaType, userId);
+                    return savedMessage;
+                }
+            } catch (Exception e) {
+                System.err.println("Error routing linked-user tax media: " + e.getMessage());
             }
-        } catch (Exception e) {
-            System.err.println("Taalr WhatsApp automation error: " + e.getMessage());
-            e.printStackTrace();
         }
 
-        // Step 6: Legacy automatic reply (tax case + keyword fallback)
-        // This method handles TaxCase logic (higher priority) and keyword logic (fallback)
-        // Note: Media processing may have updated TaxCase status, so reply logic runs after
-        processAutomaticReply(normalizedFromNumber, messageBody, userId);
+        // Step 5: ALWAYS reply for every inbound WhatsApp message (any text/media, any user).
+        // Linked → full Taalr. Unlinked → register prompt / orchestrator. Never silent.
+        try {
+            String replyText = buildAlwaysOnReply(
+                    linkedUser, normalizedFromNumber, messageBody,
+                    hasMedia ? mediaUrl : null, hasMedia ? mediaType : null);
+            if (replyText == null || replyText.isBlank()) {
+                replyText = defaultCatchAllReply(linkedUser != null);
+            }
+            sendKeywordBasedReply(normalizedFromNumber, replyText, userId);
+        } catch (Exception e) {
+            System.err.println("WhatsApp always-on reply error: " + e.getMessage());
+            e.printStackTrace();
+            try {
+                sendKeywordBasedReply(normalizedFromNumber,
+                        defaultCatchAllReply(linkedUser != null),
+                        userId);
+            } catch (Exception sendEx) {
+                System.err.println("WhatsApp fallback send failed: " + sendEx.getMessage());
+            }
+        }
 
         return savedMessage;
+    }
+
+    /**
+     * Build a reply for any inbound message. Must never return blank for production traffic.
+     */
+    private String buildAlwaysOnReply(User linkedUser, String phone, String messageBody,
+            String mediaUrl, String mediaContentType) {
+        boolean hasMedia = mediaUrl != null && !mediaUrl.isBlank();
+
+        // Instant path for greetings (any casing) — skip Claude/intent latency
+        if (!hasMedia && linkedUser != null
+                && com.numbericsuserportal.ai.service.TaalrCapabilitiesService.shouldShowWelcome(messageBody)) {
+            return com.numbericsuserportal.ai.service.TaalrCapabilitiesService
+                    .buildWelcomeMessage(com.numbericsuserportal.ai.action.TaalrActionChannel.WHATSAPP);
+        }
+
+        if (linkedUser != null) {
+            ChatResponseDto taalrReply = anthropicChatService.chatFromWhatsApp(
+                    linkedUser, phone, messageBody, mediaUrl, mediaContentType);
+            if (taalrReply != null && taalrReply.isSuccess()
+                    && taalrReply.getReply() != null && !taalrReply.getReply().isBlank()) {
+                return taalrReply.getReply();
+            }
+            if (taalrReply != null && taalrReply.getError() != null && !taalrReply.getError().isBlank()) {
+                return taalrReply.getError();
+            }
+            return defaultCatchAllReply(true);
+        }
+
+        if (!hasMedia && com.numbericsuserportal.ai.service.TaalrCapabilitiesService.shouldShowWelcome(messageBody)) {
+            return defaultCatchAllReply(false);
+        }
+
+        try {
+            TaalrActionRequest taalrReq = taalrActionOrchestrator.buildWhatsAppRequest(
+                    phone, null, messageBody, mediaUrl, mediaContentType);
+            TaalrActionResult taalrResult = taalrActionOrchestrator.handle(taalrReq);
+            if (taalrResult.isHandled()
+                    && taalrResult.getReply() != null
+                    && !taalrResult.getReply().isBlank()) {
+                return taalrResult.getReply();
+            }
+        } catch (Exception e) {
+            System.err.println("Taalr WhatsApp (unlinked) error: " + e.getMessage());
+        }
+        return defaultCatchAllReply(false);
+    }
+
+    private static String defaultCatchAllReply(boolean linked) {
+        if (linked) {
+            return com.numbericsuserportal.ai.service.TaalrCapabilitiesService
+                    .buildWelcomeMessage(com.numbericsuserportal.ai.action.TaalrActionChannel.WHATSAPP);
+        }
+        return "Thanks for messaging Numbrics! To use Taalr (invoices, receipts, LLC, sales tax), "
+                + "register/login on Numbrics and save this WhatsApp number on your profile, "
+                + "then message us again.\n\n"
+                + "You can send any message — once your number is linked we will help right away.";
     }
 
     /**
@@ -199,12 +281,10 @@ public class WhatsAppMessageService {
         
         if (decision.shouldSendReply()) {
             sendAutomaticReply(phoneNumber, messageBody, decision.getTaxCase(), decision.isNewlyCreated());
-        } else if (decision.shouldUseKeywordFallback()) {
-            // Priority 2: Keyword Logic (Fallback)
+        } else {
+            // Always reply — never silent for millions of users on any message
             String keywordReply = generateReplyMessage(messageBody);
             sendKeywordBasedReply(phoneNumber, keywordReply, userId);
-        } else {
-            System.out.println("No automatic reply sent - no TaxCase trigger and no keyword match");
         }
     }
 
@@ -227,16 +307,14 @@ public class WhatsAppMessageService {
         boolean hasTaxKeyword = messageBody != null && messageBody.toLowerCase().contains("tax");
         
         if (!hasTaxKeyword) {
-            // No "tax" keyword - check if TaxCase exists but don't process it
+            // Never go silent when an old TaxCase exists — fall back to keyword/Taalr-style reply
             try {
                 TaxCase existingCase = taxCaseService.findActiveTaxCase(phoneNumber);
                 if (existingCase != null) {
-                    System.out.println("TaxCase exists but no 'tax' keyword - no reply sent");
-                    return ReplyDecision.noReply();
+                    System.out.println("TaxCase exists but no 'tax' keyword - using keyword fallback (not silent)");
                 }
             } catch (Exception e) {
                 System.err.println("Error checking existing TaxCase: " + e.getMessage());
-                // Fall through to keyword logic
             }
             return ReplyDecision.keywordFallback();
         }
@@ -252,15 +330,15 @@ public class WhatsAppMessageService {
                              ", NewlyCreated=" + taxCaseResult.isNewlyCreated() +
                              ", StatusChanged=" + taxCaseResult.isStatusChanged());
             
-            // Send reply only if TaxCase was newly created or status changed
+            // Send reply only if TaxCase was newly created or status changed;
+            // otherwise still acknowledge (never silent on WhatsApp)
             if (taxCaseResult.isNewlyCreated() || taxCaseResult.isStatusChanged()) {
                 System.out.println("Will send TaxCase-based reply: TaxCase was " + 
                                  (taxCaseResult.isNewlyCreated() ? "newly created" : "status changed"));
                 return ReplyDecision.taxCaseReply(taxCase, taxCaseResult.isNewlyCreated());
-            } else {
-                System.out.println("Skipping reply: TaxCase exists with unchanged status");
-                return ReplyDecision.noReply();
             }
+            System.out.println("TaxCase unchanged - keyword fallback instead of silent skip");
+            return ReplyDecision.keywordFallback();
         } catch (Exception e) {
             System.err.println("Error processing TaxCase: " + e.getMessage());
             e.printStackTrace();
@@ -467,16 +545,42 @@ public class WhatsAppMessageService {
      * @return User ID if found, null otherwise
      */
     private Long findUserIdByPhone(String phoneNumber) {
+        User user = findUserByPhone(phoneNumber);
+        return user != null ? user.getUserId() : null;
+    }
+
+    /**
+     * Resolve user by WhatsApp From number using common E.164 variants
+     * (with/without +, digits-only).
+     */
+    private User findUserByPhone(String phoneNumber) {
         if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
             return null;
         }
+        for (String candidate : phoneLookupCandidates(phoneNumber)) {
+            Optional<User> found = userRepository.findByPhone(candidate);
+            if (found.isPresent()) {
+                return found.get();
+            }
+        }
+        return null;
+    }
 
-        // Find user by phone number
-        // Note: Phone numbers might be stored in different formats, so we'll do exact match
-        // You may want to normalize phone numbers in the users table for better matching
-        return userRepository.findByPhone(phoneNumber)
-                .map(User::getUserId)
-                .orElse(null);
+    private static List<String> phoneLookupCandidates(String phoneNumber) {
+        String raw = phoneNumber.trim();
+        String digits = raw.replaceAll("[^0-9]", "");
+        List<String> candidates = new ArrayList<>();
+        candidates.add(raw);
+        if (!raw.startsWith("+") && !digits.isEmpty()) {
+            candidates.add("+" + digits);
+        }
+        if (!digits.isEmpty()) {
+            candidates.add(digits);
+        }
+        if (raw.startsWith("+") && !digits.isEmpty()) {
+            candidates.add(digits);
+        }
+        return candidates.stream().distinct().toList();
     }
 
     /**

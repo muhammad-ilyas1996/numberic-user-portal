@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Numberics Invoice APIs",
-    "description": "Run Auth → Login first (sets {{token}}).\n\n• Dashboard: GET /v1/dashboard/summary\n• Invoice / recurring / transactions / NMI / pay-by-token: see folders\n• Onboarding: GET|POST /api/onboarding\n• Taalr automation: folder **Taalr Automation** — receipt OCR + invoice via POST /api/chat (step-by-step requests)\n• Taalr chat (general): folder Taalr Chat\n• Public website chat (no auth): POST /api/public/chat\n• LLC companies: GET|POST|PATCH /api/llc-northwest/companies\n• Subscription: folder **Subscription** — public plans, subscribe, admin plan/subscriber CRUD\n• view-detail invoice: POST body {\"id\": <invoiceId>}\n• WhatsApp: Twilio sandbox — join code first (postman/README.md).\n• Tax Intake: folders **Tax Intake — ProConnect** (legacy) and **Tax Intake — Multi Software** — GET /api/tax/intake/softwares + /{software}/upload|upload-sheet|template|list|{id}",
+    "description": "Run Auth → Login first (sets {{token}}).\n\n• Dashboard: GET /v1/dashboard/summary\n• Invoice / recurring / transactions / NMI / pay-by-token: see folders\n• Onboarding: GET|POST /api/onboarding\n• Taalr automation: folder **Taalr Automation** — receipt OCR + invoice via POST /api/chat (step-by-step requests)\n• Taalr chat (general): folder Taalr Chat\n• Public website chat (no auth): POST /api/public/chat\n• LLC companies: GET|POST|PATCH /api/llc-northwest/companies\n• Subscription: folder **Subscription** — public plans, subscribe, admin plan/subscriber CRUD\n• view-detail invoice: POST body {\"id\": <invoiceId>}\n• WhatsApp: Twilio sandbox — join code first (postman/README.md).\n• Tax Intake: folders **Tax Intake — ProConnect** (legacy) and **Tax Intake — Multi Software** — GET /api/tax/intake/softwares + /{software}/upload|upload-sheet|template|list|{id}\n• WhatsApp Taalr agent: same features as in-app; simulate via **Taalr Automation** requests 20–30 → POST /webhooks/whatsapp (no new API).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -63,7 +63,7 @@
     },
     {
       "key": "whatsappFrom",
-      "value": "whatsapp:+923001234567"
+      "value": "whatsapp:+15551234567"
     },
     {
       "key": "subscriptionUserId",
@@ -92,6 +92,10 @@
     {
       "key": "taxIntakeRecordId",
       "value": "1"
+    },
+    {
+      "key": "whatsappTo",
+      "value": "whatsapp:+15559136356"
     }
   ],
   "item": [
@@ -1040,7 +1044,7 @@
     },
     {
       "name": "Taalr Automation (Receipt + Invoice)",
-      "description": "Test Taalr action automation (receipt OCR + invoice create/send/list/resend).\n\n**Setup:** Auth → Login first.\n\n**Invoice create:** `00` → `01` → `04 YES`\n**Invoice list:** `07` or `08`\n**Invoice status:** `09` (set real INV- number)\n**Resend/reminder:** `07b` → `07c YES`\n\n**Receipt:** `11 upload` → `13 save` OR chat `10`→`12`\n**WhatsApp:** `20`–`22` (phone must match users.phone)\n\nResponse `model: taalr-action` = automation (not Claude). Works on **app chat + WhatsApp**.",
+      "description": "Test Taalr action automation (receipt OCR + invoice create/send/list/resend) on app chat AND WhatsApp.\n\n**Setup:** Auth → Login. Set {{whatsappFrom}} = whatsapp:+YOUR_PHONE matching users.phone. Set {{whatsappTo}} = whatsapp:+15559136356 (Numbrics sender).\n\n**No new API** — WhatsApp uses existing POST /webhooks/whatsapp.\n\n**Invoice create:** `00`→`01`→`04 YES` (app) OR `20`→`21` (WhatsApp)\n**WhatsApp pack:** `20`–`30` (hi, invoice, YES, receipt, list, resend, LLC, sales tax, reset, Claude)\n**Receipt OCR photo:** real WhatsApp media; Postman text-only for prompts.\nResponse model `taalr-action` = automation.",
       "item": [
         {
           "name": "00 Reset Taalr session",
@@ -1391,7 +1395,7 @@
                 },
                 {
                   "key": "To",
-                  "value": "whatsapp:+14155238886"
+                  "value": "{{whatsappTo}}"
                 },
                 {
                   "key": "Body",
@@ -1433,7 +1437,7 @@
                 },
                 {
                   "key": "To",
-                  "value": "whatsapp:+14155238886"
+                  "value": "{{whatsappTo}}"
                 },
                 {
                   "key": "Body",
@@ -1607,7 +1611,7 @@
                 },
                 {
                   "key": "To",
-                  "value": "whatsapp:+14155238886"
+                  "value": "{{whatsappTo}}"
                 },
                 {
                   "key": "Body",
@@ -1650,7 +1654,7 @@
                 },
                 {
                   "key": "To",
-                  "value": "whatsapp:+14155238886"
+                  "value": "{{whatsappTo}}"
                 },
                 {
                   "key": "Body",
@@ -1692,7 +1696,7 @@
                 },
                 {
                   "key": "To",
-                  "value": "whatsapp:+14155238886"
+                  "value": "{{whatsappTo}}"
                 },
                 {
                   "key": "Body",
@@ -1714,6 +1718,264 @@
             },
             "url": "{{baseUrl}}/webhooks/whatsapp",
             "description": "Receipt image OCR on WhatsApp requires real Twilio MediaUrl0 — test OCR via request 11 instead."
+          }
+        },
+        {
+          "name": "25 WhatsApp — hi / welcome menu",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "From",
+                  "value": "{{whatsappFrom}}"
+                },
+                {
+                  "key": "To",
+                  "value": "{{whatsappTo}}"
+                },
+                {
+                  "key": "Body",
+                  "value": "hi"
+                },
+                {
+                  "key": "MessageSid",
+                  "value": "SM_test_{{$timestamp}}"
+                },
+                {
+                  "key": "AccountSid",
+                  "value": "AC_test"
+                },
+                {
+                  "key": "NumMedia",
+                  "value": "0"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/webhooks/whatsapp",
+            "description": "Linked phone only. Expect Taalr welcome menu reply on WhatsApp."
+          }
+        },
+        {
+          "name": "26 WhatsApp — unpaid invoices",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "From",
+                  "value": "{{whatsappFrom}}"
+                },
+                {
+                  "key": "To",
+                  "value": "{{whatsappTo}}"
+                },
+                {
+                  "key": "Body",
+                  "value": "show my unpaid invoices"
+                },
+                {
+                  "key": "MessageSid",
+                  "value": "SM_test_{{$timestamp}}"
+                },
+                {
+                  "key": "AccountSid",
+                  "value": "AC_test"
+                },
+                {
+                  "key": "NumMedia",
+                  "value": "0"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/webhooks/whatsapp",
+            "description": "Lists unpaid invoices for linked user."
+          }
+        },
+        {
+          "name": "27 WhatsApp — start LLC",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "From",
+                  "value": "{{whatsappFrom}}"
+                },
+                {
+                  "key": "To",
+                  "value": "{{whatsappTo}}"
+                },
+                {
+                  "key": "Body",
+                  "value": "Start LLC formation in TX"
+                },
+                {
+                  "key": "MessageSid",
+                  "value": "SM_test_{{$timestamp}}"
+                },
+                {
+                  "key": "AccountSid",
+                  "value": "AC_test"
+                },
+                {
+                  "key": "NumMedia",
+                  "value": "0"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/webhooks/whatsapp",
+            "description": "Starts LLC draft questions (same as in-app Taalr)."
+          }
+        },
+        {
+          "name": "28 WhatsApp — sales tax",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "From",
+                  "value": "{{whatsappFrom}}"
+                },
+                {
+                  "key": "To",
+                  "value": "{{whatsappTo}}"
+                },
+                {
+                  "key": "Body",
+                  "value": "File sales tax for TX"
+                },
+                {
+                  "key": "MessageSid",
+                  "value": "SM_test_{{$timestamp}}"
+                },
+                {
+                  "key": "AccountSid",
+                  "value": "AC_test"
+                },
+                {
+                  "key": "NumMedia",
+                  "value": "0"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/webhooks/whatsapp",
+            "description": "Starts sales tax draft questions."
+          }
+        },
+        {
+          "name": "29 WhatsApp — reset session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "From",
+                  "value": "{{whatsappFrom}}"
+                },
+                {
+                  "key": "To",
+                  "value": "{{whatsappTo}}"
+                },
+                {
+                  "key": "Body",
+                  "value": "reset"
+                },
+                {
+                  "key": "MessageSid",
+                  "value": "SM_test_{{$timestamp}}"
+                },
+                {
+                  "key": "AccountSid",
+                  "value": "AC_test"
+                },
+                {
+                  "key": "NumMedia",
+                  "value": "0"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/webhooks/whatsapp",
+            "description": "Clears Taalr WhatsApp session/history."
+          }
+        },
+        {
+          "name": "30 WhatsApp — Claude guidance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "From",
+                  "value": "{{whatsappFrom}}"
+                },
+                {
+                  "key": "To",
+                  "value": "{{whatsappTo}}"
+                },
+                {
+                  "key": "Body",
+                  "value": "What is the difference between LLC and sole prop?"
+                },
+                {
+                  "key": "MessageSid",
+                  "value": "SM_test_{{$timestamp}}"
+                },
+                {
+                  "key": "AccountSid",
+                  "value": "AC_test"
+                },
+                {
+                  "key": "NumMedia",
+                  "value": "0"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/webhooks/whatsapp",
+            "description": "Non-automation question → Claude guidance reply."
           }
         }
       ]

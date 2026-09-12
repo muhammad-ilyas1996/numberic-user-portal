@@ -33,7 +33,10 @@ For the sandbox, **the recipient must join the sandbox once** before they can re
   `WhatsApp sent to +923343071241 for invoice 2; Twilio SID: SM...`  
   confirms the API accepted the send; delivery depends on Twilio and opt-in.
 
-**Production:** For real production, you need a Twilio WhatsApp Business profile (approved by Twilio), not the sandbox.
+**Production (Numbrics WhatsApp sender):** webhook  
+`https://www.numbrics.ai/numbricsservice/webhooks/whatsapp` (HTTP POST), config  
+`twilio.whatsapp.number=whatsapp:+15559136356`, and `users.phone` must match the sender’s WhatsApp number.  
+**No new WhatsApp API** — inbound uses existing webhook; linked users get full Taalr (same as in-app).
 
 ---
 

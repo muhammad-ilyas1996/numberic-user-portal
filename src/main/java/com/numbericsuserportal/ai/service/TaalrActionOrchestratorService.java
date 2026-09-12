@@ -121,6 +121,16 @@ public class TaalrActionOrchestratorService {
                 || s.getPendingAction() == TaalrPendingAction.SALES_TAX_REVIEW_CONFIRM).orElse(false);
 
         String message = request.getMessage() != null ? request.getMessage().trim() : "";
+
+        // Fast path: greetings / menu — no Anthropic intent call (seconds, not minutes)
+        if (sessionOpt.isEmpty() && TaalrCapabilitiesService.shouldShowWelcome(message)) {
+            User welcomeUser = resolveUser(request);
+            if (welcomeUser != null) {
+                return TaalrActionResult.handled(
+                        TaalrCapabilitiesService.buildWelcomeMessage(request.getChannel()));
+            }
+        }
+
         TaalrIntentParseResult parsed = intentParser.parse(message, awaitingConfirm);
         boolean guideMode = resolveMode(request) == TaalrChatMode.GUIDE
                 || TaalrInputValidation.wantsGuidanceOnly(message);
@@ -489,7 +499,13 @@ public class TaalrActionOrchestratorService {
 
     public TaalrActionRequest buildWhatsAppRequest(String phone, Long userId, String message,
             String mediaUrl, String mediaContentType) {
+        return buildWhatsAppRequest(phone, userId, message, mediaUrl, mediaContentType, TaalrChatMode.AUTO);
+    }
+
+    public TaalrActionRequest buildWhatsAppRequest(String phone, Long userId, String message,
+            String mediaUrl, String mediaContentType, TaalrChatMode mode) {
         return TaalrActionRequest.builder()
+                .mode(mode != null ? mode : TaalrChatMode.AUTO)
                 .channel(TaalrActionChannel.WHATSAPP)
                 .phoneNumber(phone)
                 .userId(userId)
