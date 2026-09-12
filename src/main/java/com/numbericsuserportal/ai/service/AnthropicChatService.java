@@ -143,10 +143,18 @@ public class AnthropicChatService {
             return new ChatResponseDto(true, actionResult.getReply(), null, "taalr-action", null);
         }
 
-        return runClaudeGuidance(user, userMessage.isBlank() ? "(media received)" : userMessage, true);
+        return runClaudeGuidance(user, userMessage.isBlank() ? "(media received)" : userMessage, true, true);
     }
 
     private ChatResponseDto runClaudeGuidance(User user, String userMessage, boolean includeProfile) {
+        return runClaudeGuidance(user, userMessage, includeProfile, false);
+    }
+
+    /**
+     * @param preferFastMessagesApi WhatsApp: use single Messages API call instead of Managed Agents polling (much faster).
+     */
+    private ChatResponseDto runClaudeGuidance(User user, String userMessage, boolean includeProfile,
+            boolean preferFastMessagesApi) {
         if (anthropicProperties.getKey() == null || anthropicProperties.getKey().isBlank()) {
             Optional<String> pendingOnly = taalrPendingContextService.buildGuidanceReminder(user);
             if (pendingOnly.isPresent()) {
@@ -159,7 +167,7 @@ public class AnthropicChatService {
         OnboardingResponseDto profile = onboardingService.getOnboarding(user);
 
         ChatResponseDto guidance;
-        if (anthropicProperties.isManagedAgentsReady()) {
+        if (!preferFastMessagesApi && anthropicProperties.isManagedAgentsReady()) {
             guidance = chatViaManagedAgents(user, userMessage, profile, includeProfile);
         } else {
             guidance = chatViaMessagesApi(user, profile, userMessage, includeProfile);

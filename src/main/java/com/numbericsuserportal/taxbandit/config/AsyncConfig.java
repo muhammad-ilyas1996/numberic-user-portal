@@ -23,4 +23,16 @@ public class AsyncConfig {
         ex.initialize();
         return ex;
     }
+
+    /** WhatsApp inbound: ack Twilio fast, build/send Taalr reply off the HTTP thread. */
+    @Bean(name = "whatsappWebhookExecutor")
+    public TaskExecutor whatsappWebhookExecutor() {
+        ThreadPoolTaskExecutor ex = new ThreadPoolTaskExecutor();
+        ex.setThreadNamePrefix("wa-webhook-");
+        ex.setCorePoolSize(4);
+        ex.setMaxPoolSize(16);
+        ex.setQueueCapacity(500);
+        ex.initialize();
+        return ex;
+    }
 }

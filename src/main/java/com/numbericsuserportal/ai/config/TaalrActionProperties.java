@@ -21,6 +21,12 @@ public class TaalrActionProperties {
     /** Max tokens for intent JSON response. */
     private int intentMaxTokens = 1024;
 
+    /**
+     * Extra Claude call to classify intent. Default false — rules/keywords are enough and keep
+     * WhatsApp/app replies in seconds. Set true only if you need LLM fallback for ambiguous phrasing.
+     */
+    private boolean intentLlmEnabled = false;
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -51,5 +57,13 @@ public class TaalrActionProperties {
 
     public void setIntentMaxTokens(int intentMaxTokens) {
         this.intentMaxTokens = intentMaxTokens;
+    }
+
+    public boolean isIntentLlmEnabled() {
+        return intentLlmEnabled;
+    }
+
+    public void setIntentLlmEnabled(boolean intentLlmEnabled) {
+        this.intentLlmEnabled = intentLlmEnabled;
     }
 }

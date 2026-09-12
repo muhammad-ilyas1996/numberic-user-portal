@@ -131,7 +131,10 @@ public class TaalrActionOrchestratorService {
             }
         }
 
-        TaalrIntentParseResult parsed = intentParser.parse(message, awaitingConfirm);
+        // Skip intent LLM while a session is open (field answers like "Jane" / "500") or on WhatsApp
+        boolean allowIntentLlm = sessionOpt.isEmpty()
+                && request.getChannel() != TaalrActionChannel.WHATSAPP;
+        TaalrIntentParseResult parsed = intentParser.parse(message, awaitingConfirm, allowIntentLlm);
         boolean guideMode = resolveMode(request) == TaalrChatMode.GUIDE
                 || TaalrInputValidation.wantsGuidanceOnly(message);
         boolean resumeRequested = pendingContextService.isResumeMessage(message);

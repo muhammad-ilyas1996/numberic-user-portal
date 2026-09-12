@@ -107,6 +107,14 @@ public class TaalrIntentParserService {
     private ObjectMapper objectMapper;
 
     public TaalrIntentParseResult parse(String message, boolean awaitingConfirmation) {
+        return parse(message, awaitingConfirmation, true);
+    }
+
+    /**
+     * @param allowIntentLlm when false, skip the Claude intent call (use rules + keywords only).
+     *                       Use false for WhatsApp speed and while a draft/confirm session is open.
+     */
+    public TaalrIntentParseResult parse(String message, boolean awaitingConfirmation, boolean allowIntentLlm) {
         if (message == null || message.isBlank()) {
             return defaultChat();
         }
@@ -120,6 +128,11 @@ public class TaalrIntentParserService {
         // Keywords before Claude — production was misclassifying "create invoice" as CHAT.
         TaalrIntentParseResult keyword = parseWithKeywords(trimmed);
         if (keyword.getIntent() != TaalrIntent.CHAT) {
+            return keyword;
+        }
+
+        // Fast path: no second LLM round-trip for intent (draft answers like "Jane" / "$500" stay instant)
+        if (!allowIntentLlm || !taalrActionProperties.isIntentLlmEnabled()) {
             return keyword;
         }
 

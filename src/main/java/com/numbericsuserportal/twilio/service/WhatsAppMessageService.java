@@ -19,8 +19,12 @@ import com.numbericsuserportal.twilio.service.TaxCaseService;
 import com.numbericsuserportal.usermanagement.domain.User;
 import com.numbericsuserportal.usermanagement.repo.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -62,6 +66,10 @@ public class WhatsAppMessageService {
 
     @Autowired
     private AnthropicChatService anthropicChatService;
+
+    @Autowired
+    @Qualifier("whatsappWebhookExecutor")
+    private TaskExecutor whatsappWebhookExecutor;
 
     /**
      * Process and save incoming WhatsApp message
@@ -165,29 +173,51 @@ public class WhatsAppMessageService {
             }
         }
 
-        // Step 5: ALWAYS reply for every inbound WhatsApp message (any text/media, any user).
-        // Linked → full Taalr. Unlinked → register prompt / orchestrator. Never silent.
-        try {
-            String replyText = buildAlwaysOnReply(
-                    linkedUser, normalizedFromNumber, messageBody,
-                    hasMedia ? mediaUrl : null, hasMedia ? mediaType : null);
-            if (replyText == null || replyText.isBlank()) {
-                replyText = defaultCatchAllReply(linkedUser != null);
-            }
-            sendKeywordBasedReply(normalizedFromNumber, replyText, userId);
-        } catch (Exception e) {
-            System.err.println("WhatsApp always-on reply error: " + e.getMessage());
-            e.printStackTrace();
+        // Step 5: Ack Twilio immediately — reply on background thread (avoids 15s webhook timeout / 2min delays)
+        final String phone = normalizedFromNumber;
+        final Long uid = userId;
+        final String body = messageBody;
+        final boolean media = hasMedia;
+        final String mUrl = hasMedia ? mediaUrl : null;
+        final String mType = hasMedia ? mediaType : null;
+        Runnable replyJob = () -> {
             try {
-                sendKeywordBasedReply(normalizedFromNumber,
-                        defaultCatchAllReply(linkedUser != null),
-                        userId);
-            } catch (Exception sendEx) {
-                System.err.println("WhatsApp fallback send failed: " + sendEx.getMessage());
+                User user = uid != null ? userRepository.findById(uid).orElse(null) : null;
+                // Re-resolve by phone if id lookup missed (stale)
+                if (user == null) {
+                    user = findUserByPhone(phone);
+                }
+                String replyText = buildAlwaysOnReply(user, phone, body, mUrl, mType);
+                if (replyText == null || replyText.isBlank()) {
+                    replyText = defaultCatchAllReply(user != null);
+                }
+                sendKeywordBasedReply(phone, replyText, user != null ? user.getUserId() : uid);
+            } catch (Exception e) {
+                System.err.println("WhatsApp always-on reply error: " + e.getMessage());
+                e.printStackTrace();
+                try {
+                    sendKeywordBasedReply(phone, defaultCatchAllReply(uid != null), uid);
+                } catch (Exception sendEx) {
+                    System.err.println("WhatsApp fallback send failed: " + sendEx.getMessage());
+                }
             }
-        }
+        };
+        scheduleWhatsAppReply(replyJob);
 
         return savedMessage;
+    }
+
+    private void scheduleWhatsAppReply(Runnable replyJob) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    whatsappWebhookExecutor.execute(replyJob);
+                }
+            });
+        } else {
+            whatsappWebhookExecutor.execute(replyJob);
+        }
     }
 
     /**
