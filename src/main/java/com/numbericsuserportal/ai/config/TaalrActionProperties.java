@@ -22,10 +22,11 @@ public class TaalrActionProperties {
     private int intentMaxTokens = 1024;
 
     /**
-     * Extra Claude call to classify intent. Default false — rules/keywords are enough and keep
-     * WhatsApp/app replies in seconds. Set true only if you need LLM fallback for ambiguous phrasing.
+     * Claude classifies natural-language intent (agentic). Default true.
+     * Short draft answers still skip LLM while a session is open (orchestrator).
+     * Set false only for offline/dev when Anthropic is unavailable.
      */
-    private boolean intentLlmEnabled = false;
+    private boolean intentLlmEnabled = true;
 
     public boolean isEnabled() {
         return enabled;

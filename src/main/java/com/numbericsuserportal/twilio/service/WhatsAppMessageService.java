@@ -30,12 +30,17 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service for handling WhatsApp message operations
  */
 @Service
 public class WhatsAppMessageService {
+
+    /** Prevents Twilio webhook retries from stacking duplicate reply jobs for the same MessageSid. */
+    private final Set<String> inFlightReplySids = ConcurrentHashMap.newKeySet();
 
     @Autowired
     private WhatsAppMessageRepository whatsAppMessageRepository;
@@ -97,9 +102,27 @@ public class WhatsAppMessageService {
             String numMedia,
             String mediaUrl0,
             String mediaContentType0) {
-        if (whatsAppMessageRepository.findByMessageSid(messageSid).isPresent()) {
-            System.out.println("Duplicate message ignored: " + messageSid);
-            return null;
+        Optional<WhatsAppMessage> existingBySid = messageSid != null && !messageSid.isBlank()
+                ? whatsAppMessageRepository.findByMessageSid(messageSid)
+                : Optional.empty();
+        if (existingBySid.isPresent()) {
+            // Twilio often retries the same MessageSid after webhook timeout.
+            // Re-queue only if the first reply job already finished (or never started).
+            WhatsAppMessage existing = existingBySid.get();
+            if (messageSid != null && inFlightReplySids.contains(messageSid)) {
+                System.out.println("Duplicate MessageSid (Twilio retry): " + messageSid
+                        + " — reply already in-flight, skip");
+                return existing;
+            }
+            System.out.println("Duplicate MessageSid (Twilio retry): " + messageSid + " — re-queueing reply");
+            String phone = existing.getFromNumber() != null ? existing.getFromNumber() : normalizePhoneNumber(fromNumber);
+            Long uid = existing.getUserId();
+            String body = existing.getMessageBody() != null ? existing.getMessageBody() : messageBody;
+            String mUrl = existing.getNumMedia() != null && !"0".equals(existing.getNumMedia().trim())
+                    ? mediaUrl0 : null;
+            String mType = mUrl != null ? mediaContentType0 : null;
+            queueWhatsAppReply(phone, uid, body, mUrl, mType, messageSid);
+            return existing;
         }
 
         // Step 1: Normalize phone number - remove "whatsapp:" prefix if present
@@ -174,16 +197,25 @@ public class WhatsAppMessageService {
         }
 
         // Step 5: Ack Twilio immediately — reply on background thread (avoids 15s webhook timeout / 2min delays)
-        final String phone = normalizedFromNumber;
-        final Long uid = userId;
-        final String body = messageBody;
-        final boolean media = hasMedia;
-        final String mUrl = hasMedia ? mediaUrl : null;
-        final String mType = hasMedia ? mediaType : null;
+        queueWhatsAppReply(
+                normalizedFromNumber,
+                userId,
+                messageBody,
+                hasMedia ? mediaUrl : null,
+                hasMedia ? mediaType : null,
+                messageSid);
+
+        return savedMessage;
+    }
+
+    private void queueWhatsAppReply(String phone, Long uid, String body, String mUrl, String mType, String messageSid) {
+        if (messageSid != null && !messageSid.isBlank() && !inFlightReplySids.add(messageSid)) {
+            System.out.println("Reply already in-flight for MessageSid: " + messageSid + " — skip queue");
+            return;
+        }
         Runnable replyJob = () -> {
             try {
                 User user = uid != null ? userRepository.findById(uid).orElse(null) : null;
-                // Re-resolve by phone if id lookup missed (stale)
                 if (user == null) {
                     user = findUserByPhone(phone);
                 }
@@ -200,11 +232,13 @@ public class WhatsAppMessageService {
                 } catch (Exception sendEx) {
                     System.err.println("WhatsApp fallback send failed: " + sendEx.getMessage());
                 }
+            } finally {
+                if (messageSid != null && !messageSid.isBlank()) {
+                    inFlightReplySids.remove(messageSid);
+                }
             }
         };
         scheduleWhatsAppReply(replyJob);
-
-        return savedMessage;
     }
 
     private void scheduleWhatsAppReply(Runnable replyJob) {

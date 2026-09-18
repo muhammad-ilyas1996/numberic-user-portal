@@ -131,9 +131,9 @@ public class TaalrActionOrchestratorService {
             }
         }
 
-        // Skip intent LLM while a session is open (field answers like "Jane" / "500") or on WhatsApp
-        boolean allowIntentLlm = sessionOpt.isEmpty()
-                && request.getChannel() != TaalrActionChannel.WHATSAPP;
+        // Agentic intent (Claude) on app + WhatsApp. Skip only while a draft/confirm session is open
+        // so short field answers ("Jane", "500") stay instant without an extra LLM round-trip.
+        boolean allowIntentLlm = sessionOpt.isEmpty();
         TaalrIntentParseResult parsed = intentParser.parse(message, awaitingConfirm, allowIntentLlm);
         boolean guideMode = resolveMode(request) == TaalrChatMode.GUIDE
                 || TaalrInputValidation.wantsGuidanceOnly(message);

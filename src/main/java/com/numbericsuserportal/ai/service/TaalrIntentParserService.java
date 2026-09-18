@@ -9,8 +9,6 @@ import com.numbericsuserportal.ai.action.dto.TaalrLlcDraft;
 import com.numbericsuserportal.ai.action.dto.TaalrSalesTaxDraft;
 import com.numbericsuserportal.ai.config.AnthropicProperties;
 import com.numbericsuserportal.ai.config.TaalrActionProperties;
-import com.numbericsuserportal.ai.util.TaalrInputValidation;
-import com.numbericsuserportal.kintsugi.domain.SalesTaxBusinessType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -19,9 +17,7 @@ import org.springframework.web.client.RestClient;
 
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
@@ -77,19 +73,16 @@ public class TaalrIntentParserService {
           "statusFilter": "ALL" | "UNPAID" | "PAID" | "DRAFT" or null
         }
         Rules:
-        - INVOICE: user wants to create and/or send a NEW invoice (e.g. "invoice Jane $500", "create invoice").
-        - INVOICE_LIST: user wants to see invoices or status (e.g. "my invoices", "unpaid invoices", "status of INV-001").
-        - INVOICE_RESEND: user wants to resend/remind on an EXISTING invoice (e.g. "resend INV-001", "send reminder", "follow up on invoice").
-        - RECEIPT: user mentions saving/uploading a receipt without an image in this message.
-        - RECEIPT_LIST: user wants to see saved receipts.
-        - RECEIPT_MANUAL: user wants to enter receipt details without uploading a photo.
-        - LLC_FORMATION: user wants to start/continue LLC formation, set state/name/owner details, or says LLC automation.
-        - LLC_STATUS: user asks status of LLC formation/order.
-        - SALES_TAX_FILE: user wants to file/prepare sales tax, enter quarterly sales, start sales tax automation.
-        - SALES_TAX_STATUS: user asks sales tax status, filings, due dates, nexus summary.
+        - Understand natural language in any phrasing (formal, casual, typos, Urdu-English mix). Do NOT require exact keywords.
+        - INVOICE: create/send a NEW invoice.
+        - INVOICE_LIST: list or filter invoices / payment status (including unpaid, outstanding, overdue, paid, draft). Set statusFilter when clear.
+        - INVOICE_RESEND: resend/remind on an EXISTING invoice.
+        - RECEIPT / RECEIPT_LIST / RECEIPT_MANUAL: receipt save, list, or manual entry.
+        - LLC_FORMATION / LLC_STATUS: start formation or ask formation status.
+        - SALES_TAX_FILE / SALES_TAX_STATUS: file/prepare sales tax or ask filing status.
         - CONFIRM_YES / CONFIRM_NO / CANCEL: explicit confirmation or rejection.
-        - CHAT: general questions, greetings, unrelated — NOT when user wants invoice/receipt/llc/sales-tax automation.
-        - If user asks "can I create invoice in chat" or wants to create one, use INVOICE not CHAT.
+        - CHAT: guidance/questions that are NOT an automation action above.
+        - Prefer automation intents over CHAT when the user clearly wants to do or see something in-product.
         - Extract amounts as numbers without currency symbols. Default channel WHATSAPP if phone mentioned, EMAIL if email mentioned.
         - If INVOICE intent but customer name or amount missing, set missingField and a short question.
         """;
@@ -111,8 +104,8 @@ public class TaalrIntentParserService {
     }
 
     /**
-     * @param allowIntentLlm when false, skip the Claude intent call (use rules + keywords only).
-     *                       Use false for WhatsApp speed and while a draft/confirm session is open.
+     * @param allowIntentLlm when false, skip Claude intent (e.g. open draft session — short field answers).
+     *                       When true, natural language is classified by Claude (agentic), not keyword lists.
      */
     public TaalrIntentParseResult parse(String message, boolean awaitingConfirmation, boolean allowIntentLlm) {
         if (message == null || message.isBlank()) {
@@ -120,35 +113,26 @@ public class TaalrIntentParserService {
         }
         String trimmed = message.trim();
 
+        // Structural only: yes / no / cancel — not product vocabulary
         TaalrIntentParseResult ruleBased = parseWithRules(trimmed, awaitingConfirmation);
         if (ruleBased.getIntent() != TaalrIntent.CHAT) {
             return ruleBased;
         }
 
-        // Keywords before Claude — production was misclassifying "create invoice" as CHAT.
-        TaalrIntentParseResult keyword = parseWithKeywords(trimmed);
-        if (keyword.getIntent() != TaalrIntent.CHAT) {
-            return keyword;
-        }
-
-        // Fast path: no second LLM round-trip for intent (draft answers like "Jane" / "$500" stay instant)
         if (!allowIntentLlm || !taalrActionProperties.isIntentLlmEnabled()) {
-            return keyword;
+            return defaultChat();
         }
 
         if (anthropicProperties.getKey() == null || anthropicProperties.getKey().isBlank()) {
-            return keyword;
+            log.warn("Intent LLM skipped: ANTHROPIC_API_KEY missing");
+            return defaultChat();
         }
 
         try {
-            TaalrIntentParseResult claude = parseWithClaude(trimmed, awaitingConfirmation);
-            if (claude.getIntent() != TaalrIntent.CHAT) {
-                return claude;
-            }
-            return keyword;
+            return parseWithClaude(trimmed, awaitingConfirmation);
         } catch (Exception e) {
-            log.warn("Claude intent parse failed, using keyword fallback: {}", e.getMessage());
-            return keyword;
+            log.warn("Claude intent parse failed, falling back to CHAT: {}", e.getMessage());
+            return defaultChat();
         }
     }
 
@@ -171,210 +155,6 @@ public class TaalrIntentParserService {
             }
         }
         return defaultChat();
-    }
-
-    private TaalrIntentParseResult parseWithKeywords(String message) {
-        String lower = message.toLowerCase();
-        if (lower.contains("manual receipt") || lower.contains("enter receipt")
-                || lower.contains("receipt without photo") || lower.contains("receipt manually")
-                || lower.contains("add receipt manually")) {
-            TaalrIntentParseResult r = new TaalrIntentParseResult();
-            r.setIntent(TaalrIntent.RECEIPT_MANUAL);
-            return r;
-        }
-        if (lower.contains("my receipts") || lower.contains("list receipt") || lower.contains("show receipt")
-                || lower.contains("receipt list") || lower.contains("saved receipts")) {
-            TaalrIntentParseResult r = new TaalrIntentParseResult();
-            r.setIntent(TaalrIntent.RECEIPT_LIST);
-            return r;
-        }
-        if (containsWord(lower, "receipt") || lower.contains("expense report") || lower.contains("scan expense")) {
-            TaalrIntentParseResult r = new TaalrIntentParseResult();
-            r.setIntent(TaalrIntent.RECEIPT);
-            return r;
-        }
-        if (lower.contains("resend") || lower.contains("send again")
-                || ((lower.contains("remind") || lower.contains("reminder")
-                || lower.contains("follow up") || lower.contains("follow-up"))
-                && (containsWord(lower, "invoice") || lower.contains("inv-") || lower.contains("payment")))) {
-            TaalrIntentParseResult r = new TaalrIntentParseResult();
-            r.setIntent(TaalrIntent.INVOICE_RESEND);
-            r.setInvoice(extractInvoiceHeuristic(message));
-            extractInvoiceNumToDraft(message, r.getInvoice());
-            return r;
-        }
-        if (lower.contains("my invoices") || lower.contains("list invoice") || lower.contains("show invoice")
-                || lower.contains("invoice list") || lower.contains("invoice status")
-                || lower.contains("unpaid invoice") || lower.contains("outstanding invoice")
-                || (lower.contains("status") && lower.contains("inv-"))) {
-            TaalrIntentParseResult r = new TaalrIntentParseResult();
-            r.setIntent(TaalrIntent.INVOICE_LIST);
-            r.setInvoice(extractInvoiceHeuristic(message));
-            extractInvoiceNumToDraft(message, r.getInvoice());
-            if (lower.contains("unpaid") || lower.contains("outstanding") || lower.contains("overdue")) {
-                r.setStatusFilter("UNPAID");
-            } else if (lower.contains("paid")) {
-                r.setStatusFilter("PAID");
-            } else if (lower.contains("draft")) {
-                r.setStatusFilter("DRAFT");
-            }
-            return r;
-        }
-        if (containsWord(lower, "invoice") || lower.contains("bill client") || lower.contains("send bill")
-                || lower.contains("create an invoice") || lower.contains("creat an invoice")
-                || lower.contains("new invoice") || lower.contains("make an invoice")
-                || lower.contains("invoice bna") || lower.contains("invoice ban")) {
-            TaalrIntentParseResult r = new TaalrIntentParseResult();
-            r.setIntent(TaalrIntent.INVOICE);
-            r.setInvoice(extractInvoiceHeuristic(message));
-            return r;
-        }
-        if (containsWord(lower, "llc")
-                || lower.contains("register company") || lower.contains("company formation")
-                || lower.contains("llc formation") || lower.contains("form an llc") || lower.contains("start llc")
-                || lower.contains("incorporat") || (containsWord(lower, "formation") && lower.contains("compan"))) {
-            TaalrIntentParseResult r = new TaalrIntentParseResult();
-            if (lower.contains("status") || lower.contains("llc update")) {
-                r.setIntent(TaalrIntent.LLC_STATUS);
-            } else {
-                r.setIntent(TaalrIntent.LLC_FORMATION);
-            }
-            r.setLlc(extractLlcHeuristic(message));
-            return r;
-        }
-        if (lower.contains("llc status") || lower.contains("formation status") || lower.contains("company status")) {
-            TaalrIntentParseResult r = new TaalrIntentParseResult();
-            r.setIntent(TaalrIntent.LLC_STATUS);
-            return r;
-        }
-        if (isSalesTaxStatus(lower)) {
-            TaalrIntentParseResult r = new TaalrIntentParseResult();
-            r.setIntent(TaalrIntent.SALES_TAX_STATUS);
-            return r;
-        }
-        if (isSalesTaxFile(lower)) {
-            TaalrIntentParseResult r = new TaalrIntentParseResult();
-            r.setIntent(TaalrIntent.SALES_TAX_FILE);
-            r.setSalesTax(extractSalesTaxHeuristic(message));
-            return r;
-        }
-        return defaultChat();
-    }
-
-    private static boolean isSalesTaxStatus(String lower) {
-        return lower.contains("sales tax status") || lower.contains("sales-tax status")
-                || (lower.contains("filing status") && lower.contains("tax"))
-                || (lower.contains("sales tax") && (lower.contains("status") || lower.contains("due")
-                || lower.contains("schedule") || lower.contains("summary") || lower.contains("pending")))
-                || lower.contains("my sales tax") || lower.contains("sales tax filings");
-    }
-
-    private static boolean isSalesTaxFile(String lower) {
-        if (lower.equals("sales tax") || lower.equals("sales-tax") || lower.equals("salestax")
-                || lower.equals("sales taxes")) {
-            return true;
-        }
-        return lower.contains("file sales tax") || lower.contains("sales tax filing")
-                || lower.contains("file my sales tax") || lower.contains("prepare sales tax")
-                || lower.contains("sales tax automation") || lower.contains("start sales tax")
-                || lower.contains("sales tax draft") || lower.contains("quarterly sales tax")
-                || (containsWord(lower, "sales") && containsWord(lower, "tax")
-                && (lower.contains("file") || lower.contains("filing") || lower.contains("remit")
-                || lower.contains("nexus") || lower.contains("estimate")));
-    }
-
-    private TaalrSalesTaxDraft extractSalesTaxHeuristic(String message) {
-        TaalrSalesTaxDraft draft = new TaalrSalesTaxDraft();
-        String state = TaalrInputValidation.parseUsState(message);
-        if (state != null) {
-            draft.setStateCode(state);
-        }
-        java.util.regex.Matcher amountMatcher = Pattern.compile("\\$?([0-9]+(?:\\.[0-9]{1,2})?)")
-                .matcher(message);
-        if (amountMatcher.find()) {
-            draft.setTaxableAmount(Double.parseDouble(amountMatcher.group(1)));
-        }
-        String lower = message.toLowerCase(Locale.ROOT);
-        for (SalesTaxBusinessType type : SalesTaxBusinessType.values()) {
-            if (lower.contains(type.name().replace('_', ' ')) || lower.contains(type.name())) {
-                draft.setBusinessType(type.name());
-                break;
-            }
-        }
-        return draft;
-    }
-
-    private static boolean containsWord(String lowerMessage, String word) {
-        return Pattern.compile("\\b" + Pattern.quote(word) + "\\b", Pattern.CASE_INSENSITIVE)
-                .matcher(lowerMessage)
-                .find();
-    }
-
-    private static void extractInvoiceNumToDraft(String message, TaalrInvoiceDraft draft) {
-        if (message == null || draft == null) {
-            return;
-        }
-        Matcher m = Pattern.compile("\\b(INV-[A-Za-z0-9\\-]+)\\b", Pattern.CASE_INSENSITIVE).matcher(message);
-        if (m.find()) {
-            draft.setInvoiceNum(m.group(1).toUpperCase());
-        }
-    }
-
-    private TaalrInvoiceDraft extractInvoiceHeuristic(String message) {
-        TaalrInvoiceDraft draft = new TaalrInvoiceDraft();
-        java.util.regex.Matcher amountMatcher = Pattern.compile("\\$?([0-9]+(?:\\.[0-9]{1,2})?)")
-                .matcher(message);
-        if (amountMatcher.find()) {
-            draft.setAmount(Double.parseDouble(amountMatcher.group(1)));
-        }
-        java.util.regex.Matcher emailMatcher = Pattern.compile("[\\w.+-]+@[\\w.-]+\\.[a-zA-Z]{2,}")
-                .matcher(message);
-        if (emailMatcher.find()) {
-            draft.setCustomerEmail(emailMatcher.group());
-            draft.setRecipientPhoneOrEmail(emailMatcher.group());
-            draft.setChannel("EMAIL");
-        }
-        return draft;
-    }
-
-    private TaalrLlcDraft extractLlcHeuristic(String message) {
-        TaalrLlcDraft draft = new TaalrLlcDraft();
-        String lower = message.toLowerCase();
-        Matcher stateCode = Pattern.compile("\\b([A-Z]{2})\\b").matcher(message);
-        while (stateCode.find()) {
-            String code = stateCode.group(1).toUpperCase();
-            if ("LL".equals(code)) {
-                continue;
-            }
-            // Skip bare "IN" unless clearly a state cue (avoids English "in").
-            if ("IN".equals(code)
-                    && !(lower.contains("indiana") || lower.contains("state") || lower.contains("jurisdiction")
-                    || lower.matches(".*\\bin\\s+in\\b.*") || lower.contains("llc in"))) {
-                continue;
-            }
-            draft.setJurisdiction(code);
-            break;
-        }
-        Matcher forName = Pattern.compile("(?i)(?:named|name|llc name)\\s+([A-Za-z0-9&'\\- ]{3,60})").matcher(message);
-        if (forName.find()) {
-            draft.setLlcName(forName.group(1).trim());
-        }
-        Matcher owner = Pattern.compile("(?i)(?:owner|member)\\s+([A-Za-z]+)\\s+([A-Za-z]+)").matcher(message);
-        if (owner.find()) {
-            draft.setOwnerFirstName(owner.group(1).trim());
-            draft.setOwnerLastName(owner.group(2).trim());
-        }
-        if (lower.contains("expedited")) {
-            draft.setFilingSpeed("expedited");
-        } else if (lower.contains("same day") || lower.contains("sameday")) {
-            draft.setFilingSpeed("sameday");
-        } else if (lower.contains("standard")) {
-            draft.setFilingSpeed("standard");
-        }
-        if (lower.contains("ein")) {
-            draft.setAddonEin(Boolean.TRUE);
-        }
-        return draft;
     }
 
     private TaalrIntentParseResult parseWithClaude(String message, boolean awaitingConfirmation) throws Exception {
