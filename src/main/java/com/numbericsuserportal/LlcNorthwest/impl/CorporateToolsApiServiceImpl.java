@@ -49,7 +49,7 @@ public class CorporateToolsApiServiceImpl implements CorporateToolsApiService {
     @Autowired
     private CorporateToolsAuthService authService;
 
-    @Value("${corporate.tools.api.base.url}")
+    @Value("${corporate.tools.api.base.url:}")
     private String baseUrl;
 
     // Configure RestTemplate with HttpComponentsClientHttpRequestFactory to support PATCH method

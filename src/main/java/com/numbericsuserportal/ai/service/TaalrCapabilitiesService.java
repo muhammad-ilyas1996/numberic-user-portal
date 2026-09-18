@@ -10,7 +10,7 @@ public final class TaalrCapabilitiesService {
     private static final Pattern GREETING = Pattern.compile(
             "^(hi|hello|hey|hiya|howdy|start|menu|help|yo|hola|salam|salaam|assalam|"
                     + "good\\s*(morning|afternoon|evening)|what's\\s*up|whats\\s*up|sup)"
-                    + "(\\s+there)?[!?.\\s]*$",
+                    + "(\\s+there)?(\\s+(taalr|numbrics))?[!?.\\s]*$",
             Pattern.CASE_INSENSITIVE);
 
     private static final Pattern CAPABILITIES_QUESTION = Pattern.compile(

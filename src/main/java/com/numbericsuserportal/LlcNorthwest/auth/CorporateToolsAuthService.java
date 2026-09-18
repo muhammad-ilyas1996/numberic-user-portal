@@ -15,10 +15,10 @@ import java.util.Map;
 @Service
 public class CorporateToolsAuthService {
 
-    @Value("${corporate.tools.access.key}")
+    @Value("${corporate.tools.access.key:}")
     private String accessKey;
 
-    @Value("${corporate.tools.secret.key}")
+    @Value("${corporate.tools.secret.key:}")
     private String secretKey;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
