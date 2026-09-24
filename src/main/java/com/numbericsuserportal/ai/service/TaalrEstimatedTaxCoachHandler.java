@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
 public class TaalrEstimatedTaxCoachHandler {
 
     private static final Pattern AMOUNT = Pattern.compile(
-            "[$]?\\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\\.[0-9]{1,2})?|[0-9]+(?:\\.[0-9]{1,2})?)");
+            "[$]?\\s*([0-9]{1,3}(?:,[0-9]{3})+(?:\\.[0-9]{1,2})?|[0-9]+(?:\\.[0-9]{1,2})?)");
 
     @Autowired
     private TaalrActionSessionService sessionService;
@@ -45,7 +45,10 @@ public class TaalrEstimatedTaxCoachHandler {
             draft.setTaxYear(java.time.LocalDate.now().getYear());
         }
         mergeFromParsed(draft, parsed != null ? parsed.getEstimatedTax() : null);
-        detectLanguageFromMessage(draft, rawMessage);
+        // Only sniff language from the opening message — not from later field answers like "English"
+        if (existingSession == null) {
+            detectLanguageFromMessage(draft, rawMessage);
+        }
 
         if (rawMessage != null && !rawMessage.isBlank()) {
             if (wantsEscalation(rawMessage)) {
