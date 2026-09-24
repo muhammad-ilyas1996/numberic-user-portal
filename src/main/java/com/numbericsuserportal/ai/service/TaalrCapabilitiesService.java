@@ -33,7 +33,7 @@ public final class TaalrCapabilitiesService {
 
     public static String buildWelcomeMessage(TaalrActionChannel channel) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Hello! I'm Taalr, your Numbrics assistant.\n\n");
+        sb.append("Hello! I'm TAALR empowered by Numbrics.\n\n");
         sb.append("You can either:\n");
         sb.append("• Automate in chat (I'll collect required fields with validation), or\n");
         sb.append("• Ask for guidance (I'll explain how to do it on the dashboard)\n\n");
@@ -41,13 +41,15 @@ public final class TaalrCapabilitiesService {
         sb.append("1. Invoice — create, send, list, resend\n");
         sb.append("2. Receipt OCR — scan, edit, categorize, save\n");
         sb.append("3. LLC Formation — draft, name check, prepare\n");
-        sb.append("4. Sales tax — quarterly draft, estimate, status (pay on dashboard)\n\n");
+        sb.append("4. Sales tax — quarterly draft, estimate, status (pay on dashboard)\n");
+        sb.append("5. Estimated tax coach — federal + self-employment estimate (EN / Español / Kreyòl)\n\n");
         sb.append("Examples:\n");
         sb.append("• Create invoice for Jane $500 via email jane@example.com\n");
         sb.append("• Show my unpaid invoices\n");
         sb.append("• Upload a receipt / manual receipt / show my receipts\n");
         sb.append("• Start LLC formation in TX\n");
         sb.append("• File sales tax for TX / sales tax status\n");
+        sb.append("• Estimated tax / impuestos estimados / enpo estime\n");
         sb.append("• Guide me on invoices (no automation)\n");
         if (channel == TaalrActionChannel.WHATSAPP) {
             sb.append("\nOn WhatsApp you can also send a receipt photo directly.");

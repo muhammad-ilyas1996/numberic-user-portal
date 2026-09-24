@@ -10,6 +10,7 @@ public class TaalrIntentParseResult {
     private TaalrInvoiceDraft invoice = new TaalrInvoiceDraft();
     private TaalrLlcDraft llc = new TaalrLlcDraft();
     private TaalrSalesTaxDraft salesTax = new TaalrSalesTaxDraft();
+    private TaalrEstimatedTaxDraft estimatedTax = new TaalrEstimatedTaxDraft();
     /** When intent is INVOICE but a required field is missing — e.g. customerName, amount */
     private String missingField;
     /** Suggested follow-up question for the user */

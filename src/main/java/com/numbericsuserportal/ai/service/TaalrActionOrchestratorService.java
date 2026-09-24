@@ -52,6 +52,9 @@ public class TaalrActionOrchestratorService {
     private TaalrSalesTaxActionHandler salesTaxHandler;
 
     @Autowired
+    private TaalrEstimatedTaxCoachHandler estimatedTaxCoachHandler;
+
+    @Autowired
     private TaalrPendingContextService pendingContextService;
 
     @Autowired
@@ -84,7 +87,8 @@ public class TaalrActionOrchestratorService {
                     || pending == TaalrPendingAction.LLC_DRAFT
                     || pending == TaalrPendingAction.LLC_PREPARE_CONFIRM
                     || pending == TaalrPendingAction.SALES_TAX_DRAFT
-                    || pending == TaalrPendingAction.SALES_TAX_REVIEW_CONFIRM) {
+                    || pending == TaalrPendingAction.SALES_TAX_REVIEW_CONFIRM
+                    || pending == TaalrPendingAction.ESTIMATED_TAX_DRAFT) {
                 return TaalrActionResult.handled(
                         "You have an unfinished " + describePendingLabel(pending)
                                 + " in progress. Reply \"cancel\" to discard it first, then send the receipt photo.\n"
@@ -106,6 +110,7 @@ public class TaalrActionOrchestratorService {
             case INVOICE_DRAFT, INVOICE_SEND_CONFIRM, INVOICE_RESEND_CONFIRM -> "invoice";
             case LLC_DRAFT, LLC_PREPARE_CONFIRM -> "LLC formation";
             case SALES_TAX_DRAFT, SALES_TAX_REVIEW_CONFIRM -> "sales tax";
+            case ESTIMATED_TAX_DRAFT -> "estimated tax";
             case RECEIPT_SAVE_CONFIRM -> "receipt";
         };
     }
@@ -239,12 +244,26 @@ public class TaalrActionOrchestratorService {
                 return salesTaxHandler.handleStartOrContinue(request, user, parsed, sessionOpt.get(), message);
             }
         }
+        if (sessionOpt.isPresent() && sessionOpt.get().getPendingAction() == TaalrPendingAction.ESTIMATED_TAX_DRAFT) {
+            if (parsed.getIntent() == TaalrIntent.CANCEL) {
+                return estimatedTaxCoachHandler.cancel(request);
+            }
+            if (isSwitchAwayIntent(parsed.getIntent(), TaalrIntent.ESTIMATED_TAX)) {
+                return TaalrActionResult.handled(
+                        "You have an estimated-tax coach session in progress. Reply \"cancel\" to discard it first, "
+                                + "or continue answering the questions.");
+            }
+            if (user != null) {
+                return estimatedTaxCoachHandler.handleStartOrContinue(
+                        request, user, parsed, sessionOpt.get(), message);
+            }
+        }
 
         if (user == null) {
             if (!guideMode && isAutomationIntent(parsed.getIntent())) {
                 return TaalrActionResult.handled(
                         "Please log in to Numbrics (or link your WhatsApp number to your account) "
-                                + "to use invoices, receipts, LLC formation, and sales tax.");
+                                + "to use invoices, receipts, LLC formation, sales tax, and estimated tax.");
             }
             return TaalrActionResult.notHandled();
         }
@@ -295,6 +314,10 @@ public class TaalrActionOrchestratorService {
         if (parsed.getIntent() == TaalrIntent.SALES_TAX_FILE) {
             return salesTaxHandler.handleStartOrContinue(request, user, parsed, sessionOpt.orElse(null), message);
         }
+        if (parsed.getIntent() == TaalrIntent.ESTIMATED_TAX) {
+            return estimatedTaxCoachHandler.handleStartOrContinue(
+                    request, user, parsed, sessionOpt.orElse(null), message);
+        }
 
         return TaalrActionResult.notHandled();
     }
@@ -331,6 +354,9 @@ public class TaalrActionOrchestratorService {
         if (action == TaalrPendingAction.SALES_TAX_REVIEW_CONFIRM) {
             return TaalrActionResult.handled("Please reply YES to save the sales-tax draft, or NO to cancel.");
         }
+        if (action == TaalrPendingAction.ESTIMATED_TAX_DRAFT) {
+            return estimatedTaxCoachHandler.promptContinue(request, user, session);
+        }
         return TaalrActionResult.notHandled();
     }
 
@@ -339,7 +365,8 @@ public class TaalrActionOrchestratorService {
                 || intent == TaalrIntent.RECEIPT_MANUAL
                 || intent == TaalrIntent.INVOICE_LIST || intent == TaalrIntent.INVOICE_RESEND
                 || intent == TaalrIntent.LLC_FORMATION || intent == TaalrIntent.LLC_STATUS
-                || intent == TaalrIntent.SALES_TAX_FILE || intent == TaalrIntent.SALES_TAX_STATUS;
+                || intent == TaalrIntent.SALES_TAX_FILE || intent == TaalrIntent.SALES_TAX_STATUS
+                || intent == TaalrIntent.ESTIMATED_TAX;
     }
 
     /** True when user asks for a different automation while a draft of {@code current} is open. */
@@ -430,7 +457,8 @@ public class TaalrActionOrchestratorService {
         }
 
         if (action == TaalrPendingAction.INVOICE_DRAFT || action == TaalrPendingAction.LLC_DRAFT
-                || action == TaalrPendingAction.SALES_TAX_DRAFT) {
+                || action == TaalrPendingAction.SALES_TAX_DRAFT
+                || action == TaalrPendingAction.ESTIMATED_TAX_DRAFT) {
             return TaalrActionResult.notHandled();
         }
 
@@ -452,6 +480,9 @@ public class TaalrActionOrchestratorService {
         if (session.getPendingAction() == TaalrPendingAction.SALES_TAX_DRAFT
                 || session.getPendingAction() == TaalrPendingAction.SALES_TAX_REVIEW_CONFIRM) {
             return salesTaxHandler.cancel(request);
+        }
+        if (session.getPendingAction() == TaalrPendingAction.ESTIMATED_TAX_DRAFT) {
+            return estimatedTaxCoachHandler.cancel(request);
         }
         return invoiceHandler.cancel(request, user);
     }

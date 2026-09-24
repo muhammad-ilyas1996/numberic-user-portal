@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.numbericsuserportal.ai.action.TaalrIntent;
 import com.numbericsuserportal.ai.action.dto.TaalrIntentParseResult;
+import com.numbericsuserportal.ai.action.dto.TaalrEstimatedTaxDraft;
 import com.numbericsuserportal.ai.action.dto.TaalrInvoiceDraft;
 import com.numbericsuserportal.ai.action.dto.TaalrLlcDraft;
 import com.numbericsuserportal.ai.action.dto.TaalrSalesTaxDraft;
@@ -38,7 +39,7 @@ public class TaalrIntentParserService {
         You are Taalr intent parser for Numbrics. Classify the user message for automation.
         Reply with ONLY valid JSON (no markdown fences). Schema:
         {
-          "intent": "CHAT" | "RECEIPT" | "RECEIPT_LIST" | "RECEIPT_MANUAL" | "INVOICE" | "INVOICE_LIST" | "INVOICE_RESEND" | "LLC_FORMATION" | "LLC_STATUS" | "SALES_TAX_FILE" | "SALES_TAX_STATUS" | "CONFIRM_YES" | "CONFIRM_NO" | "CANCEL",
+          "intent": "CHAT" | "RECEIPT" | "RECEIPT_LIST" | "RECEIPT_MANUAL" | "INVOICE" | "INVOICE_LIST" | "INVOICE_RESEND" | "LLC_FORMATION" | "LLC_STATUS" | "SALES_TAX_FILE" | "SALES_TAX_STATUS" | "ESTIMATED_TAX" | "CONFIRM_YES" | "CONFIRM_NO" | "CANCEL",
           "invoice": {
             "customerName": string or null,
             "customerEmail": string or null,
@@ -68,18 +69,29 @@ public class TaalrIntentParserService {
             "city": string or null,
             "postalCode": string or null
           },
+          "estimatedTax": {
+            "language": "EN" | "ES" | "HT" or null,
+            "filingStatus": "SINGLE" | "MFJ" | "MFS" | "HOH" | "QW" or null,
+            "stateCode": string or null,
+            "taxYear": number or null,
+            "ytdIncome": number or null,
+            "deductibleExpenses": number or null,
+            "priorPayments": number or null,
+            "withholding": number or null
+          },
           "missingField": string or null,
           "question": string or null,
           "statusFilter": "ALL" | "UNPAID" | "PAID" | "DRAFT" or null
         }
         Rules:
-        - Understand natural language in any phrasing (formal, casual, typos, Urdu-English mix). Do NOT require exact keywords.
+        - Understand natural language in any phrasing (formal, casual, typos, Urdu-English mix, Spanish, Haitian Creole). Do NOT require exact keywords.
         - INVOICE: create/send a NEW invoice.
         - INVOICE_LIST: list or filter invoices / payment status (including unpaid, outstanding, overdue, paid, draft). Set statusFilter when clear.
         - INVOICE_RESEND: resend/remind on an EXISTING invoice.
         - RECEIPT / RECEIPT_LIST / RECEIPT_MANUAL: receipt save, list, or manual entry.
         - LLC_FORMATION / LLC_STATUS: start formation or ask formation status.
-        - SALES_TAX_FILE / SALES_TAX_STATUS: file/prepare sales tax or ask filing status.
+        - SALES_TAX_FILE / SALES_TAX_STATUS: file/prepare state sales tax or ask sales-tax filing status (NOT federal estimated income tax).
+        - ESTIMATED_TAX: federal estimated / quarterly / 1040-ES / self-employment tax coach (impuestos estimados, enpo estime). Extract any provided fields into estimatedTax.
         - CONFIRM_YES / CONFIRM_NO / CANCEL: explicit confirmation or rejection.
         - CHAT: guidance/questions that are NOT an automation action above.
         - Prefer automation intents over CHAT when the user clearly wants to do or see something in-product.
@@ -288,6 +300,35 @@ public class TaalrIntentParserService {
                 draft.setPostalCode(salesTax.path("postalCode").asText(null));
             }
             result.setSalesTax(draft);
+        }
+        JsonNode estimatedTax = node.path("estimatedTax");
+        if (!estimatedTax.isMissingNode() && !estimatedTax.isNull()) {
+            TaalrEstimatedTaxDraft draft = new TaalrEstimatedTaxDraft();
+            if (estimatedTax.hasNonNull("language")) {
+                draft.setLanguage(estimatedTax.path("language").asText(null));
+            }
+            if (estimatedTax.hasNonNull("filingStatus")) {
+                draft.setFilingStatus(estimatedTax.path("filingStatus").asText(null));
+            }
+            if (estimatedTax.hasNonNull("stateCode")) {
+                draft.setStateCode(estimatedTax.path("stateCode").asText(null));
+            }
+            if (estimatedTax.has("taxYear") && !estimatedTax.path("taxYear").isNull()) {
+                draft.setTaxYear(estimatedTax.path("taxYear").asInt());
+            }
+            if (estimatedTax.has("ytdIncome") && !estimatedTax.path("ytdIncome").isNull()) {
+                draft.setYtdIncome(estimatedTax.path("ytdIncome").asDouble());
+            }
+            if (estimatedTax.has("deductibleExpenses") && !estimatedTax.path("deductibleExpenses").isNull()) {
+                draft.setDeductibleExpenses(estimatedTax.path("deductibleExpenses").asDouble());
+            }
+            if (estimatedTax.has("priorPayments") && !estimatedTax.path("priorPayments").isNull()) {
+                draft.setPriorPayments(estimatedTax.path("priorPayments").asDouble());
+            }
+            if (estimatedTax.has("withholding") && !estimatedTax.path("withholding").isNull()) {
+                draft.setWithholding(estimatedTax.path("withholding").asDouble());
+            }
+            result.setEstimatedTax(draft);
         }
         if (node.hasNonNull("missingField")) {
             result.setMissingField(node.path("missingField").asText(null));

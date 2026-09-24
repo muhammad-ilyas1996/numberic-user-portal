@@ -12,6 +12,7 @@ public enum TaalrIntent {
     LLC_STATUS,
     SALES_TAX_FILE,
     SALES_TAX_STATUS,
+    ESTIMATED_TAX,
     CONFIRM_YES,
     CONFIRM_NO,
     CANCEL

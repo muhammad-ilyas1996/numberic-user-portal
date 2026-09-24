@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
 public class TaalrPendingContextService {
 
     private static final Pattern RESUME_PATTERN = Pattern.compile(
-            ".*(continue|resume|finish|complete)\\s+(my\\s+)?(invoice|receipt|draft|reminder|llc|formation|sales\\s*tax|salestax).*",
+            ".*(continue|resume|finish|complete)\\s+(my\\s+)?(invoice|receipt|draft|reminder|llc|formation|sales\\s*tax|salestax|estimated\\s*tax|estimate).*",
             Pattern.CASE_INSENSITIVE);
 
     @Autowired
@@ -83,6 +83,9 @@ public class TaalrPendingContextService {
         if (action == TaalrPendingAction.SALES_TAX_DRAFT || action == TaalrPendingAction.SALES_TAX_REVIEW_CONFIRM) {
             return "continue sales tax";
         }
+        if (action == TaalrPendingAction.ESTIMATED_TAX_DRAFT) {
+            return "continue estimated tax";
+        }
         return "continue invoice";
     }
 
@@ -99,6 +102,7 @@ public class TaalrPendingContextService {
             case LLC_PREPARE_CONFIRM -> describeLlcPrepareConfirm(ctx);
             case SALES_TAX_DRAFT -> describeSalesTaxDraft(ctx);
             case SALES_TAX_REVIEW_CONFIRM -> describeSalesTaxReview(ctx);
+            case ESTIMATED_TAX_DRAFT -> "You were using the estimated-tax coach — answers incomplete.";
         };
     }
 

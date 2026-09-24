@@ -67,9 +67,8 @@ public class TwilioWebhookController {
             // You may want to log this error for monitoring
         }
         
-        // Return 200 OK - Twilio expects a valid HTTP response
-        // You can return empty string or a simple message
-        return ResponseEntity.ok("Message received");
+        // Empty body — plain text would be sent as an extra WhatsApp reply by Twilio.
+        return ResponseEntity.ok("");
     }
 }
 

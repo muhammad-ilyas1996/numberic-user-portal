@@ -11,5 +11,6 @@ public class TaalrSessionContext {
     private TaalrInvoiceDraft invoiceDraft = new TaalrInvoiceDraft();
     private TaalrLlcDraft llcDraft = new TaalrLlcDraft();
     private TaalrSalesTaxDraft salesTaxDraft = new TaalrSalesTaxDraft();
+    private TaalrEstimatedTaxDraft estimatedTaxDraft = new TaalrEstimatedTaxDraft();
     private Long createdInvoiceId;
 }
