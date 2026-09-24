@@ -62,7 +62,8 @@ public class TaalrEstimatedTaxCoachHandler {
                 return TaalrActionResult.handled(questionFor(draft, missing));
             }
             String missingBefore = missingField(draft);
-            if (missingBefore != null) {
+            // Opening phrases like "impuestos estimados" set language but must not be treated as a field answer.
+            if (missingBefore != null && !isCoachStartPhrase(rawMessage)) {
                 String err = applyAnswer(draft, missingBefore, rawMessage.trim());
                 if (err != null) {
                     persist(request, existingSession, ctx);
@@ -300,6 +301,18 @@ public class TaalrEstimatedTaxCoachHandler {
         if (lang != null) {
             draft.setLanguage(lang);
         }
+    }
+
+    private static boolean isCoachStartPhrase(String raw) {
+        if (raw == null) {
+            return false;
+        }
+        String lower = raw.toLowerCase(Locale.ROOT);
+        return lower.contains("estimated tax") || lower.contains("estimate my tax")
+                || lower.contains("1040-es") || lower.contains("1040es")
+                || lower.contains("quarterly tax") || lower.contains("self-employment tax")
+                || lower.contains("impuestos estimados") || lower.contains("impuesto estimado")
+                || lower.contains("enpo estime") || lower.contains("enpo estime");
     }
 
     private static String detectLangToken(String raw) {
