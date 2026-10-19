@@ -86,6 +86,12 @@ public class SubscriptionRequiredFilter extends OncePerRequestFilter {
 
         User user = (User) auth.getPrincipal();
 
+        // Exempt SUPER ADMIN from subscription requirements
+        if (User.UserType.admin.equals(user.getUserType())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String status = user.getSubscriptionStatus();
         if (status == null || !ALLOWED_STATUSES.contains(status.toUpperCase())) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
