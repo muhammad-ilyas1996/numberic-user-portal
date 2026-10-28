@@ -38,7 +38,14 @@ public class AuthService {
             throw new RuntimeException("User inactive or deleted");
         }
 
-        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+        if (user.getPassword() == null || !passwordEncoder.matches(rawPassword, user.getPassword())) {
+            String provider = user.getAuthProvider();
+            boolean oauthPrimary = provider != null && !"LOCAL".equalsIgnoreCase(provider)
+                    && (user.getGoogleId() != null || user.getLinkedinId() != null);
+            if (oauthPrimary) {
+                String label = provider.charAt(0) + provider.substring(1).toLowerCase();
+                throw new RuntimeException("This account uses " + label + " sign-in. Please continue with " + label + ".");
+            }
             throw new RuntimeException("Invalid credentials");
         }
         return user;

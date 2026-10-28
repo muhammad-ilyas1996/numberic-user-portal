@@ -34,6 +34,18 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String password;
 
+    /** How the account was first created: LOCAL | GOOGLE | LINKEDIN */
+    @Column(name = "auth_provider", length = 20, nullable = false)
+    private String authProvider = "LOCAL";
+
+    /** Google OpenID "sub" — set when user signs in with Google */
+    @Column(name = "google_id", length = 128, unique = true)
+    private String googleId;
+
+    /** LinkedIn OpenID "sub" — set when user signs in with LinkedIn */
+    @Column(name = "linkedin_id", length = 128, unique = true)
+    private String linkedinId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "user_type", nullable = false)
     private UserType userType;

@@ -34,6 +34,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/forgot-password").permitAll() // Forgot password endpoint
                         .requestMatchers("/auth/reset-password").permitAll() // Reset password endpoint
                         .requestMatchers("/auth/forgot-username").permitAll() // Forgot username endpoint
+                        .requestMatchers("/auth/oauth/**").permitAll() // Google / LinkedIn SSO
                         .requestMatchers("/webhooks/**").permitAll() // Allow Twilio webhooks without authentication
                         .requestMatchers("/api/auth/register/**").permitAll() // Allow registration endpoints
                         .requestMatchers("/api/taxbandits/**").permitAll() // Allow all TaxBandits APIs (test-auth, form1099nec, and future endpoints)
