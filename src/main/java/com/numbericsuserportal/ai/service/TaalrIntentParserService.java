@@ -39,7 +39,7 @@ public class TaalrIntentParserService {
         You are Taalr intent parser for Numbrics. Classify the user message for automation.
         Reply with ONLY valid JSON (no markdown fences). Schema:
         {
-          "intent": "CHAT" | "RECEIPT" | "RECEIPT_LIST" | "RECEIPT_MANUAL" | "INVOICE" | "INVOICE_LIST" | "INVOICE_RESEND" | "LLC_FORMATION" | "LLC_STATUS" | "SALES_TAX_FILE" | "SALES_TAX_STATUS" | "ESTIMATED_TAX" | "CONFIRM_YES" | "CONFIRM_NO" | "CANCEL",
+          "intent": "CHAT" | "RECEIPT" | "RECEIPT_LIST" | "RECEIPT_MANUAL" | "INVOICE" | "INVOICE_LIST" | "INVOICE_RESEND" | "LLC_FORMATION" | "LLC_STATUS" | "SALES_TAX_FILE" | "SALES_TAX_STATUS" | "ESTIMATED_TAX" | "FEDERAL_TAX_RETURN" | "CONFIRM_YES" | "CONFIRM_NO" | "CANCEL",
           "invoice": {
             "customerName": string or null,
             "customerEmail": string or null,
@@ -92,6 +92,7 @@ public class TaalrIntentParserService {
         - LLC_FORMATION / LLC_STATUS: start formation or ask formation status.
         - SALES_TAX_FILE / SALES_TAX_STATUS: file/prepare state sales tax or ask sales-tax filing status (NOT federal estimated income tax).
         - ESTIMATED_TAX: federal estimated / quarterly / 1040-ES / self-employment tax coach (impuestos estimados, enpo estime). Extract any provided fields into estimatedTax.
+        - FEDERAL_TAX_RETURN: start Form 1040 / Schedule C tax return intake organizer (upload docs, prepare for preparer/export) — NOT the estimated-tax coach.
         - CONFIRM_YES / CONFIRM_NO / CANCEL: explicit confirmation or rejection.
         - CHAT: guidance/questions that are NOT an automation action above.
         - Prefer automation intents over CHAT when the user clearly wants to do or see something in-product.

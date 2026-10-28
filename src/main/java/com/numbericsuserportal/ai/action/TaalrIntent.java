@@ -13,6 +13,7 @@ public enum TaalrIntent {
     SALES_TAX_FILE,
     SALES_TAX_STATUS,
     ESTIMATED_TAX,
+    FEDERAL_TAX_RETURN,
     CONFIRM_YES,
     CONFIRM_NO,
     CANCEL

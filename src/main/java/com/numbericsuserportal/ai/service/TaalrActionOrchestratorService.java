@@ -55,6 +55,9 @@ public class TaalrActionOrchestratorService {
     private TaalrEstimatedTaxCoachHandler estimatedTaxCoachHandler;
 
     @Autowired
+    private TaalrFederalTaxReturnHandler federalTaxReturnHandler;
+
+    @Autowired
     private TaalrPendingContextService pendingContextService;
 
     @Autowired
@@ -318,6 +321,9 @@ public class TaalrActionOrchestratorService {
             return estimatedTaxCoachHandler.handleStartOrContinue(
                     request, user, parsed, sessionOpt.orElse(null), message);
         }
+        if (parsed.getIntent() == TaalrIntent.FEDERAL_TAX_RETURN) {
+            return federalTaxReturnHandler.start(user, message);
+        }
 
         return TaalrActionResult.notHandled();
     }
@@ -366,7 +372,8 @@ public class TaalrActionOrchestratorService {
                 || intent == TaalrIntent.INVOICE_LIST || intent == TaalrIntent.INVOICE_RESEND
                 || intent == TaalrIntent.LLC_FORMATION || intent == TaalrIntent.LLC_STATUS
                 || intent == TaalrIntent.SALES_TAX_FILE || intent == TaalrIntent.SALES_TAX_STATUS
-                || intent == TaalrIntent.ESTIMATED_TAX;
+                || intent == TaalrIntent.ESTIMATED_TAX
+                || intent == TaalrIntent.FEDERAL_TAX_RETURN;
     }
 
     /** True when user asks for a different automation while a draft of {@code current} is open. */
