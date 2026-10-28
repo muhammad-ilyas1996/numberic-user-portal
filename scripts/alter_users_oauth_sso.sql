@@ -1,10 +1,17 @@
 -- Google / LinkedIn SSO columns on users
--- Run once against the Numbrics DB before deploying OAuth auth APIs.
+-- Compatible with MySQL 5.7 / 8.0 (no IF NOT EXISTS on ADD COLUMN / CREATE INDEX).
+-- Run once. If a column/index already exists, skip that statement and continue.
+
+-- 1) Columns (run as one statement, or one-by-one if some already exist)
+ALTER TABLE users
+  ADD COLUMN auth_provider VARCHAR(20) NOT NULL DEFAULT 'LOCAL';
 
 ALTER TABLE users
-  ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(20) NOT NULL DEFAULT 'LOCAL',
-  ADD COLUMN IF NOT EXISTS google_id VARCHAR(128) NULL,
-  ADD COLUMN IF NOT EXISTS linkedin_id VARCHAR(128) NULL;
+  ADD COLUMN google_id VARCHAR(128) NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS uk_users_google_id ON users (google_id);
-CREATE UNIQUE INDEX IF NOT EXISTS uk_users_linkedin_id ON users (linkedin_id);
+ALTER TABLE users
+  ADD COLUMN linkedin_id VARCHAR(128) NULL;
+
+-- 2) Unique indexes (skip if error "Duplicate key name")
+CREATE UNIQUE INDEX uk_users_google_id ON users (google_id);
+CREATE UNIQUE INDEX uk_users_linkedin_id ON users (linkedin_id);
